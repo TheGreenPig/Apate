@@ -15,7 +15,7 @@ Apate is a tool based on [stegcloak](href=https://github.com/KuroLabs/stegcloak)
 Just download the [Apate.plugin.js](https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js) file and pull it into your plugins Folder. Make sure that the plugin is turned on in the settings and that you installed any Libraries, if prompted.
 
 ## Usage
-![Demo](assets/demo.gif)
+![Demo](Assets/demo.gif)
 Syntax:
 >Cover text \*hidden message*
 
