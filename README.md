@@ -1,6 +1,8 @@
+
+
 <h1 align="center">
   <br>
-  <span>Apate</span>
+  <img src="Assets/apate_trans.png" alt="Apate" width="200" align="center">
 </h1>
  <h4 align="center">Hide your secret Discord messages in other messages!</h4>
 
