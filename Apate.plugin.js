@@ -1,7 +1,6 @@
 /**
  * @name Apate
- * @version 0.0.1
- * @source https://google.com
+ * @version 0.0.2
 */
 
 module.exports = (() => {
