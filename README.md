@@ -16,6 +16,7 @@ Just download the [Apate.plugin.js](https://github.com/TheGreenPig/Apate/blob/ma
 
 ## Usage
 ![Demo](Assets/demo.gif)
+
 Syntax:
 >Cover text \*hidden message*
 
