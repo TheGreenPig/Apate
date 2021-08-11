@@ -1,6 +1,7 @@
 /**
  * @name Apate
  * @version 0.0.2
+ * @updateUrl https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
 */
 
 module.exports = (() => {
@@ -118,7 +119,7 @@ module.exports = (() => {
 			return class Apate extends Plugin {
 				start() {
 					console.clear();
-					console.log(`%cApate has started.`, `font - size: 2em; color: lime; background - color: black; padding: 1em; border - radius: 1em; `);
+					console.log(`%cApate has started.`, `font-size: 1.2em; color: lime; background-color: black; padding: 1em; border-radius: 1em; border: 0.1em solid #fff`);
 					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
 
 					function stegCloakLoaded() {
@@ -141,7 +142,7 @@ module.exports = (() => {
 				}
 
 				stop() {
-					console.log(`%cApate has stopped.`, `font - size: 2em; color: red; background - color: black; padding: 1em; border - radius: 1em; `);
+					console.log(`%cApate has stopped.`, `font-size: 1.2em; color: red; background-color: black; padding: 1em; border-radius: 1em; border: 0.1em solid #fff`);
 				}
 
 				addKeyButton() {
