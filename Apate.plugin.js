@@ -1,6 +1,7 @@
 /**
  * @name Apate
  * @version 0.0.2
+ * @source https://github.com/TheGreenPig/Apate/
  * @updateUrl https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
 */
 
