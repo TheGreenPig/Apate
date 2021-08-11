@@ -271,7 +271,7 @@ module.exports = (() => {
 				addHiddenMessageBanners() {
 					const messageContainers = document.querySelectorAll(
 						`${DiscordSelectors.TitleWrap.chatContent.value
-						} div[data-list-id="chat-messages"] > div[class*="message-"]:not([apate-seen])`
+						} div[data-list-id="chat-messages"] > div[class*="message-"]:not([data-apate-seen])`
 					);
 
 					if (!messageContainers) return;
@@ -279,9 +279,11 @@ module.exports = (() => {
 					// document.body.
 
 					for (const messageContainer of [...messageContainers].reverse()) {
-						messageContainer.setAttribute("apate-seen", "");
+						messageContainer.setAttribute("data-apate-seen", "");
 
-						const textContent = messageContainer.querySelector(`div[class*="markup-"][class*="messageContent-"]`).textContent;
+						const textContent = messageContainer.querySelector(
+							`div[class*="contents-"][role="document"] > div[class*="markup-"][class*="messageContent-"]`
+						).textContent;
 
 						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-contains-hidden-message")) {
 							const id = `apate-${new Date().getTime().toString(36)}-${Math.floor(Math.random() * 1e16).toString(36)}`;
