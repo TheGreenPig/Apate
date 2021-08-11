@@ -2,7 +2,7 @@
 
 <h1 align="center">
   <br>
-  <img src="Assets/apate_trans.png" alt="Apate" width="200" align="center">
+  <img src="Assets/logo.svg" alt="Apate" width="200" align="center">
 </h1>
  <h4 align="center">Hide your secret Discord messages in other messages!</h4>
 
@@ -31,6 +31,7 @@ Syntax:
 
 ## Authors
 
+<img src="Assets/logo.svg" alt="Apate Logo" width="80" align="right"></img>
 ><a href="https://github.com/BenjaminAster"><img src="https://github.com/BenjaminAster.png?size=60"><p>BenjaminAster</p></a>
 ><a href="https://github.com/TheGreenPig"><img src="https://github.com/thegreenpig.png?size=60"><p>TheGreenPig</p></a>
 
