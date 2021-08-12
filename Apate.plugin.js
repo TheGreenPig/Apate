@@ -328,9 +328,8 @@ module.exports = (() => {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
 						return;
 					}
-					if (!coverMessage?.includes(" ")) {
-						BdApi.alert("Invalid input!", "Cover message must have at least one space! (Or else the message can't be hidden...)");
-						return;
+					if (!/ ./.test(coverMessage)) {
+						coverMessage+=" \u200b";
 					}
 
 					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
