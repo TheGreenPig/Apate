@@ -180,9 +180,6 @@ module.exports = (() => {
 				hideWorker;
 				lastWorkerId = 0;
 				numOfWorkers = 16;
-				getNextWorker() {
-				}
-
 				async start() {
 					{
 						// console
@@ -263,13 +260,8 @@ module.exports = (() => {
 
 				hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-					let input = textArea?.querySelector(`span`)?.textContent;
+					let input = textArea?.querySelector(`div > div`)?.textContent;
 					if (!input) return;
-
-					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
-
-					editor.moveToRangeOfDocument();
-					editor.delete();
 
 					let RegExpGroups = (
 						(/^(?<coverMessage>([^\*]+))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
@@ -292,6 +284,11 @@ module.exports = (() => {
 						BdApi.alert("Invalid input!", "Cover message must have at least one space! (Or else the message can't be hidden...)");
 						return;
 					}
+
+					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
+
+					editor.moveToRangeOfDocument();
+					editor.delete();
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
 
