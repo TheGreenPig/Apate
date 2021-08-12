@@ -319,20 +319,23 @@ module.exports = (() => {
 					let coverMessage = RegExpGroups?.coverMessage?.trim();
 					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
 					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
-
+					
+					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
 					if (!coverMessage || !hiddenMessage) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
 						return;
 					}
 					if (invalidEndString) {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
+						editor.moveToRangeOfDocument();
+						editor.delete();
+						editor.insertText(coverMessage+"*"+hiddenMessage+"*");
 						return;
 					}
 					if (!/ ./.test(coverMessage)) {
 						coverMessage+=" \u200b";
 					}
 
-					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
 
 					editor.moveToRangeOfDocument();
 					editor.delete();
