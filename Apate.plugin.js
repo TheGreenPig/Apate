@@ -166,7 +166,6 @@ module.exports = (() => {
 								//\uFFFD = � --> wrong password
 								//try to reveal with password
 								let password = data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
-								// console.log("Cloaked: "+data.stegCloakedMsg+", passwrd: "+password);
 								let revealedMessage = stegCloak.reveal(data.stegCloakedMsg, password);
 								if(!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
@@ -204,9 +203,12 @@ module.exports = (() => {
 						// console
 						console.clear();
 						console.log(
-							`%cApate has started.`,
-							`color: lime; font-size: 1.5em; font-weight: bold; background-color: black; border: .1em solid white; border-radius: 1em; padding: .8em;`,
+							`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
+							'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; backdround-size: contain;',
+							``,
+							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 						);
+						
 					}
 
 					{
