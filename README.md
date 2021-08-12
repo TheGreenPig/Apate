@@ -22,6 +22,8 @@ Just download the [Apate.plugin.js](https://github.com/TheGreenPig/Apate/blob/ma
 Syntax:
 >Cover text \*hidden message*
 
+Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the message.
+
 **Note:**
 
  - The hidden message should turn *italic* if you did it right
