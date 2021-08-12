@@ -196,6 +196,7 @@ module.exports = (() => {
 				hideWorker;
 				lastWorkerId = 0;
 				numOfWorkers = 16;
+				discordEmojis;
 				async start() {
 					{
 						// console
@@ -272,11 +273,40 @@ module.exports = (() => {
 							}
 						});
 					}
+					{
+						// Discord emojis
+
+						this.discordEmojis = await (await window.fetch(
+							`https://github.com/TheGreenPig/Apate/raw/main/discord-emojis.json?anti-cache=${Date.now().toString(36)}`
+						)).json();
+					}
 				};
 
 				hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-					let input = textArea?.querySelector(`div > div`)?.textContent;
+					let input = (() => {
+						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
+						let input = "";
+
+						console.log(textSegments);
+
+						for (let textSegment of textSegments) {
+							switch (textSegment.getAttribute("data-slate-object")) {
+								case ("text"): {
+									input += textSegment.textContent;
+									break;
+								}
+								case ("inline"): {
+									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
+									input += this.discordEmojis?.[emojiName] || "[?]";
+									break;
+								}
+							}
+						}
+
+						return input;
+					})();
+
 					if (!input) return;
 
 					let RegExpGroups = (
