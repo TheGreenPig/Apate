@@ -327,6 +327,9 @@ module.exports = (() => {
 								}
 								case ("inline"): {
 									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
+									if(!this.discordEmojis?.[emojiName]) {
+										BdApi.alert("Unsupported Emoji", ":"+emojiName+": is not supported and will be sent as ```[?]```!");
+									}
 									input += this.discordEmojis?.[emojiName] || "[?]";
 									break;
 								}
