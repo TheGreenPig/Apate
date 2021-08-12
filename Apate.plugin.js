@@ -277,7 +277,7 @@ module.exports = (() => {
 						// Discord emojis
 
 						this.discordEmojis = await (await window.fetch(
-							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/?anti-cache=${Date.now().toString(36)}`
+							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/discord-emojis.json?anti-cache=${Date.now().toString(36)}`
 						)).json();
 					}
 				};
