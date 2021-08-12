@@ -137,7 +137,8 @@ module.exports = (() => {
 				DiscordSelectors,
 				getInternalInstance,
 			} = { ...Api, ...BdApi };
-
+			
+			
 			const worker = (stegCloakBlobURL) => {
 				self.importScripts(stegCloakBlobURL);
 				const stegCloak = new StegCloak();
@@ -148,7 +149,8 @@ module.exports = (() => {
 					if (data.hide) {
 						const stegCloakedMsg = (() => {
 							try {
-								return stegCloak.hide(data.hiddenMsg, "", data.coverMsg);
+								let password = data.coverMsg.replace(data.coverMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
+								return stegCloak.hide(data.hiddenMsg, password, data.coverMsg);
 							} catch {
 								return;
 							}
@@ -161,7 +163,21 @@ module.exports = (() => {
 					} else if (data.reveal) {
 						const hiddenMsg = (() => {
 							try {
-								return stegCloak.reveal(data.stegCloakedMsg, "");
+								//\uFFFD = � --> wrong password
+								//try to reveal with password
+								let password = data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
+								// console.log("Cloaked: "+data.stegCloakedMsg+", passwrd: "+password);
+								let revealedMessage = stegCloak.reveal(data.stegCloakedMsg, password);
+								if(!revealedMessage.includes("\uFFFD")) {
+									return revealedMessage;
+								}
+								//try to reveal without password (for older messages that aren't encrypted)
+								revealedMessage = stegCloak.reveal(cloaked, "");
+								if(!revealedMessage.includes("\uFFFD")) {
+									return revealedMessage;
+								}
+								console.error("%c\""+cloaked+"\"%c had a %cfaulty password%c! Output: %c\""+revealedMessage+"\"", "color: Fuchsia", "color: white", "color:red", "color: white","color: DarkGreen");
+								return;
 							} catch {
 								return;
 							}
@@ -293,6 +309,9 @@ module.exports = (() => {
 						return;
 					}
 
+					
+					coverMessage = this.getPassword() + coverMessage;
+
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
 
 					this.hideWorker?.postMessage({
@@ -301,6 +320,15 @@ module.exports = (() => {
 						hiddenMsg: hiddenMessage,
 						coverMsg: coverMessage,
 					});
+				}
+				getPassword() {
+					//makes a 4 character Long password that gets added to the start of the cover Text for some encryption
+					let password = "";
+					let invisibleCharacters= ["\u200C","\u200D","\u2061","\u2062","\u2063","\u2064"];
+					for(var i=0;i<4;i++) {
+						password += invisibleCharacters[(Math.floor(Math.random()*6))];
+					}
+					return password;
 				}
 
 				addKeyButton() {
