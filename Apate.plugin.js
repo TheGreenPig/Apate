@@ -45,42 +45,83 @@ module.exports = (() => {
 		stop() { };
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
-			const keyStyle =
-				`.encriptionKey {` +
+			const globalStyle =
+				`.apateKeyButtonContainer {` +
+				`	display: flex;` +
+				`	justify-content: center;` +
+				`	align-items: center;` +
+				`}` +
+				`.apateEncryptionKeyButton {` +
 				`	transition: all 300ms ease;` +
+				`	overflow: hidden;` +
+				`	font-size: 1rem;` +
+				`	display: flex;` +
+				`	justify-content: center;` +
+				`	align-items: center;` +
+				`	clip-path: inset(0);` +
+				`	width: 3em;` +
+				`	height: 2.8em;` +
+				`}` +
+				`.apateEncryptionKeyButton:hover {` +
+				`	width: 4em;` +
+				`}` +
+				`.apateEncryptionKeyContainer {` +
+				`	padding: 0;` +
+				`	width: 5rem;` +
+				`	height: 5rem;` +
+				`}` +
+				`.apateEncryptionKey {` +
+				`	transition: all 300ms ease;` +
+				`	font-size: 1.3rem;` +
 				`	width: 2em;` +
 				`	height: 2em;` +
 				`}` +
-				`.encriptionKey:hover {` +
-				`	font-size: 1.5em;` +
-				`	fill: mediumSpringGreen;` +
-				`	animation: rotate 0.5s ease;` +
+				`.apateEncryptionKey:hover {` +
+				`	font-size: 2em;` +
+				`	fill: dodgerBlue;` +
+				`	animation: apateRotate 0.5s ease;` +
 				`	animation-iteration-count: 1; ` +
 				`}` +
-				`.encriptionKey:active {` +
-				`	font-size: 1.5em;` +
-				`	fill: mediumSlateBlue;` +
-				`	animation: shake 0.2s;` +
-				`	animation-iteration-count: infinite; ` +
+				`.apateEncryptionKey.calculating {` +
+				`	fill: orange;` +
+				`	animation: apateRotate 1s linear;` +
+				`	animation-direction: reverse;` +
+				`	animation-iteration-count: infinite;` +
 				`}` +
-				`@keyframes rotate {` +
+				`@keyframes apateRotate {` +
 				`	0%   { transform: rotate(0deg);   }` +
 				`	100% { transform: rotate(360deg); }` +
 				`}` +
-				`@keyframes shake {` +
-				`	0%   { transform: rotate(0deg);   }` +
-				`	30%  { transform: rotate(25deg);  }` +
-				`	70%  { transform: rotate(-25deg); }` +
-				`	100% { transform: rotate(0deg);   }`;
-			`}`;
+				`.apateHiddenMessage {` +
+				`	border: 2px solid var(--interactive-muted);` +
+				`	color: var(--text-normal);` +
+				`	padding: .5em;` +
+				`	margin: .3em 0;` +
+				`	width: fit-content;` +
+				`	border-radius: 0 .8em .8em .8em;` +
+				`	background-image: ` +
+				`		repeating-linear-gradient(-45deg, ` +
+				`		var(--background-tertiary) 0em, ` +
+				`		var(--background-tertiary) 1em, ` +
+				`		var(--background-floating) 1em, ` +
+				`		var(--background-floating) 2em);` +
+				`}` +
+				`.apateHiddenMessage.loading {` +
+				`	font-style: italic;` +
+				`	color: var(--text-muted);` +
+				`}` +
+				`.apateHiddenMessage.loading::after {` +
+				`	content: "[loading hidden message...]";` +
+				`}`;
 
 			const buttonHTML =
-				`<div class="buttonContainer-28fw2U da-buttonContainer keyButton">` +
+				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">` +
 				`	<button aria-label="Send Message" tabindex="0" type="button" ` +
-				`			class="buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"` +
+				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button ` +
+				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"` +
 				`	>` +
-				`		<div class="contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">` +
-				`			<svg xmlns="http://www.w3.org/2000/svg" class="encriptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" aria-hidden="false" fill="currentColor">` +
+				`		<div class="apateEncryptionKeyContainer contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">` +
+				`			<svg xmlns="http://www.w3.org/2000/svg" class="apateEncryptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" fill="currentColor">` +
 				`				<path d="M0 0h24v24H0z" fill="none" />` +
 				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,` +
 				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" ` +
@@ -90,29 +131,17 @@ module.exports = (() => {
 				`	</button>` +
 				`</div>`;
 
-			document.querySelector("#keyStyleEl")?.remove();
-
-			let keyStyleEl = document.createElement("style");
-			keyStyleEl.textContent = keyStyle;
-			keyStyleEl.id = "keyStyleEl";
-			document.head.append(keyStyleEl);
 
 			const {
 				DiscordSelectors,
 				getInternalInstance,
 			} = { ...Api, ...BdApi };
-			let stegCloak;
 
-			const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
-			Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
-
-			const worker = async () => {
-				console.log("hi, i am the worker");
-
-				self.importScripts("https://stegcloak.surge.sh/bundle.js");
+			const worker = (stegCloakBlobURL) => {
+				self.importScripts(stegCloakBlobURL);
 				const stegCloak = new StegCloak();
 
-				self.addEventListener("message", async (evt) => {
+				self.addEventListener("message", (evt) => {
 					const data = evt.data;
 
 					if (data.hide) {
@@ -146,71 +175,132 @@ module.exports = (() => {
 			};
 
 			return class Apate extends Plugin {
-				worker;
-				start() {
-					console.clear();
-					console.log(`%cApate has started.`, `font-size: 1.2em; color: lime; background-color: black; padding: 1em; border-radius: 1em; border: 0.1em solid #fff`);
-					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
+				revealWorkers = [];
+				hideWorker;
+				lastWorkerId = 0;
+				numOfWorkers = 16;
+				getNextWorker() {
+				}
 
-					function stegCloakLoaded() {
-						stegCloak = new StegCloak();
-						console.log("%cStegcloak%c is sucessfully installed!", "color: Crimson; font-size: 1.1em; text-decoration: underline;", "color: greenyellow; font-size: 1.1em");
-					}
-
-					if (typeof StegCloak === "undefined") {
-						let stegCloakScript = document.createElement("script");
-						stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
-						stegCloakScript.addEventListener("load", (evt) => {
-							stegCloakLoaded();
-						});
-						document.head.append(stegCloakScript);
-					} else {
-						stegCloakLoaded();
-					}
-
-					this.addKeyButton();
-
+				async start() {
 					{
-						// setup worker
-
-						const code = worker.toString();
-						const blob = new Blob([`(${code})();`]);
-						this.worker = new Worker(URL.createObjectURL(blob));
+						// console
+						console.clear();
+						console.log(
+							`%cApate has started.`,
+							`color: lime; font-size: 1.5em; font-weight: bold; background-color: black; border: .1em solid white; border-radius: 1em; padding: .8em;`,
+						);
 					}
 
 					{
-						this.worker.addEventListener("message", (evt) => {
+						// global style
+						document.querySelector("#globalStyleEl")?.remove();
+
+						let globalStyleEl = document.createElement("style");
+						globalStyleEl.textContent = globalStyle;
+						globalStyleEl.id = "globalStyleEl";
+						document.head.append(globalStyleEl);
+					}
+					{
+						// key button
+						this.addKeyButton();
+					}
+
+					{
+						// workers
+						const workerCode = worker.toString();
+
+						const stegCloakBlobURL = URL.createObjectURL(new Blob([
+							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
+						]));
+
+						for (let i in [...Array(this.numOfWorkers)]) {
+							const worker = new window.Worker(URL.createObjectURL(new Blob(
+								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
+							)));
+
+							worker.addEventListener("message", (evt) => {
+								const data = evt.data;
+								const messageContainer = document.querySelector(`[data-apate-id="${data.id}"]`);
+
+								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
+									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
+									hiddenMessageDiv.textContent = data.hiddenMsg;
+									hiddenMessageDiv.classList.remove("loading");
+									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
+								}
+							});
+
+							this.revealWorkers.push(worker);
+						}
+
+
+						this.hideWorker = new window.Worker(URL.createObjectURL(new Blob(
+							[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
+						)));
+
+						this.hideWorker.addEventListener("message", (evt) => {
 							const data = evt.data;
-							const messageContainer = document.querySelector(`[data-apate-id="${data.id}"]`);
+							if (data.hide) {
+								let output = "\u200B" + data.stegCloakedMsg;
+								const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
+								const editor = getInternalInstance(textArea).return.stateNode.editorRef;
 
-							if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-hidden-message-revealed")) {
-								const messageWrapper = messageContainer.querySelector(`div[role="document"]`);
+								editor.moveToRangeOfDocument();
+								editor.delete();
+								editor.insertText(output);
 
-								let hiddenMessageDiv = document.createElement("div");
-								hiddenMessageDiv.textContent = data?.hiddenMsg;
-								hiddenMessageDiv.style.backgroundColor = "black";
-								hiddenMessageDiv.style.border = "2px dotted white";
-								hiddenMessageDiv.style.padding = ".5em";
-								hiddenMessageDiv.style.margin = ".3em 0";
-								hiddenMessageDiv.style.borderRadius = ".8em";
-								hiddenMessageDiv.style.color = "white";
-								hiddenMessageDiv.style.height = "0";
-								messageWrapper.append(hiddenMessageDiv);
-								messageWrapper.setAttribute("data-hidden-message-revealed", "");
+								const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
+								Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
+								window.setTimeout(() => textArea.children[0].dispatchEvent(press), 100);
 
-								window.requestAnimationFrame(() => {
-									window.requestAnimationFrame(() => {
-										hiddenMessageDiv.style.height = "auto";
-									});
-								});
+								document.querySelector(".apateEncryptionKey")?.classList.remove("calculating");
 							}
 						});
 					}
 				};
 
-				stop() {
-					console.log(`%cApate has stopped.`, `font-size: 1.2em; color: red; background-color: black; padding: 1em; border-radius: 1em; border: 0.1em solid #fff`);
-				};
+				hideMessage() {
+					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
+					let input = textArea?.querySelector(`span`)?.textContent;
+					if (!input) return;
+
+					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
+
+					editor.moveToRangeOfDocument();
+					editor.delete();
+
+					let RegExpGroups = (
+						(/^(?<coverMessage>([^\*]+))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
+							.exec(input.trim())?.groups
+					);
+
+					let coverMessage = RegExpGroups?.coverMessage?.trim();
+					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
+					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
+
+					if (!coverMessage || !hiddenMessage) {
+						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
+						return;
+					}
+					if (invalidEndString) {
+						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
+						return;
+					}
+					if (!coverMessage?.includes(" ")) {
+						BdApi.alert("Invalid input!", "Cover message must have at least one space! (Or else the message can't be hidden...)");
+						return;
+					}
+
+					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
+
+					this.hideWorker?.postMessage({
+						id: `apate-hide-${Date.now().toString(36)}`,
+						hide: true,
+						hiddenMsg: hiddenMessage,
+						coverMsg: coverMessage,
+					});
+				}
 
 				addKeyButton() {
 					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
@@ -223,49 +313,14 @@ module.exports = (() => {
 
 					button = form.querySelector(".keyButton");
 
-					button.addEventListener("click", () => {
-						if (typeof stegCloak === "undefined") return;
-						const textareaWrapper = form.querySelector(DiscordSelectors.Textarea.textArea);
-						if (!textareaWrapper) return;
-						const textarea = textareaWrapper.children?.[0];
-						if (!textarea) return;
-
-						const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-						const editor = getInternalInstance(textArea).return.stateNode.editorRef;
-						let input = textArea.querySelector(`span`).textContent;
-
-						let RegExpGroups = (
-							(/^(?<coverMessage>([^\*]+))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
-								.exec(input.trim())?.groups
-						);
-
-						let coverMessage = RegExpGroups?.coverMessage?.trim();
-						let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
-						let invalidEndString = RegExpGroups?.invalidEndString?.trim();
-
-						if (!coverMessage || !hiddenMessage) {
-							BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
-							return;
+					form.addEventListener("keyup", (evt) => {
+						if (evt.key === "Enter" && evt.ctrlKey) {
+							evt.preventDefault();
+							this.hideMessage();
 						}
-						if (invalidEndString) {
-							BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
-							return;
-						}
-						if (!coverMessage?.includes(" ")) {
-							BdApi.alert("Invalid input!", "Cover message must have at least one space! (Or else the message can't be hidden...)");
-							return;
-						}
-
-						console.log({ coverMessage, hiddenMessage });
-
-						let output = "\u200B" + stegCloak.hide(hiddenMessage, "", coverMessage);
-
-						editor.moveToRangeOfDocument();
-						editor.delete();
-						editor.insertText(output);
-
-						window.setTimeout(() => textarea.dispatchEvent(press), 100);
 					});
+
+					button.addEventListener("click", () => this.hideMessage());
 				};
 
 				addHiddenMessageBanners() {
@@ -274,35 +329,52 @@ module.exports = (() => {
 						} div[data-list-id="chat-messages"] > div[class*="message-"]:not([data-apate-seen])`
 					);
 
-					if (!messageContainers) return;
+					if (!messageContainers || !this.revealWorkers.length) return;
 
-					// document.body.
+					const randomStr = Math.floor(Math.random() * 1e16).toString(36);
+					const timeStr = Date.now().toString(36);
 
-					for (const messageContainer of [...messageContainers].reverse()) {
+					for (const [i, messageContainer] of [...messageContainers].reverse().entries()) {
 						messageContainer.setAttribute("data-apate-seen", "");
 
 						const textContent = messageContainer.querySelector(
 							`div[class*="contents-"][role="document"] > div[class*="markup-"][class*="messageContent-"]`
 						).textContent;
 
-						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-contains-hidden-message")) {
-							const id = `apate-${new Date().getTime().toString(36)}-${Math.floor(Math.random() * 1e16).toString(36)}`;
-							messageContainer.setAttribute("data-contains-hidden-message", "");
+						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-apate-contains-hidden-message")) {
+							const id = `apate-${timeStr}-${randomStr}-${i}`;
+
+							messageContainer.setAttribute("data-apate-contains-hidden-message", "");
 							messageContainer.setAttribute("data-apate-id", id);
-							this.worker.postMessage({
+
+							this.revealWorkers[this.lastWorkerId]?.postMessage({
 								id,
 								reveal: true,
 								stegCloakedMsg: textContent.replace(/^\u200b/, ""),
 							});
+							this.lastWorkerId++;
+							this.lastWorkerId %= this.numOfWorkers;
+
+							{
+								const messageWrapper = messageContainer.querySelector(`div[role="document"]`);
+
+								let hiddenMessageDiv = document.createElement("div");
+								hiddenMessageDiv.classList.add("apateHiddenMessage", "loading");
+								messageWrapper.append(hiddenMessageDiv);
+							}
 						}
 					}
-				}
+				};
 				observer(mutationRecord) {
 					if (!mutationRecord.addedNodes) return;
 					this.addHiddenMessageBanners();
 					this.addKeyButton();
-				}
-
+				};
+				stop() {
+					for (const worker of this.revealWorkers) {
+						worker.terminate();
+					}
+				};
 			};
 		};
 		return plugin(Plugin, Api);;
