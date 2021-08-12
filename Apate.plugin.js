@@ -2,7 +2,7 @@
  * @name Apate
  * @version 0.0.2
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
- * @updateUrl https://raw.githubusercontent.comm/TheGreenPig/Apate/blob/main/Apate.plugin.js
+ * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
 */
 
 module.exports = (() => {
