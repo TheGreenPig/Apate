@@ -46,6 +46,7 @@ module.exports = (() => {
 		stop() { };
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+			
 			const globalStyle =
 				`.apateKeyButtonContainer {` +
 				`	display: flex;` +
@@ -196,6 +197,7 @@ module.exports = (() => {
 				lastWorkerId = 0;
 				numOfWorkers = 16;
 				discordEmojis;
+				
 				async start() {
 					{
 						this.checkForUpdates();
@@ -285,56 +287,67 @@ module.exports = (() => {
 					}
 				};
 				async checkForUpdates() {
-					const newestScript = await (await window.fetch(
-						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
-					)).text()
-					const newestVersion = newestScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, "");
-
-					const gitHubFileHash = (
-						[...(
-							new Uint8Array(
-								await window.crypto.subtle.digest(
-									'SHA-256',
-									new TextEncoder().encode(newestScript),
-								),
-							)
-						)].map(
-							(byte) => byte.toString(16).padStart(2, '0')
-						).join('')
+					const developerMode = false;
+					const localScript = new TextDecoder().decode(
+						await new Promise((resolve) =>
+							require("fs").readFile(
+								require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+								{},
+								(err, data) => resolve(data),
+							),
+						),
 					);
-
+					
+					const gitHubScript = await(await window.fetch(
+						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
+					)).text();
+					
 					const localFileHash = (
 						[...(
 							new Uint8Array(
 								await window.crypto.subtle.digest(
 									'SHA-256',
-									await new Promise((resolve) =>
-										require("fs").readFile(
-											require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-											{},
-											(err, data) => resolve(data),
-										),
-									),
+									new TextEncoder().encode(localScript),
 								),
 							)
 						)].map(
 							(byte) => byte.toString(16).padStart(2, '0')
 						).join('')
 					);
-
-
-						
-					if(gitHubFileHash !== localFileHash) {
-						BdApi.showConfirmationModal("New Update", `There is a new update (Version ${newestVersion}) for ${config.info.name}. Please click Download Now to install it.`, {
+					
+					const gitHubFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(gitHubScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+					
+					
+					if (localFileHash !== gitHubFileHash && !developerMode) {
+						console.log(
+							`%cNew Update for Apate avalible!`, 
+							`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+							);
+						console.log({
+							localScript,
+							gitHubScript,
+							localFileHash,
+							gitHubFileHash,
+						});
+							BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${config.info.version}\`). Please click \`Download Now\` to install it.`, {
 							confirmText: "Download Now",
 							cancelText: "Cancel",
 							onConfirm: async () => {
-								const newUpdate = await (await globalThis.fetch("https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js")).text();
-			
 								await new Promise(
-									resolve => require("fs").writeFile(
+									(resolve) => require("fs").writeFile(
 										require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-										newUpdate,
+										gitHubScript,
 										resolve,
 									),
 								);
