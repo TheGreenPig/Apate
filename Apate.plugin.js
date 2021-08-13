@@ -175,7 +175,7 @@ module.exports = (() => {
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
-								console.error("%c\"" + cloaked + "\"%c had a %cfaulty password%c! Output: %c\"" + revealedMessage + "\"", "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
+								console.error(`%c"${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}"`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
 								return;
 							} catch {
 								return;
@@ -282,22 +282,22 @@ module.exports = (() => {
 							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/discord-emojis.json?anti-cache=${Date.now().toString(36)}`
 						)).json();
 					}
-				};
+				}
 				async checkForUpdates() {
 					let newestScript = await (await window.fetch(
 						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
-					)).text()
+					)).text();
 					let newestVersion = newestScript.match(/version:.*"/)[0];
 					newestVersion = newestVersion.replace(/(\"*)([^\d\.]*)/g, "");
 
-						
-					if(config.info.version !== newestVersion) {
+
+					if (config.info.version !== newestVersion) {
 						BdApi.showConfirmationModal("New Update", `There is a new update (New: ${newestVersion}, current: ${config.info.version}) for ${config.info.name}. Please click Download Now to install it.`, {
 							confirmText: "Download Now",
 							cancelText: "Cancel",
 							onConfirm: async () => {
 								const newUpdate = await (await globalThis.fetch("https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js")).text();
-			
+
 								await new Promise(
 									resolve => require("fs").writeFile(
 										require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
@@ -326,8 +326,8 @@ module.exports = (() => {
 								}
 								case ("inline"): {
 									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
-									if(!this.discordEmojis?.[emojiName]) {
-										BdApi.alert("Unsupported Emoji", ":"+emojiName+": is not supported and will be sent as ```[?]```!");
+									if (!this.discordEmojis?.[emojiName]) {
+										BdApi.alert("Unsupported Emoji", ":" + emojiName + ": is not supported and will be sent as ```[?]```!");
 									}
 									input += this.discordEmojis?.[emojiName] || "[?]";
 									break;
