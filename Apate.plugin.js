@@ -285,15 +285,47 @@ module.exports = (() => {
 					}
 				};
 				async checkForUpdates() {
-					let newestScript = await (await window.fetch(
+					const newestScript = await (await window.fetch(
 						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
 					)).text()
-					let newestVersion = newestScript.match(/version:.*"/)[0];
-					newestVersion = newestVersion.replace(/(\"*)([^\d\.]*)/g, "");
+					const newestVersion = newestScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, "");
+
+					const gitHubFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(newestScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+
+					const localFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									await new Promise((resolve) =>
+										require("fs").readFile(
+											require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+											{},
+											(err, data) => resolve(data),
+										),
+									),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+
 
 						
-					if(config.info.version !== newestVersion) {
-						BdApi.showConfirmationModal("New Update", `There is a new update (New: ${newestVersion}, current: ${config.info.version}) for ${config.info.name}. Please click Download Now to install it.`, {
+					if(gitHubFileHash !== localFileHash) {
+						BdApi.showConfirmationModal("New Update", `There is a new update (Version ${newestVersion}) for ${config.info.name}. Please click Download Now to install it.`, {
 							confirmText: "Download Now",
 							cancelText: "Cancel",
 							onConfirm: async () => {
