@@ -46,6 +46,7 @@ module.exports = (() => {
 		stop() { };
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+
 			const globalStyle =
 				`.apateKeyButtonContainer {` +
 				`	display: flex;` +
@@ -196,6 +197,7 @@ module.exports = (() => {
 				lastWorkerId = 0;
 				numOfWorkers = 16;
 				discordEmojis;
+
 				async start() {
 					{
 						this.checkForUpdates();
@@ -284,32 +286,105 @@ module.exports = (() => {
 					}
 				}
 				async checkForUpdates() {
-					let newestScript = await (await window.fetch(
-						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
-					)).text();
-					let newestVersion = newestScript.match(/version:.*"/)[0];
-					newestVersion = newestVersion.replace(/(\"*)([^\d\.]*)/g, "");
+					const developerMode = false;
+					if (!developerMode) {
+						const localScript = new TextDecoder().decode(
+							await new Promise((resolve) =>
+								require("fs").readFile(
+									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+									{},
+									(err, data) => resolve(data),
+								),
+							),
+						);
 
+						const gitHubScript = await (await window.fetch(
+							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
+						)).text();
 
-					if (config.info.version !== newestVersion) {
-						BdApi.showConfirmationModal("New Update", `There is a new update (New: ${newestVersion}, current: ${config.info.version}) for ${config.info.name}. Please click Download Now to install it.`, {
-							confirmText: "Download Now",
-							cancelText: "Cancel",
-							onConfirm: async () => {
-								const newUpdate = await (await globalThis.fetch("https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js")).text();
-
-								await new Promise(
-									resolve => require("fs").writeFile(
-										require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-										newUpdate,
-										resolve,
+						const localFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(localScript),
 									),
-								);
-							},
-						});
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
+
+						const gitHubFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(gitHubScript),
+									),
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
+						let localVersion = config.info.version;
+						let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
+
+						// console.log(`Local Version: ${localVersion}, Github Version: ${gitHubVersion}, upToDate?: ${this.upToDate(localVersion, gitHubVersion)}`);
+
+						eval(gitHubScript);
+						if (localFileHash !== gitHubFileHash && !this.upToDate(localVersion, gitHubVersion)) {
+							console.log(
+								`%cNew Update ${gitHubVersion} for Apate avalible!`,
+								`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+							);
+							console.log({
+								localScript,
+								gitHubScript,
+								localFileHash,
+								gitHubFileHash,
+							});
+							BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
+								confirmText: "Download Now",
+								cancelText: "Cancel",
+								onConfirm: async () => {
+									await new Promise(
+										(resolve) => require("fs").writeFile(
+											require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+											gitHubScript,
+											resolve,
+										),
+									);
+								},
+							});
+						}
 					}
 				}
-
+				upToDate(local, remote) {
+					var VPAT = /^\d+(\.\d+){0,2}$/;
+					if (!local || !remote || local.length === 0 || remote.length === 0)
+						return false;
+					if (local == remote)
+						return true;
+					if (VPAT.test(local) && VPAT.test(remote)) {
+						var lparts = local.split('.');
+						while (lparts.length < 3)
+							lparts.push("0");
+						var rparts = remote.split('.');
+						while (rparts.length < 3)
+							rparts.push("0");
+						for (var i = 0; i < 3; i++) {
+							var l = parseInt(lparts[i], 10);
+							var r = parseInt(rparts[i], 10);
+							if (l === r)
+								continue;
+							return l > r;
+						}
+						return true;
+					} else {
+						return local >= remote;
+					}
+				}
 				hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
 					let input = (() => {
