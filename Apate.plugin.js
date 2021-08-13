@@ -285,107 +285,157 @@ module.exports = (() => {
 							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/discord-emojis.json?anti-cache=${Date.now().toString(36)}`
 						)).json();
 					}
+				};
+				async doUpdate() {
+					const localScript = new TextDecoder().decode(
+						await new Promise((resolve) =>
+							require("fs").readFile(
+								require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+								{},
+								(err, data) => resolve(data),
+							),
+						),
+					);
+
+					const gitHubScript = await (await window.fetch(
+						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
+					)).text();
+
+					const localFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(localScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+
+					const gitHubFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(gitHubScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+					let localVersion = config.info.version;
+					let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
+
+					if (localFileHash !== gitHubFileHash) {
+						console.log(
+							`%cNew Update ${gitHubVersion} for Apate avalible!`,
+							`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+						);
+						console.log({
+							localScript,
+							gitHubScript,
+							localFileHash,
+							gitHubFileHash,
+						});
+						BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
+							confirmText: "Download Now",
+							cancelText: "Cancel",
+							onConfirm: async () => {
+								await new Promise(
+									(resolve) => require("fs").writeFile(
+										require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+										gitHubScript,
+										resolve,
+									),
+								);
+							},
+						});
+					}
 				}
 				async checkForUpdates() {
-					const developerMode = false;
-					if (!developerMode) {
-						const localScript = new TextDecoder().decode(
-							await new Promise((resolve) =>
-								require("fs").readFile(
-									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-									{},
-									(err, data) => resolve(data),
-								),
-							),
-						);
+					// To turn on dev mode
+					// let dbconnect = window.indexedDB.open('ApateDB', 1);
+					// dbconnect.onupgradeneeded = ev => {
+					// 	console.log('Upgrade DB..');
+					// 	const db = ev.target.result;
+					// 	const store = db.createObjectStore('User', { keyPath: 'id' });
+					// 	store.createIndex('Is_dev', 'Is_dev', { unique: false });
+					// }
+					// dbconnect.onsuccess = ev => {
+					// 	const db = ev.target.result;
+					// 	const transaction = db.transaction('User', 'readwrite');
+					// 	const store = transaction.objectStore('User');
+					// 	const data = [
+					// 		{ id: 0, Is_dev: 'true' },
+					// 	];
+						
+					// 	data.forEach(el => store.add(el));
+					// }
 
-						const gitHubScript = await (await window.fetch(
-							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
-						)).text();
+					let dbconnect = window.indexedDB.open('ApateDB', 1);
+					dbconnect.onupgradeneeded = ev => {
+						ev.target.transaction.abort();
+						this.doUpdate();
+						return;
+					}
+					dbconnect.onsuccess = ev => {
+						try {
+							const db = ev.target.result;
+							const transaction = db.transaction('User', 'readwrite')
+							transaction.oncomplete = ev => {
+								const store = db.transaction('User', 'readonly').objectStore('User');
+								const query = store.get(0);
+								query.onsuccess = ev => {
+									let is_dev = ev.target.result.Is_dev.toLowerCase() == 'true' ? true : false;
+									if (!is_dev) {
+										this.doUpdate();
+										return;
+									}
+									else {
+										console.log(`%cIt looks like you're a developer! No updates will be made!`,
+											`color: Firebrick; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+										);
+									}
+								};
+							};
 
-						const localFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(localScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
-
-						const gitHubFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(gitHubScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
-						let localVersion = config.info.version;
-						let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
-
-						// console.log(`Local Version: ${localVersion}, Github Version: ${gitHubVersion}, upToDate?: ${this.upToDate(localVersion, gitHubVersion)}`);
-
-						eval(gitHubScript);
-						if (localFileHash !== gitHubFileHash && !this.upToDate(localVersion, gitHubVersion)) {
-							console.log(
-								`%cNew Update ${gitHubVersion} for Apate avalible!`,
-								`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-							);
-							console.log({
-								localScript,
-								gitHubScript,
-								localFileHash,
-								gitHubFileHash,
-							});
-							BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
-								confirmText: "Download Now",
-								cancelText: "Cancel",
-								onConfirm: async () => {
-									await new Promise(
-										(resolve) => require("fs").writeFile(
-											require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-											gitHubScript,
-											resolve,
-										),
-									);
-								},
-							});
+						} catch (error) {
+							this.doUpdate();
+							return;
 						}
 					}
+
+
 				}
-				upToDate(local, remote) {
-					var VPAT = /^\d+(\.\d+){0,2}$/;
-					if (!local || !remote || local.length === 0 || remote.length === 0)
-						return false;
-					if (local == remote)
-						return true;
-					if (VPAT.test(local) && VPAT.test(remote)) {
-						var lparts = local.split('.');
-						while (lparts.length < 3)
-							lparts.push("0");
-						var rparts = remote.split('.');
-						while (rparts.length < 3)
-							rparts.push("0");
-						for (var i = 0; i < 3; i++) {
-							var l = parseInt(lparts[i], 10);
-							var r = parseInt(rparts[i], 10);
-							if (l === r)
-								continue;
-							return l > r;
-						}
-						return true;
-					} else {
-						return local >= remote;
-					}
-				}
+				// Maybe Nedded in the future?
+				// upToDate(local, remote) {
+				// 	var VPAT = /^\d+(\.\d+){0,2}$/;
+				// 	if (!local || !remote || local.length === 0 || remote.length === 0)
+				// 		return false;
+				// 	if (local == remote)
+				// 		return true;
+				// 	if (VPAT.test(local) && VPAT.test(remote)) {
+				// 		var lparts = local.split('.');
+				// 		while(lparts.length < 3)
+				// 			lparts.push("0");
+				// 		var rparts = remote.split('.');
+				// 		while (rparts.length < 3)
+				// 			rparts.push("0");
+				// 		for (var i=0; i<3; i++) {
+				// 			var l = parseInt(lparts[i], 10);
+				// 			var r = parseInt(rparts[i], 10);
+				// 			if (l === r)
+				// 				continue;
+				// 			return l > r;
+				// 		}
+				// 		return true;
+				// 	} else {
+				// 		return local >= remote;
+				// 	}
+				// }
 				hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
 					let input = (() => {
