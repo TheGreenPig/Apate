@@ -206,7 +206,6 @@ module.exports = (() => {
 							``,
 							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 						);
-						
 					}
 
 					{
@@ -319,7 +318,7 @@ module.exports = (() => {
 					let coverMessage = RegExpGroups?.coverMessage?.trim();
 					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
 					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
-					
+
 					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
 					if (!coverMessage || !hiddenMessage) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
@@ -329,11 +328,11 @@ module.exports = (() => {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
 						editor.moveToRangeOfDocument();
 						editor.delete();
-						editor.insertText(coverMessage+"*"+hiddenMessage+"*");
+						editor.insertText(coverMessage + "*" + hiddenMessage + "*");
 						return;
 					}
 					if (!/ ./.test(coverMessage)) {
-						coverMessage+=" \u200b";
+						coverMessage += " \u200b";
 					}
 
 
