@@ -209,6 +209,7 @@ module.exports = (() => {
 							``,
 							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 						);
+
 					}
 
 					{
