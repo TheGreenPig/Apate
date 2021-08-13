@@ -18,7 +18,6 @@ Just download the [Apate.plugin.js](https://github.com/TheGreenPig/Apate/blob/ma
 
 ## Usage
 ![Demo](Assets/demo.gif)
-
 Syntax:
 >Cover text \*hidden message*
 
@@ -27,7 +26,6 @@ Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the mes
 **Note:**
 
  - The hidden message should turn *italic* if you did it right
- - The cover text must have at least two words for stegcloak to be able to hide text
  - There can't be a string after the hidden message. The second `*` should be the last character
 
 
