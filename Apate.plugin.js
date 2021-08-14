@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 0.0.2
+ * @version 1.0.0
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -29,7 +29,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "0.0.2",
+			version: "1.0.0",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			updateUrl: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js"
 		},
