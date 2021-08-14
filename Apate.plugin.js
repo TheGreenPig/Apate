@@ -352,7 +352,7 @@ module.exports = (() => {
 						)).json();
 					}
 				};
-				async doUpdate(localVersion, gitHubVersion) {
+				async doUpdate(localVersion, gitHubVersion, gitHubScript) {
 					console.log(
 						`%cNew Update ${gitHubVersion} for Apate avalible!`,
 						`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
@@ -430,7 +430,7 @@ module.exports = (() => {
 					let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
 
 					if (localFileHash !== gitHubFileHash) {
-						this.doUpdate(localVersion, gitHubVersion);			
+						this.doUpdate(localVersion, gitHubVersion, gitHubScript);			
 						}
 					}
 				}
