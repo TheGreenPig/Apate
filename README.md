@@ -14,7 +14,7 @@ Apate is a tool based on [stegcloak](href=https://github.com/KuroLabs/stegcloak)
 
 
 ## Installing
-Just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/download/v1.0.0/Apate.plugin.js) file and pull it into your plugins Folder or [go to the File directly](https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js) and pull it into the plugins Folder. Make sure that the plugin is turned on in the settings and that you've installed any Libraries, if prompted. You might need to restart too (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
+Just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/download/v1.0.0/Apate.plugin.js) and pull it into your plugins Folder or [go to the File directly](https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js) and pull it into the plugins Folder. Make sure that the plugin is turned on in the settings and that you've installed any Libraries, if prompted. You might need to restart too (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
 
 ## Usage
 ![Demo](Assets/demo.gif)
