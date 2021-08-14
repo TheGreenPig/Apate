@@ -18,6 +18,7 @@ Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then j
 
 ## Usage
 ![Demo](Assets/demo.gif)
+
 Syntax:
 >Cover text \*hidden message*
 
