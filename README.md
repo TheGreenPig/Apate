@@ -10,9 +10,6 @@
 
 Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that allows you to send and read invisible hidden messages through [BetterDiscord](https://betterdiscord.app/). It hides the message using zero width unicode characters and a indicator character at the start of the string. It then goes through all the messages in chat and tries to insert a new `div` with the hidden message.
 
-
-
-
 ## Installing
 Just download the [Apate.plugin.js](https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js) file and pull it into your plugins Folder. Make sure that the plugin is turned on in the settings and that you installed any Libraries, if prompted.
 

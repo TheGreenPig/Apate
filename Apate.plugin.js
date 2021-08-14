@@ -21,6 +21,7 @@ module.exports = (() => {
 			}],
 			version: "0.0.2",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
+			updateUrl: "https://raw.githubusercontent.com/TheGreenPig/Apate/blob/main/Apate.plugin.js"
 		},
 	};
 
@@ -298,7 +299,7 @@ module.exports = (() => {
 					);
 
 					const gitHubScript = await (await window.fetch(
-						`https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js?anti-cache=${Date.now().toString(36)}`
+						`${config.info.updateUrl}?anti-cache=${Date.now().toString(36)}`
 					)).text();
 
 					const localFileHash = (
@@ -340,7 +341,9 @@ module.exports = (() => {
 							localFileHash,
 							gitHubFileHash,
 						});
-						BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
+						BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, 
+													Newest Version: \`${gitHubVersion}\`). It is **highly** recommended to always update to the newest version.
+													Please click \`Download Now\` to install it.`, {
 							confirmText: "Download Now",
 							cancelText: "Cancel",
 							onConfirm: async () => {
@@ -374,6 +377,8 @@ module.exports = (() => {
 						
 					// 	data.forEach(el => store.add(el));
 					// }
+					
+
 
 					let dbconnect = window.indexedDB.open('ApateDB', 1);
 					dbconnect.onupgradeneeded = ev => {
@@ -453,9 +458,9 @@ module.exports = (() => {
 								case ("inline"): {
 									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
 									if (!this.discordEmojis?.[emojiName]) {
-										BdApi.alert("Unsupported Emoji", ":" + emojiName + ": is not supported and will be sent as ```[?]```!");
+										BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`[:${emojiName}:]\`!`);
 									}
-									input += this.discordEmojis?.[emojiName] || "[?]";
+									input += this.discordEmojis?.[emojiName] || "[:"+emojiName+":]";
 									break;
 								}
 							}
