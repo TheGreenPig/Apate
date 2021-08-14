@@ -14,7 +14,7 @@ Apate is a tool based on [stegcloak](href=https://github.com/KuroLabs/stegcloak)
 
 
 ## Installing
-Just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/download/v1.0.0/Apate.plugin.js) and pull it into your plugins Folder. Make sure that the plugin is turned on in the settings and that you've installed any Libraries, if prompted. You might need to restart too (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
+Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/download/v1.0.0/Apate.plugin.js) and pull it into your plugins Folder. Make sure that the plugin is turned on in the settings and that you've installed any Libraries, if prompted. You might need to restart too (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
 
 ## Usage
 ![Demo](Assets/demo.gif)
@@ -27,6 +27,7 @@ Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the mes
 
  - The hidden message should turn *italic* if you did it right
  - There can't be a string after the hidden message. The second `*` should be the last character
+ - Most settings in the App dont require a restart, but it might help
 
 
 ## Authors
