@@ -147,7 +147,6 @@ module.exports = (() => {
 
 			const {
 				DiscordSelectors,
-				getInternalInstance,
 				Settings,
 			} = { ...Api, ...BdApi };
 			const { SettingPanel, SettingGroup, ColorPicker, RadioGroup, Switch } = Settings;
@@ -176,7 +175,6 @@ module.exports = (() => {
 							try {
 								let password = data.coverMsg.replace(data.coverMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
 								return stegCloak.hide(data.hiddenMsg, password, data.coverMsg);
-
 							} catch {
 								return;
 							}
@@ -215,6 +213,7 @@ module.exports = (() => {
 					}
 				});
 			};
+
 			return class Apate extends Plugin {
 				revealWorkers = [];
 				hideWorker;
@@ -226,7 +225,6 @@ module.exports = (() => {
 					encryption: 0,
 					deleteInvalid: true,
 					ctrlToSend: true,
-					unsupportedEmojiName: true,
 					devMode: false
 				};
 				settings = null;
@@ -236,38 +234,22 @@ module.exports = (() => {
 						new RadioGroup('Encryption', `If encryption is on, all your messages will get basic encryption so that you can't copy-paste them into the stegcloak 
 										website without a password. (Recommended)`, this.settings.encryption || 0, options, (i) => {
 							this.settings.encryption = i;
+							console.log(`Set "encrpytion" to ${this.settings.encryption}`);
 						}),
 						new Switch('Delete Invalid String', 'If you enter any text after the second * you will get an error. With this option turned on, Apate automatically deletes any text that is invalid!', this.settings.deleteInvalid, (i) => {
 							this.settings.deleteInvalid = i;
+							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
 						new Switch('Control + Enter to send', 'A helpful shortcut that hides and then sends your message! A restart is needed if you change this (Ctrl+R).', this.settings.ctrlToSend, (i) => {
 							this.settings.ctrlToSend = i;
-						}),
-						new Switch('Send Unsupported Emoji Name', `Unfourtunately some emojis can't be hidden. Turning this on will replace the Emoji with it's name (😎 -> :sunglasses:). If this is off, the emoji will be sent as [?]`, this.settings.unsupportedEmojiName, (i) => {
-							this.settings.unsupportedEmojiName = i;
+							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
 						new SettingGroup('Experimental').append(
 							new Switch('Developer Mode', 'No updates will be made when Developer Mode is on (NOT RECOMMENDED!)', this.settings.devMode, (i) => {
+								this.settings.devMode = i;
+								console.log(`Set "devMode" to ${this.settings.devMode}`)
 								if (i) {
-									BdApi.showConfirmationModal("Are you sure you want to turn on Developer Mode?", "This is not recommended and you will not be informed about any updates!", {
-										confirmText: "No",
-										cancelText: "Yes, turn on Developer Mode",
-										onCancel: async () => {
-											await new Promise(
-												(resolve) => this.settings.devMode = true, BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
-											);
-										},
-										onConfirm: async () => {
-											await new Promise(
-												(resolve) => this.settings.devMode = false,
-											);
-											i = false
-											return;
-										}
-									})
-								}
-								else {
-									this.settings.devMode = false;
+									BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")	
 								}
 							})
 						)
@@ -280,19 +262,25 @@ module.exports = (() => {
 						this.checkForUpdates();
 						// console
 						console.clear();
-						console.log(
-							`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
-							'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; backdround-size: contain;',
-							``,
-							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-						);
 						if (this.settings.devMode) {
-							console.log(`%cIt looks like you're a developer! No updates will be made!`,
-								`color: Firebrick; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+							console.log(
+								`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
+								'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; backdround-size: contain;',
+								``,
+								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+							);
+						}
+						else {
+							console.log(
+								`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
+								'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; backdround-size: contain;',
+								``,
+								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 							);
 						}
 
 					}
+
 					{
 						// Apate CSS
 						BdApi.injectCSS("apateCSS", apateCSS);
@@ -338,7 +326,6 @@ module.exports = (() => {
 
 						this.hideWorker.addEventListener("message", (evt) => {
 							const data = evt.data;
-
 							if (data.hide) {
 								let output = "\u200B" + data.stegCloakedMsg;
 								const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
@@ -351,7 +338,6 @@ module.exports = (() => {
 								const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
 								Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
 								window.setTimeout(() => textArea.children[0].dispatchEvent(press), 100);
-
 
 								document.querySelector(".apateEncryptionKey")?.classList.remove("calculating");
 							}
@@ -388,10 +374,10 @@ module.exports = (() => {
 							await new Promise(
 								(resolve) => BdApi.showConfirmationModal("You canceled the Update", "This is not recommended, but do you whish to turn on Developer Mode so that you don't get asked about updates again? (**Not recommended**)", {
 									confirmText: "No",
-									cancelText: "Yes, turn on Developer Mode",
+									cancelText: "Yes, but how?",
 									onCancel: async () => {
 										await new Promise(
-											(resolve) => this.settings.devMode = true, BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
+											(resolve) => BdApi.alert("To turn on Develeoper Mode go into the Settings pannel -> Experimental and turn in on!")
 										);
 									},
 								})
@@ -401,78 +387,54 @@ module.exports = (() => {
 				}
 				async checkForUpdates() {
 					if (!this.settings.devMode) {
-						const localScript = new TextDecoder().decode(
-							await new Promise((resolve) =>
-								require("fs").readFile(
-									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-									{},
-									(err, data) => resolve(data),
-								),
+					const localScript = new TextDecoder().decode(
+						await new Promise((resolve) =>
+							require("fs").readFile(
+								require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+								{},
+								(err, data) => resolve(data),
 							),
-						);
+						),
+					);
 
-						const gitHubScript = await (await window.fetch(`${config.info.updateUrl}`)).text();
+					const gitHubScript = await (await window.fetch(
+						`${config.info.updateUrl}?anti-cache=${Date.now().toString(36)}`
+					)).text();
 
-						const localFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(localScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
+					const localFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(localScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
 
-						const gitHubFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(gitHubScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
-						let localVersion = config.info.version;
-						let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
+					const gitHubFileHash = (
+						[...(
+							new Uint8Array(
+								await window.crypto.subtle.digest(
+									'SHA-256',
+									new TextEncoder().encode(gitHubScript),
+								),
+							)
+						)].map(
+							(byte) => byte.toString(16).padStart(2, '0')
+						).join('')
+					);
+					let localVersion = config.info.version;
+					let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
 
-						if (localFileHash !== gitHubFileHash) {
-							this.doUpdate(localVersion, gitHubVersion);
+					if (localFileHash !== gitHubFileHash) {
+						this.doUpdate(localVersion, gitHubVersion);			
 						}
 					}
 				}
 
-				// Maybe Nedded in the future?
-				// upToDate(local, remote) {
-				// 	var VPAT = /^\d+(\.\d+){0,2}$/;
-				// 	if (!local || !remote || local.length === 0 || remote.length === 0)
-				// 		return false;
-				// 	if (local == remote)
-				// 		return true;
-				// 	if (VPAT.test(local) && VPAT.test(remote)) {
-				// 		var lparts = local.split('.');
-				// 		while(lparts.length < 3)
-				// 			lparts.push("0");
-				// 		var rparts = remote.split('.');
-				// 		while (rparts.length < 3)
-				// 			rparts.push("0");
-				// 		for (var i=0; i<3; i++) {
-				// 			var l = parseInt(lparts[i], 10);
-				// 			var r = parseInt(rparts[i], 10);
-				// 			if (l === r)
-				// 				continue;
-				// 			return l > r;
-				// 		}
-				// 		return true;
-				// 	} else {
-				// 		return local >= remote;
-				// 	}
-				// }
 
 				async hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
@@ -490,19 +452,30 @@ module.exports = (() => {
 								}
 								case ("inline"): {
 									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
-									if (!this.discordEmojis?.[emojiName]) {
-										if(this.settings.unsupportedEmojiName) {
-											BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`:${emojiName}:\`! To see a list of supported Emojis click https://tinyurl.com/yewmfeyw.`);
-											input += `:${emojiName}:`;
-											break;
+
+									const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
+										if (input.includes("*")) {
+											return (await new Promise((resolve) => {
+												
+												BdApi.showConfirmationModal("Unsupported Emoji", `\`:${emojiName}:\` is not supported and will be sent as \`[:${emojiName}:]\`! To see a list of supported Emojis click https://tinyurl.com/yewmfeyw.`, {
+													confirmText: "Send anyways",
+													cancelText: "Don't send",
+													onConfirm: () => {
+														resolve(true);
+													},
+													onCancel: () => {
+														resolve(false);
+													},
+												});
+											}) ? `[:${emojiName}:]` : undefined);
 										}
-										else {
-											BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`[?]\`!  To see a list of supported Emojis click https://tinyurl.com/yewmfeyw`);
-											input += `[?]`;
-											break;
-										}
-									}
-									input += this.discordEmojis?.[emojiName] || ":" + emojiName + ":";
+										return `:${emojiName}:`;
+									})();
+
+									if (!emojiText) return;
+
+									input += emojiText;
+
 									break;
 								}
 							}
@@ -539,7 +512,7 @@ module.exports = (() => {
 						if(this.settings.deleteInvalid) {
 							editor.moveToRangeOfDocument();
 							editor.delete();
-							editor.insertText(coverMessage + "*" + hiddenMessage + "*");
+							editor.insertText(`${coverMessage}*${hiddenMessage}*`);
 						}
 						return;
 					}
@@ -549,7 +522,7 @@ module.exports = (() => {
 					editor.delete();
 
 					if (this.settings.encryption === 0) {
-						coverMessage = this.getPassword() + coverMessage;
+					coverMessage = this.getPassword() + coverMessage;
 					}
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
