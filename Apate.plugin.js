@@ -21,7 +21,7 @@ module.exports = (() => {
 			}],
 			version: "0.0.2",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
-			updateUrl: "https://raw.githubusercontent.com/TheGreenPig/Apate/blob/main/Apate.plugin.js"
+			updateUrl: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js"
 		},
 	};
 
@@ -138,9 +138,22 @@ module.exports = (() => {
 			const {
 				DiscordSelectors,
 				getInternalInstance,
+				Settings,
 			} = { ...Api, ...BdApi };
+			const { SettingPanel, SettingGroup, ColorPicker, RadioGroup, Switch } = Settings;
 
-
+			const options = [
+				{
+					name: 'Encryption On',
+					desc: 'Your messages will be encrypted.',
+					value: 0
+				},
+				{
+					name: 'Encryption Off',
+					desc: 'Your messages will NOT be encrypted. (Although this is supported, there is a slight chance your messages will not be readable.)',
+					value: 1
+				}
+			];
 			const worker = (stegCloakBlobURL) => {
 				self.importScripts(stegCloakBlobURL);
 				const stegCloak = new StegCloak();
@@ -153,6 +166,7 @@ module.exports = (() => {
 							try {
 								let password = data.coverMsg.replace(data.coverMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
 								return stegCloak.hide(data.hiddenMsg, password, data.coverMsg);
+
 							} catch {
 								return;
 							}
@@ -191,7 +205,6 @@ module.exports = (() => {
 					}
 				});
 			};
-
 			return class Apate extends Plugin {
 				revealWorkers = [];
 				hideWorker;
@@ -199,8 +212,61 @@ module.exports = (() => {
 				numOfWorkers = 16;
 				discordEmojis;
 
+				default = {
+					encryption: 0,
+					deleteInvalid: true,
+					ctrlToSend: true,
+					unsupportedEmojiName: true,
+					devMode: false
+				};
+				settings = null;
+
+				getSettingsPanel() {
+					return SettingPanel.build(() => this.saveSettings(this.settings),
+						new RadioGroup('Encryption', `If encryption is on, all your messages will get basic encryption so that you can't copy-paste them into the stegcloak 
+										website without a password. (Recommended)`, this.settings.encryption || 0, options, (i) => {
+							this.settings.encryption = i;
+						}),
+						new Switch('Delete Invalid String', 'If you enter any text after the second * you will get an error. With this option turned on, Apate automatically deletes any text that is invalid!', this.settings.deleteInvalid, (i) => {
+							this.settings.deleteInvalid = i;
+						}),
+						new Switch('Control + Enter to send', 'A helpful shortcut that hides and then sends your message! A restart is needed if you change this (Ctrl+R).', this.settings.ctrlToSend, (i) => {
+							this.settings.ctrlToSend = i;
+						}),
+						new Switch('Send Unsupported Emoji Name', `Unfourtunately some emojis can't be hidden. Turning this on will replace the Emoji with it's name (😎 -> :sunglasses:). If this is off, the emoji will be sent as [?]`, this.settings.unsupportedEmojiName, (i) => {
+							this.settings.unsupportedEmojiName = i;
+						}),
+						new SettingGroup('Experimental').append(
+							new Switch('Developer Mode', 'No updates will be made when Developer Mode is on (NOT RECOMMENDED!)', this.settings.devMode, (i) => {
+								if (i) {
+									BdApi.showConfirmationModal("Are you sure you want to turn on Developer Mode?", "This is not recommended and you will not be informed about any updates!", {
+										confirmText: "No",
+										cancelText: "Yes, turn on Developer Mode",
+										onCancel: async () => {
+											await new Promise(
+												(resolve) => this.settings.devMode = true, BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
+											);
+										},
+										onConfirm: async () => {
+											await new Promise(
+												(resolve) => this.settings.devMode = false,
+											);
+											i = false
+											return;
+										}
+									})
+								}
+								else {
+									this.settings.devMode = false;
+								}
+							})
+						)
+					);
+				}
+
 				async start() {
 					{
+						this.settings = this.loadSettings(this.default);
 						this.checkForUpdates();
 						// console
 						console.clear();
@@ -210,9 +276,13 @@ module.exports = (() => {
 							``,
 							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 						);
+						if (this.settings.devMode) {
+							console.log(`%cIt looks like you're a developer! No updates will be made!`,
+								`color: Firebrick; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+							);
+						}
 
 					}
-
 					{
 						// global style
 						document.querySelector("#globalStyleEl")?.remove();
@@ -262,6 +332,7 @@ module.exports = (() => {
 
 						this.hideWorker.addEventListener("message", (evt) => {
 							const data = evt.data;
+
 							if (data.hide) {
 								let output = "\u200B" + data.stegCloakedMsg;
 								const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
@@ -275,6 +346,7 @@ module.exports = (() => {
 								Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
 								window.setTimeout(() => textArea.children[0].dispatchEvent(press), 100);
 
+
 								document.querySelector(".apateEncryptionKey")?.classList.remove("calculating");
 							}
 						});
@@ -287,133 +359,85 @@ module.exports = (() => {
 						)).json();
 					}
 				};
-				async doUpdate() {
-					const localScript = new TextDecoder().decode(
-						await new Promise((resolve) =>
-							require("fs").readFile(
-								require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-								{},
-								(err, data) => resolve(data),
-							),
-						),
+				async doUpdate(localVersion, gitHubVersion) {
+					console.log(
+						`%cNew Update ${gitHubVersion} for Apate avalible!`,
+						`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 					);
-
-					const gitHubScript = await (await window.fetch(
-						`${config.info.updateUrl}?anti-cache=${Date.now().toString(36)}`
-					)).text();
-
-					const localFileHash = (
-						[...(
-							new Uint8Array(
-								await window.crypto.subtle.digest(
-									'SHA-256',
-									new TextEncoder().encode(localScript),
+					BdApi.showConfirmationModal(`There is a new update for ${config.info.name}!`, `(Current version: \`${localVersion}\`, 
+												Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
+						confirmText: "Download Now",
+						cancelText: "Cancel",
+						onConfirm: async () => {
+							await new Promise(
+								(resolve) => require("fs").writeFile(
+									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+									gitHubScript,
+									resolve,
 								),
-							)
-						)].map(
-							(byte) => byte.toString(16).padStart(2, '0')
-						).join('')
-					);
-
-					const gitHubFileHash = (
-						[...(
-							new Uint8Array(
-								await window.crypto.subtle.digest(
-									'SHA-256',
-									new TextEncoder().encode(gitHubScript),
-								),
-							)
-						)].map(
-							(byte) => byte.toString(16).padStart(2, '0')
-						).join('')
-					);
-					let localVersion = config.info.version;
-					let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
-
-					if (localFileHash !== gitHubFileHash) {
-						console.log(
-							`%cNew Update ${gitHubVersion} for Apate avalible!`,
-							`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-						);
-						console.log({
-							localScript,
-							gitHubScript,
-							localFileHash,
-							gitHubFileHash,
-						});
-						BdApi.showConfirmationModal("New Update", `There is a new update for ${config.info.name}! (Current version: \`${localVersion}\`, 
-													Newest Version: \`${gitHubVersion}\`). It is **highly** recommended to always update to the newest version.
-													Please click \`Download Now\` to install it.`, {
-							confirmText: "Download Now",
-							cancelText: "Cancel",
-							onConfirm: async () => {
-								await new Promise(
-									(resolve) => require("fs").writeFile(
-										require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-										gitHubScript,
-										resolve,
-									),
-								);
-							},
-						});
-					}
+							);
+						},
+						onCancel: async () => {
+							await new Promise(
+								(resolve) => BdApi.showConfirmationModal("You canceled the Update", "This is not recommended, but do you whish to turn on Developer Mode so that you don't get asked about updates again? (**Not recommended**)", {
+									confirmText: "No",
+									cancelText: "Yes, turn on Developer Mode",
+									onCancel: async () => {
+										await new Promise(
+											(resolve) => this.settings.devMode = true, BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
+										);
+									},
+								})
+							);
+						}
+					});
 				}
 				async checkForUpdates() {
-					// To turn on dev mode
-					// let dbconnect = window.indexedDB.open('ApateDB', 1);
-					// dbconnect.onupgradeneeded = ev => {
-					// 	console.log('Upgrade DB..');
-					// 	const db = ev.target.result;
-					// 	const store = db.createObjectStore('User', { keyPath: 'id' });
-					// 	store.createIndex('Is_dev', 'Is_dev', { unique: false });
-					// }
-					// dbconnect.onsuccess = ev => {
-					// 	const db = ev.target.result;
-					// 	const transaction = db.transaction('User', 'readwrite');
-					// 	const store = transaction.objectStore('User');
-					// 	const data = [
-					// 		{ id: 0, Is_dev: 'true' },
-					// 	];
-						
-					// 	data.forEach(el => store.add(el));
-					// }
-					
+					if (!this.settings.devMode) {
+						const localScript = new TextDecoder().decode(
+							await new Promise((resolve) =>
+								require("fs").readFile(
+									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+									{},
+									(err, data) => resolve(data),
+								),
+							),
+						);
 
+						const gitHubScript = await (await window.fetch(`${config.info.updateUrl}`)).text();
 
-					let dbconnect = window.indexedDB.open('ApateDB', 1);
-					dbconnect.onupgradeneeded = ev => {
-						ev.target.transaction.abort();
-						this.doUpdate();
-						return;
-					}
-					dbconnect.onsuccess = ev => {
-						try {
-							const db = ev.target.result;
-							const transaction = db.transaction('User', 'readwrite')
-							transaction.oncomplete = ev => {
-								const store = db.transaction('User', 'readonly').objectStore('User');
-								const query = store.get(0);
-								query.onsuccess = ev => {
-									let is_dev = ev.target.result.Is_dev.toLowerCase() == 'true' ? true : false;
-									if (!is_dev) {
-										this.doUpdate();
-										return;
-									}
-									else {
-										console.log(`%cIt looks like you're a developer! No updates will be made!`,
-											`color: Firebrick; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-										);
-									}
-								};
-							};
+						const localFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(localScript),
+									),
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
 
-						} catch (error) {
-							this.doUpdate();
-							return;
+						const gitHubFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(gitHubScript),
+									),
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
+						let localVersion = config.info.version;
+						let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
+
+						if (localFileHash !== gitHubFileHash) {
+							this.doUpdate(localVersion, gitHubVersion);
 						}
 					}
-
-
 				}
 				// Maybe Nedded in the future?
 				// upToDate(local, remote) {
@@ -458,9 +482,18 @@ module.exports = (() => {
 								case ("inline"): {
 									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
 									if (!this.discordEmojis?.[emojiName]) {
-										BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`[:${emojiName}:]\`!`);
+										if(this.settings.unsupportedEmojiName) {
+											BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`:${emojiName}:\`! To see a list of supported Emojis click https://tinyurl.com/yewmfeyw.`);
+											input += `:${emojiName}:`;
+											break;
+										}
+										else {
+											BdApi.alert("Unsupported Emoji", `:${emojiName}: is not supported and will be sent as \`[?]\`!  To see a list of supported Emojis click https://tinyurl.com/yewmfeyw`);
+											input += `[?]`;
+											break;
+										}
 									}
-									input += this.discordEmojis?.[emojiName] || "[:"+emojiName+":]";
+									input += this.discordEmojis?.[emojiName] || ":" + emojiName + ":";
 									break;
 								}
 							}
@@ -487,9 +520,11 @@ module.exports = (() => {
 					}
 					if (invalidEndString) {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
-						editor.moveToRangeOfDocument();
-						editor.delete();
-						editor.insertText(coverMessage + "*" + hiddenMessage + "*");
+						if(this.settings.deleteInvalid) {
+							editor.moveToRangeOfDocument();
+							editor.delete();
+							editor.insertText(coverMessage + "*" + hiddenMessage + "*");
+						}
 						return;
 					}
 					if (!/ ./.test(coverMessage)) {
@@ -500,7 +535,9 @@ module.exports = (() => {
 					editor.moveToRangeOfDocument();
 					editor.delete();
 
-					coverMessage = this.getPassword() + coverMessage;
+					if (this.settings.encryption === 0) {
+						coverMessage = this.getPassword() + coverMessage;
+					}
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
 
@@ -532,12 +569,15 @@ module.exports = (() => {
 
 					button = form.querySelector(".keyButton");
 
-					form.addEventListener("keyup", (evt) => {
-						if (evt.key === "Enter" && evt.ctrlKey) {
-							evt.preventDefault();
-							this.hideMessage();
-						}
-					});
+					if(this.settings.ctrlToSend) {
+
+						form.addEventListener("keyup", (evt) => {
+							if (evt.key === "Enter" && evt.ctrlKey) {
+								evt.preventDefault();
+								this.hideMessage();
+							}
+						});
+					}
 
 					button.addEventListener("click", () => this.hideMessage());
 				};
