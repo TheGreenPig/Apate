@@ -176,7 +176,7 @@ module.exports = (() => {
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
-								console.error(`%c"${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}"`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
+								console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
 								return;
 							} catch {
 								return;
@@ -591,6 +591,6 @@ module.exports = (() => {
 				};
 			};
 		};
-		return plugin(Plugin, Api);;
+		return plugin(Plugin, Api);
 	})(global.ZeresPluginLibrary.buildPlugin(config));
 })();

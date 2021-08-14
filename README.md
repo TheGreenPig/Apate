@@ -31,7 +31,7 @@ Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the mes
 
 ## Authors
 
-<img src="Assets/logo.svg" alt="Apate Logo" width="80" align="right"></img>
+<img src="Assets/logo.svg" alt="Apate Logo" width="80"></img>
 ><a href="https://github.com/BenjaminAster"><img src="https://github.com/BenjaminAster.png?size=60"><p>BenjaminAster</p></a>
 ><a href="https://github.com/TheGreenPig"><img src="https://github.com/thegreenpig.png?size=60"><p>TheGreenPig</p></a>
 
