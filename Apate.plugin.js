@@ -1,9 +1,19 @@
 /**
  * @name Apate
  * @version 0.0.2
+ * @description Hide your secret Discord messages in other messages!
+ * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
- * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
-*/
+ * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
+ */
+
+/* 
+ * BetterDiscord BdApi documentation:
+ *   https://github.com/BetterDiscord/BetterDiscord/wiki/Creating-Plugins
+ * 
+ * BetterDiscord file structure documentation:
+ *   https://github.com/BetterDiscord/documentation/blob/main/plugins/file_structure.md
+ */
 
 module.exports = (() => {
 	const config = {
@@ -47,93 +57,93 @@ module.exports = (() => {
 		stop() { };
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+			const apateCSS = [
+				`.apateKeyButtonContainer {`,
+				`	display: flex;`,
+				`	justify-content: center;`,
+				`	align-items: center;`,
+				`}`,
+				`.apateEncryptionKeyButton {`,
+				`	transition: all 300ms ease;`,
+				`	overflow: hidden;`,
+				`	font-size: 1rem;`,
+				`	display: flex;`,
+				`	justify-content: center;`,
+				`	align-items: center;`,
+				`	clip-path: inset(0);`,
+				`	width: 3em;`,
+				`	height: 2.8em;`,
+				`}`,
+				`.apateEncryptionKeyButton:hover {`,
+				`	width: 4em;`,
+				`}`,
+				`.apateEncryptionKeyContainer {`,
+				`	padding: 0;`,
+				`	width: 5rem;`,
+				`	height: 5rem;`,
+				`}`,
+				`.apateEncryptionKey {`,
+				`	transition: all 300ms ease;`,
+				`	font-size: 1.3rem;`,
+				`	width: 2em;`,
+				`	height: 2em;`,
+				`}`,
+				`.apateEncryptionKey:hover {`,
+				`	font-size: 2em;`,
+				`	fill: dodgerBlue;`,
+				`	animation: apateRotate 0.5s ease;`,
+				`	animation-iteration-count: 1; `,
+				`}`,
+				`.apateEncryptionKey.calculating {`,
+				`	fill: orange;`,
+				`	animation: apateRotate 1s linear;`,
+				`	animation-direction: reverse;`,
+				`	animation-iteration-count: infinite;`,
+				`}`,
+				`@keyframes apateRotate {`,
+				`	0%   { transform: rotate(0deg);   }`,
+				`	100% { transform: rotate(360deg); }`,
+				`}`,
+				`.apateHiddenMessage {`,
+				`	border: 2px solid var(--interactive-muted);`,
+				`	color: var(--text-normal);`,
+				`	padding: .5em;`,
+				`	margin: .3em 0;`,
+				`	width: fit-content;`,
+				`	border-radius: 0 .8em .8em .8em;`,
+				`	background-image: `,
+				`		repeating-linear-gradient(-45deg, `,
+				`		var(--background-tertiary) 0em, `,
+				`		var(--background-tertiary) 1em, `,
+				`		var(--background-floating) 1em, `,
+				`		var(--background-floating) 2em);`,
+				`}`,
+				`.apateHiddenMessage.loading {`,
+				`	font-style: italic;`,
+				`	color: var(--text-muted);`,
+				`}`,
+				`.apateHiddenMessage.loading::after {`,
+				`	content: "[loading hidden message...]";`,
+				`}`,
+			].join("\n");
 
-			const globalStyle =
-				`.apateKeyButtonContainer {` +
-				`	display: flex;` +
-				`	justify-content: center;` +
-				`	align-items: center;` +
-				`}` +
-				`.apateEncryptionKeyButton {` +
-				`	transition: all 300ms ease;` +
-				`	overflow: hidden;` +
-				`	font-size: 1rem;` +
-				`	display: flex;` +
-				`	justify-content: center;` +
-				`	align-items: center;` +
-				`	clip-path: inset(0);` +
-				`	width: 3em;` +
-				`	height: 2.8em;` +
-				`}` +
-				`.apateEncryptionKeyButton:hover {` +
-				`	width: 4em;` +
-				`}` +
-				`.apateEncryptionKeyContainer {` +
-				`	padding: 0;` +
-				`	width: 5rem;` +
-				`	height: 5rem;` +
-				`}` +
-				`.apateEncryptionKey {` +
-				`	transition: all 300ms ease;` +
-				`	font-size: 1.3rem;` +
-				`	width: 2em;` +
-				`	height: 2em;` +
-				`}` +
-				`.apateEncryptionKey:hover {` +
-				`	font-size: 2em;` +
-				`	fill: dodgerBlue;` +
-				`	animation: apateRotate 0.5s ease;` +
-				`	animation-iteration-count: 1; ` +
-				`}` +
-				`.apateEncryptionKey.calculating {` +
-				`	fill: orange;` +
-				`	animation: apateRotate 1s linear;` +
-				`	animation-direction: reverse;` +
-				`	animation-iteration-count: infinite;` +
-				`}` +
-				`@keyframes apateRotate {` +
-				`	0%   { transform: rotate(0deg);   }` +
-				`	100% { transform: rotate(360deg); }` +
-				`}` +
-				`.apateHiddenMessage {` +
-				`	border: 2px solid var(--interactive-muted);` +
-				`	color: var(--text-normal);` +
-				`	padding: .5em;` +
-				`	margin: .3em 0;` +
-				`	width: fit-content;` +
-				`	border-radius: 0 .8em .8em .8em;` +
-				`	background-image: ` +
-				`		repeating-linear-gradient(-45deg, ` +
-				`		var(--background-tertiary) 0em, ` +
-				`		var(--background-tertiary) 1em, ` +
-				`		var(--background-floating) 1em, ` +
-				`		var(--background-floating) 2em);` +
-				`}` +
-				`.apateHiddenMessage.loading {` +
-				`	font-style: italic;` +
-				`	color: var(--text-muted);` +
-				`}` +
-				`.apateHiddenMessage.loading::after {` +
-				`	content: "[loading hidden message...]";` +
-				`}`;
-
-			const buttonHTML =
-				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">` +
-				`	<button aria-label="Send Message" tabindex="0" type="button" ` +
-				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button ` +
-				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"` +
-				`	>` +
-				`		<div class="apateEncryptionKeyContainer contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">` +
-				`			<svg xmlns="http://www.w3.org/2000/svg" class="apateEncryptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" fill="currentColor">` +
-				`				<path d="M0 0h24v24H0z" fill="none" />` +
-				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,` +
-				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" ` +
-				`				/>` +
-				`			</svg>` +
-				`		</div>` +
-				`	</button>` +
-				`</div>`;
-
+			const buttonHTML = [
+				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">`,
+				`	<button aria-label="Send Message" tabindex="0" type="button" `,
+				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button `,
+				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"`,
+				`	>`,
+				`		<div class="apateEncryptionKeyContainer contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">`,
+				`			<svg xmlns="http://www.w3.org/2000/svg" class="apateEncryptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" fill="currentColor">`,
+				`				<path d="M0 0h24v24H0z" fill="none" />`,
+				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,`,
+				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" `,
+				`				/>`,
+				`			</svg>`,
+				`		</div>`,
+				`	</button>`,
+				`</div>`,
+			].join("\n");
 
 			const {
 				DiscordSelectors,
@@ -191,7 +201,7 @@ module.exports = (() => {
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
-								console.error("%c\"" + cloaked + "\"%c had a %cfaulty password%c! Output: %c\"" + revealedMessage + "\"", "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
+								console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
 								return;
 							} catch {
 								return;
@@ -284,14 +294,10 @@ module.exports = (() => {
 
 					}
 					{
-						// global style
-						document.querySelector("#globalStyleEl")?.remove();
-
-						let globalStyleEl = document.createElement("style");
-						globalStyleEl.textContent = globalStyle;
-						globalStyleEl.id = "globalStyleEl";
-						document.head.append(globalStyleEl);
+						// Apate CSS
+						BdApi.injectCSS("apateCSS", apateCSS);
 					}
+
 					{
 						// key button
 						this.addKeyButton();
@@ -336,7 +342,7 @@ module.exports = (() => {
 							if (data.hide) {
 								let output = "\u200B" + data.stegCloakedMsg;
 								const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-								const editor = getInternalInstance(textArea).return.stateNode.editorRef;
+								const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
 								editor.moveToRangeOfDocument();
 								editor.delete();
@@ -351,6 +357,7 @@ module.exports = (() => {
 							}
 						});
 					}
+
 					{
 						// Discord emojis
 
@@ -439,6 +446,7 @@ module.exports = (() => {
 						}
 					}
 				}
+
 				// Maybe Nedded in the future?
 				// upToDate(local, remote) {
 				// 	var VPAT = /^\d+(\.\d+){0,2}$/;
@@ -465,9 +473,10 @@ module.exports = (() => {
 				// 		return local >= remote;
 				// 	}
 				// }
-				hideMessage() {
+
+				async hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-					let input = (() => {
+					let input = await (async () => {
 						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
 						let input = "";
 
@@ -504,17 +513,24 @@ module.exports = (() => {
 
 					if (!input) return;
 
+					console.log({ input });
+
 					let RegExpGroups = (
-						(/^(?<coverMessage>([^\*]+))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
+						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
 							.exec(input.trim())?.groups
 					);
 
-					let coverMessage = RegExpGroups?.coverMessage?.trim();
+					let coverMessage = RegExpGroups?.coverMessage?.trim() || "\u200b";
 					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
 					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
 
-					const editor = getInternalInstance(textArea).return.stateNode.editorRef;
-					if (!coverMessage || !hiddenMessage) {
+					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
+
+					if (!coverMessage.includes(" ")) {
+						coverMessage += " \u200b";
+					}
+
+					if (!hiddenMessage) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
 						return;
 					}
@@ -526,9 +542,6 @@ module.exports = (() => {
 							editor.insertText(coverMessage + "*" + hiddenMessage + "*");
 						}
 						return;
-					}
-					if (!/ ./.test(coverMessage)) {
-						coverMessage += " \u200b";
 					}
 
 
@@ -633,9 +646,10 @@ module.exports = (() => {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
 					}
+					BdApi.clearCSS("apateCSS");
 				};
 			};
 		};
-		return plugin(Plugin, Api);;
+		return plugin(Plugin, Api);
 	})(global.ZeresPluginLibrary.buildPlugin(config));
 })();
