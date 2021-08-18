@@ -31,7 +31,7 @@ module.exports = (() => {
 			}],
 			version: "1.0.0",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
-			updateUrl: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js"
+			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js"
 		},
 	};
 
@@ -99,6 +99,11 @@ module.exports = (() => {
 				`	animation: apateRotate 1s linear;`,
 				`	animation-direction: reverse;`,
 				`	animation-iteration-count: infinite;`,
+				`}`,
+				`.apateHiddenImg {`,
+				`	padding: 0.4em;`,
+				`	max-width: 40em;`,
+				`	max-height: 40em;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -311,6 +316,12 @@ module.exports = (() => {
 								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
 									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
 									hiddenMessageDiv.textContent = data.hiddenMsg;
+									if(/(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi.test(data.hiddenMsg)) {
+										//Message has link
+										let imageLink = data.hiddenMsg.match(/(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi)[0];
+										
+										hiddenMessageDiv.innerHTML = `${data.hiddenMsg.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
+									}
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
 								}
