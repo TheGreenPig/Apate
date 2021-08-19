@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.1
+ * @version 1.0.2
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -29,7 +29,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.1",
+			version: "1.0.2",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 		},
@@ -53,8 +53,6 @@ module.exports = (() => {
 				},
 			});
 		};
-		start() { };
-		stop() { };
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
 			const apateCSS = [
@@ -154,7 +152,7 @@ module.exports = (() => {
 				DiscordSelectors,
 				Settings,
 			} = { ...Api, ...BdApi };
-			const { SettingPanel, SettingGroup, ColorPicker, RadioGroup, Switch } = Settings;
+			const { SettingPanel, SettingGroup, RadioGroup, Switch } = Settings;
 
 			const options = [
 				{
@@ -245,28 +243,24 @@ module.exports = (() => {
 							this.settings.deleteInvalid = i;
 							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
-						new Switch('Control + Enter to send', 'A helpful shortcut that hides and then sends your message! A restart is needed if you change this (Ctrl+R).', this.settings.ctrlToSend, (i) => {
+						new Switch('Control + Enter to send', 'A helpful shortcut that hides and then sends your message!', this.settings.ctrlToSend, (i) => {
 							this.settings.ctrlToSend = i;
+							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
-						new SettingGroup('Experimental').append(
-							new Switch('Developer Mode', 'No updates will be made when Developer Mode is on (NOT RECOMMENDED!)', this.settings.devMode, (i) => {
-								this.settings.devMode = i;
-								console.log(`Set "devMode" to ${this.settings.devMode}`)
-								if (i) {
-									BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
-								}
-							})
-						)
 					);
 				}
 
 				async start() {
 					{
 						this.settings = this.loadSettings(this.default);
-						this.checkForUpdates();
 						// console
 						console.clear();
+						for(const author of config.info.authors) {
+							if(author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser().id) {
+								this.settings.devMode = true;
+							}
+						}
 						if (this.settings.devMode) {
 							console.log(
 								`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
@@ -386,90 +380,6 @@ module.exports = (() => {
 						)).json();
 					}
 				};
-				async doUpdate(localVersion, gitHubVersion, gitHubScript) {
-					console.log(
-						`%cNew Update ${gitHubVersion} for Apate avalible!`,
-						`color: aqua;background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-					);
-					BdApi.showConfirmationModal(`There is a new update for ${config.info.name}!`, `(Current version: \`${localVersion}\`, 
-												Newest Version: \`${gitHubVersion}\`). Please click \`Download Now\` to install it.`, {
-						confirmText: "Download Now",
-						cancelText: "Cancel",
-						onConfirm: async () => {
-							await new Promise(
-								(resolve) => require("fs").writeFile(
-									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-									gitHubScript,
-									resolve,
-								),
-							);
-						},
-						onCancel: async () => {
-							await new Promise(
-								(resolve) => BdApi.showConfirmationModal("You canceled the Update", "This is not recommended, but do you whish to turn on Developer Mode so that you don't get asked about updates again? (**Not recommended**)", {
-									confirmText: "No",
-									cancelText: "Yes, but how?",
-									onCancel: async () => {
-										await new Promise(
-											(resolve) => BdApi.alert("To turn on Develeoper Mode go into the Settings pannel -> Experimental and turn in on!")
-										);
-									},
-								})
-							);
-						}
-					});
-				}
-				async checkForUpdates() {
-					if (!this.settings.devMode) {
-						const localScript = new TextDecoder().decode(
-							await new Promise((resolve) =>
-								require("fs").readFile(
-									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-									{},
-									(err, data) => resolve(data),
-								),
-							),
-						);
-
-						const gitHubScript = await (await window.fetch(
-							`${config.info.github_raw}?anti-cache=${Date.now().toString(36)}`
-						)).text();
-
-						const localFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(localScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
-
-						const gitHubFileHash = (
-							[...(
-								new Uint8Array(
-									await window.crypto.subtle.digest(
-										'SHA-256',
-										new TextEncoder().encode(gitHubScript),
-									),
-								)
-							)].map(
-								(byte) => byte.toString(16).padStart(2, '0')
-							).join('')
-						);
-						let localVersion = config.info.version;
-					
-						let gitHubVersion = gitHubScript?.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
-
-						if (localFileHash !== gitHubFileHash) {
-							this.doUpdate(localVersion, gitHubVersion, gitHubScript);
-						}
-					}
-				}
-
 
 				async hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
