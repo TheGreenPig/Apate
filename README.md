@@ -14,7 +14,7 @@ Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that
 
 
 ## Installing
-Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/latest/download/Apate.plugin.js) and pull it into your plugins Folder. Make sure that the plugin is turned on in the settings and that you've installed the ZeresPluginLibrary (also make sure that is turned on). Then restart (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
+Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/latest/download/Apate.plugin.js) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. Then go to the Pluin settings and turn both Apate and ZeresPluginLibrary on. Then restart (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
 
 ## Usage
 ![Demo](Assets/demo.gif)
