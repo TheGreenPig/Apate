@@ -5,6 +5,7 @@
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
+ * @authorLink https://github.com/TheGreenPig/Apate#authors, https://google.com
  */
 
 /* 
@@ -32,6 +33,7 @@ module.exports = (() => {
 			version: "1.0.2",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
+			github: "https://github.com/TheGreenPig/Apate"
 		},
 	};
 
@@ -55,7 +57,7 @@ module.exports = (() => {
 		};
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
-			const apateCSS = [
+			let apateCSS = [
 				`.apateKeyButtonContainer {`,
 				`	display: flex;`,
 				`	justify-content: center;`,
@@ -72,9 +74,6 @@ module.exports = (() => {
 				`	width: 3em;`,
 				`	height: 2.8em;`,
 				`}`,
-				`.apateEncryptionKeyButton:hover {`,
-				`	width: 4em;`,
-				`}`,
 				`.apateEncryptionKeyContainer {`,
 				`	padding: 0;`,
 				`	width: 5rem;`,
@@ -85,18 +84,6 @@ module.exports = (() => {
 				`	font-size: 1.3rem;`,
 				`	width: 2em;`,
 				`	height: 2em;`,
-				`}`,
-				`.apateEncryptionKey:hover {`,
-				`	font-size: 2em;`,
-				`	fill: dodgerBlue;`,
-				`	animation: apateRotate 0.5s ease;`,
-				`	animation-iteration-count: 1; `,
-				`}`,
-				`.apateEncryptionKey.calculating {`,
-				`	fill: orange;`,
-				`	animation: apateRotate 1s linear;`,
-				`	animation-direction: reverse;`,
-				`	animation-iteration-count: infinite;`,
 				`}`,
 				`.apateHiddenImg {`,
 				`	padding: 0.4em;`,
@@ -152,7 +139,7 @@ module.exports = (() => {
 				DiscordSelectors,
 				Settings,
 			} = { ...Api, ...BdApi };
-			const { SettingPanel, SettingGroup, RadioGroup, Switch } = Settings;
+			const { SettingPanel, SettingGroup, RadioGroup, Switch, Slider, Textbox} = Settings;
 
 			const options = [
 				{
@@ -228,9 +215,12 @@ module.exports = (() => {
 					encryption: 0,
 					deleteInvalid: true,
 					ctrlToSend: true,
+					animate: true,
 					devMode: false
 				};
 				settings = null;
+
+				
 
 				getSettingsPanel() {
 					return SettingPanel.build(() => this.saveSettings(this.settings),
@@ -248,16 +238,19 @@ module.exports = (() => {
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
+						new Switch('Animate', 'If the Key should be animated or not. If you change this, please Restart (Ctrl + R)', this.settings.animate, (i) => {
+							this.settings.animate = i;
+							console.log(`Set "animate" to ${this.settings.animate}`);
+						}),
 					);
 				}
-
 				async start() {
 					{
 						this.settings = this.loadSettings(this.default);
 						// console
 						console.clear();
 						for(const author of config.info.authors) {
-							if(author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser().id) {
+							if(author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
 								this.settings.devMode = true;
 							}
 						}
@@ -282,6 +275,24 @@ module.exports = (() => {
 
 					{
 						// Apate CSS
+						if(this.settings.animate) {
+							apateCSS += [
+							`.apateEncryptionKey:hover {`,
+							`	font-size: 2em;`,
+							`	fill: dodgerBlue;`,
+							`	animation: apateRotate 0.5s ease;`,
+							`	animation-iteration-count: 1; `,
+							`}`,
+							`.apateEncryptionKey.calculating {`,
+							`	fill: orange;`,
+							`	animation: apateRotate 1s linear;`,
+							`	animation-direction: reverse;`,
+							`	animation-iteration-count: infinite;`,
+							`}`,
+							`.apateEncryptionKeyButton:hover {`,
+							`	width: 4em;`,
+							`}`,].join("\n");
+						}
 						BdApi.injectCSS("apateCSS", apateCSS);
 					}
 
@@ -387,7 +398,7 @@ module.exports = (() => {
 						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
 						let input = "";
 
-						console.log(textSegments);
+						// console.log(textSegments);
 
 						for (let textSegment of textSegments) {
 							switch (textSegment.getAttribute("data-slate-object")) {
