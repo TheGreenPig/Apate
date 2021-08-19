@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.0
+ * @version 1.0.1
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -29,9 +29,9 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.0",
+			version: "1.0.1",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
-			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js"
+			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 		},
 	};
 
@@ -164,7 +164,7 @@ module.exports = (() => {
 				},
 				{
 					name: 'Encryption Off',
-					desc: 'Your messages will NOT be encrypted. (Although this is supported, there is a slight chance your messages will not be readable.)',
+					desc: 'Your messages will NOT be encrypted.',
 					value: 1
 				}
 			];
@@ -254,7 +254,7 @@ module.exports = (() => {
 								this.settings.devMode = i;
 								console.log(`Set "devMode" to ${this.settings.devMode}`)
 								if (i) {
-									BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")	
+									BdApi.alert("You turned on the Developer Mode! You will not be informed about any updates! (You can turn it off again under the Experimental settings)")
 								}
 							})
 						)
@@ -316,11 +316,34 @@ module.exports = (() => {
 								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
 									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
 									hiddenMessageDiv.textContent = data.hiddenMsg;
-									if(/(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi.test(data.hiddenMsg)) {
-										//Message has link
-										let imageLink = data.hiddenMsg.match(/(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi)[0];
-										
-										hiddenMessageDiv.innerHTML = `${data.hiddenMsg.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
+									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
+									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+									if (urlRegex.test(data.hiddenMsg)) {
+										let linkArray = data.hiddenMsg.match(urlRegex);
+										let hasImage = false;
+									
+
+										for (let i = 0; i < linkArray.length; i++) {
+											if (imageRegex.test(linkArray[i]) && hasImage === false) {
+												//Message has image link
+												let imageLink = linkArray[i];
+												data.hiddenMsg = `${data.hiddenMsg.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
+												hasImage = true;
+
+											}
+											else {
+												data.hiddenMsg = data.hiddenMsg.replace(linkArray[i],
+													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
+																title="${linkArray[i]}" 
+																href="${linkArray[i]}" 
+																rel="noreferrer noopener" 
+																target="_blank" 
+																role="button" 
+																tabindex="0"">
+																${linkArray[i]}</a>`);
+											}
+										}
+										hiddenMessageDiv.innerHTML = data.hiddenMsg;
 									}
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
@@ -398,50 +421,51 @@ module.exports = (() => {
 				}
 				async checkForUpdates() {
 					if (!this.settings.devMode) {
-					const localScript = new TextDecoder().decode(
-						await new Promise((resolve) =>
-							require("fs").readFile(
-								require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
-								{},
-								(err, data) => resolve(data),
+						const localScript = new TextDecoder().decode(
+							await new Promise((resolve) =>
+								require("fs").readFile(
+									require("path").join(BdApi.Plugins.folder, "Apate.plugin.js"),
+									{},
+									(err, data) => resolve(data),
+								),
 							),
-						),
-					);
+						);
 
-					const gitHubScript = await (await window.fetch(
-						`${config.info.updateUrl}?anti-cache=${Date.now().toString(36)}`
-					)).text();
+						const gitHubScript = await (await window.fetch(
+							`${config.info.github_raw}?anti-cache=${Date.now().toString(36)}`
+						)).text();
 
-					const localFileHash = (
-						[...(
-							new Uint8Array(
-								await window.crypto.subtle.digest(
-									'SHA-256',
-									new TextEncoder().encode(localScript),
-								),
-							)
-						)].map(
-							(byte) => byte.toString(16).padStart(2, '0')
-						).join('')
-					);
+						const localFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(localScript),
+									),
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
 
-					const gitHubFileHash = (
-						[...(
-							new Uint8Array(
-								await window.crypto.subtle.digest(
-									'SHA-256',
-									new TextEncoder().encode(gitHubScript),
-								),
-							)
-						)].map(
-							(byte) => byte.toString(16).padStart(2, '0')
-						).join('')
-					);
-					let localVersion = config.info.version;
-					let gitHubVersion = gitHubScript.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
+						const gitHubFileHash = (
+							[...(
+								new Uint8Array(
+									await window.crypto.subtle.digest(
+										'SHA-256',
+										new TextEncoder().encode(gitHubScript),
+									),
+								)
+							)].map(
+								(byte) => byte.toString(16).padStart(2, '0')
+							).join('')
+						);
+						let localVersion = config.info.version;
+					
+						let gitHubVersion = gitHubScript?.match(/version:.*"/)[0].replace(/(\"*)([^\d\.]*)/g, ""); //we need a better way to get the github version
 
-					if (localFileHash !== gitHubFileHash) {
-						this.doUpdate(localVersion, gitHubVersion, gitHubScript);			
+						if (localFileHash !== gitHubFileHash) {
+							this.doUpdate(localVersion, gitHubVersion, gitHubScript);
 						}
 					}
 				}
@@ -467,7 +491,7 @@ module.exports = (() => {
 									const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
 										if (input.includes("*")) {
 											return (await new Promise((resolve) => {
-												
+
 												BdApi.showConfirmationModal("Unsupported Emoji", `\`:${emojiName}:\` is not supported and will be sent as \`[:${emojiName}:]\`! To see a list of supported Emojis click https://tinyurl.com/yewmfeyw.`, {
 													confirmText: "Send anyways",
 													cancelText: "Don't send",
@@ -520,12 +544,19 @@ module.exports = (() => {
 					}
 					if (invalidEndString) {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
-						if(this.settings.deleteInvalid) {
+						if (this.settings.deleteInvalid) {
 							editor.moveToRangeOfDocument();
 							editor.delete();
 							editor.insertText(`${coverMessage}*${hiddenMessage}*`);
 						}
 						return;
+					}
+					let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
+					if (hiddenMessage.match(imageRegex)?.length > 1) {
+						BdApi.alert("Multiple Images", 
+									`You have two or more links that lead to images. 
+									Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
+									will be displayed, the other ones will appear as links.`)
 					}
 
 
@@ -533,7 +564,7 @@ module.exports = (() => {
 					editor.delete();
 
 					if (this.settings.encryption === 0) {
-					coverMessage = this.getPassword() + coverMessage;
+						coverMessage = this.getPassword() + coverMessage;
 					}
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
@@ -566,7 +597,7 @@ module.exports = (() => {
 
 					button = form.querySelector(".keyButton");
 
-					if(this.settings.ctrlToSend) {
+					if (this.settings.ctrlToSend) {
 
 						form.addEventListener("keyup", (evt) => {
 							if (evt.key === "Enter" && evt.ctrlKey) {
