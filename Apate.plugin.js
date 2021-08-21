@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.2
+ * @version 1.0.3
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -30,11 +30,21 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.2",
+			version: "1.0.3",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
+		changelog: [
+			{
+				title: "New Features:",
+				type: "added",
+				items: [
+					"Added the ability to turn off animations.",
+					"Added the ability to not display images."
+				]
+			}
+		],
 	};
 
 	return !global.ZeresPluginLibrary ? class {
@@ -114,6 +124,31 @@ module.exports = (() => {
 				`}`,
 				`.apateHiddenMessage.loading::after {`,
 				`	content: "[loading hidden message...]";`,
+				`	animation: changeLetter 1s linear infinite;`,
+				`}`,
+			].join("\n");
+			
+			const apateAnimateCSS = [
+				`.apateEncryptionKey:hover {`,
+				`	font-size: 2em;`,
+				`	fill: dodgerBlue;`,
+				`	animation: apateRotate 0.5s ease;`,
+				`	animation-iteration-count: 1; `,
+				`}`,
+				`.apateEncryptionKey.calculating {`,
+				`	fill: orange;`,
+				`	animation: apateRotate 1s linear;`,
+				`	animation-direction: reverse;`,
+				`	animation-iteration-count: infinite;`,
+				`}`,
+				`.apateEncryptionKeyButton:hover {`,
+				`	width: 4em;`,
+				`}`,
+				`@keyframes changeLetter {`,
+				`	0%   { content: "[loading hidden message]";   }`,
+				`	33%  { content: "[loading hidden message.]";  }`,
+				`	66%  { content: "[loading hidden message..]"; }`,
+				`	100% { content: "[loading hidden message...]";}`,
 				`}`,
 			].join("\n");
 
@@ -205,6 +240,7 @@ module.exports = (() => {
 			};
 
 			return class Apate extends Plugin {
+				
 				revealWorkers = [];
 				hideWorker;
 				lastWorkerId = 0;
@@ -216,6 +252,7 @@ module.exports = (() => {
 					deleteInvalid: true,
 					ctrlToSend: true,
 					animate: true,
+					displayImage: true,
 					devMode: false
 				};
 				settings = null;
@@ -238,10 +275,23 @@ module.exports = (() => {
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
-						new Switch('Animate', 'If the Key should be animated or not. If you change this, please Restart (Ctrl + R)', this.settings.animate, (i) => {
-							this.settings.animate = i;
-							console.log(`Set "animate" to ${this.settings.animate}`);
-						}),
+						new SettingGroup('Display').append(
+							new Switch('Animate', 'Turn this off to all Apate animations.', this.settings.animate, (i) => {
+								this.settings.animate = i;
+								console.log(`Set "animate" to ${this.settings.animate}`);
+								BdApi.clearCSS("apateCSS");
+								if(this.settings.animate) {
+									BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
+									
+								} else {
+									BdApi.injectCSS("apateCSS", apateCSS);
+								}
+							}),
+							new Switch('Display Images', 'The first link that leads directly to an image will be directly displayed.', this.settings.displayImage, (i) => {
+								this.settings.displayImage = i;
+								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
+							}),
+						),
 					);
 				}
 				async start() {
@@ -276,24 +326,10 @@ module.exports = (() => {
 					{
 						// Apate CSS
 						if(this.settings.animate) {
-							apateCSS += [
-							`.apateEncryptionKey:hover {`,
-							`	font-size: 2em;`,
-							`	fill: dodgerBlue;`,
-							`	animation: apateRotate 0.5s ease;`,
-							`	animation-iteration-count: 1; `,
-							`}`,
-							`.apateEncryptionKey.calculating {`,
-							`	fill: orange;`,
-							`	animation: apateRotate 1s linear;`,
-							`	animation-direction: reverse;`,
-							`	animation-iteration-count: infinite;`,
-							`}`,
-							`.apateEncryptionKeyButton:hover {`,
-							`	width: 4em;`,
-							`}`,].join("\n");
+							BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
+						} else {
+							BdApi.injectCSS("apateCSS", apateCSS);
 						}
-						BdApi.injectCSS("apateCSS", apateCSS);
 					}
 
 					{
@@ -329,7 +365,7 @@ module.exports = (() => {
 									
 
 										for (let i = 0; i < linkArray.length; i++) {
-											if (imageRegex.test(linkArray[i]) && hasImage === false) {
+											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
 												//Message has image link
 												let imageLink = linkArray[i];
 												data.hiddenMsg = `${data.hiddenMsg.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
@@ -391,6 +427,8 @@ module.exports = (() => {
 						)).json();
 					}
 				};
+
+				
 
 				async hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
@@ -508,11 +546,15 @@ module.exports = (() => {
 				}
 
 				addKeyButton() {
+					console.log()
 					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-
+					
 					if (!form || form.querySelector(".keyButton")) return;
 					let button = document.createElement("div");
-
+					if(form.querySelector(DiscordSelectors.Textarea.buttons) == null ) {
+						return;
+					}
+					
 					form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
 					button.outerHTML = buttonHTML;
 
