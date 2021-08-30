@@ -1,11 +1,10 @@
 /**
  * @name Apate
- * @version 1.0.3
+ * @version 1.0.4
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
- * @authorLink https://github.com/TheGreenPig/Apate#authors, https://google.com
  */
 
 /* 
@@ -14,6 +13,9 @@
  * 
  * BetterDiscord file structure documentation:
  *   https://github.com/BetterDiscord/documentation/blob/main/plugins/file_structure.md
+ *  
+ * Zere's Plugin Library documentation:
+ * 	 https://rauenzi.github.io/BDPluginLibrary/docs/
  */
 
 module.exports = (() => {
@@ -40,8 +42,8 @@ module.exports = (() => {
 				title: "New Features:",
 				type: "added",
 				items: [
-					"Added the ability to turn off animations.",
-					"Added the ability to not display images."
+					"Custom encryption!",
+					"Simple Background option (Thanks to gurrrrrrett3)"
 				]
 			}
 		],
@@ -182,7 +184,7 @@ module.exports = (() => {
 				`	animation: changeLetter 1s linear infinite;`,
 				`}`,
 			].join("\n");
-			
+
 			const apateAnimateCSS = [
 				`.apateEncryptionKey:hover {`,
 				`	font-size: 2em;`,
@@ -229,7 +231,7 @@ module.exports = (() => {
 				DiscordSelectors,
 				Settings,
 			} = { ...Api, ...BdApi };
-			const { SettingPanel, SettingGroup, RadioGroup, Switch, Slider, Textbox} = Settings;
+			const { SettingPanel, SettingGroup, RadioGroup, Switch, Slider, Textbox } = Settings;
 
 			const options = [
 				{
@@ -253,8 +255,7 @@ module.exports = (() => {
 					if (data.hide) {
 						const stegCloakedMsg = (() => {
 							try {
-								let password = data.coverMsg.replace(data.coverMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
-								return stegCloak.hide(data.hiddenMsg, password, data.coverMsg);
+								return stegCloak.hide(data.hiddenMsg, data.password, data.coverMsg);
 							} catch {
 								return;
 							}
@@ -268,17 +269,15 @@ module.exports = (() => {
 						const hiddenMsg = (() => {
 							try {
 								//\uFFFD = � --> wrong password
-								//try to reveal with password
-								let password = data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
-								let revealedMessage = stegCloak.reveal(data.stegCloakedMsg, password);
+								let revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.password);
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
-								//try to reveal without password (for older messages that aren't encrypted)
-								revealedMessage = stegCloak.reveal(cloaked, "");
+								revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), ""));
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
+
 								console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
 								return;
 							} catch {
@@ -295,7 +294,7 @@ module.exports = (() => {
 			};
 
 			return class Apate extends Plugin {
-				
+
 				revealWorkers = [];
 				hideWorker;
 				lastWorkerId = 0;
@@ -303,24 +302,22 @@ module.exports = (() => {
 				discordEmojis;
 
 				default = {
-					encryption: 0,
+					encryption: 1,
 					deleteInvalid: true,
 					ctrlToSend: true,
 					animate: true,
 					displayImage: true,
+					password: "1234",
 					devMode: false
 				};
 				settings = null;
 
-				
+
 
 				getSettingsPanel() {
+					
+				
 					return SettingPanel.build(() => this.saveSettings(this.settings),
-						new RadioGroup('Encryption', `If encryption is on, all your messages will get basic encryption so that you can't copy-paste them into the stegcloak 
-										website without a password. (Recommended)`, this.settings.encryption || 0, options, (i) => {
-							this.settings.encryption = i;
-							console.log(`Set "encrpytion" to ${this.settings.encryption}`);
-						}),
 						new Switch('Delete Invalid String', 'If you enter any text after the second * you will get an error. With this option turned on, Apate automatically deletes any text that is invalid!', this.settings.deleteInvalid, (i) => {
 							this.settings.deleteInvalid = i;
 							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
@@ -330,14 +327,29 @@ module.exports = (() => {
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
+						new SettingGroup('Encryption').append(
+							new RadioGroup('Encryption', `If encryption is on, all your messages will get an encryption and you can ready every message with the defined password.`, this.settings.encryption || 0, options, (i) => {
+								this.settings.encryption = i;
+								console.log(`Set "encrpytion" to ${this.settings.encryption}`);
+							}),
+							new Textbox("Password", "If you turned Encryption off, this Textbox will just be ignored.", this.settings.password, (i) => {
+								if (i === "" || typeof i === 'undefined') {
+									BdApi.alert("Password Error", "Your password can't be empty!");
+									this.settings.encryption = 0;
+								}
+								else {
+									this.settings.password = i;
+								}
+							}),
+						),
 						new SettingGroup('Display').append(
 							new Switch('Animate', 'Turn this off to all Apate animations.', this.settings.animate, (i) => {
 								this.settings.animate = i;
 								console.log(`Set "animate" to ${this.settings.animate}`);
 								BdApi.clearCSS("apateCSS");
-								if(this.settings.animate) {
-									BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
-									
+								if (this.settings.animate) {
+									BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
+
 								} else {
 									BdApi.injectCSS("apateCSS", apateCSS);
 								}
@@ -349,10 +361,10 @@ module.exports = (() => {
 							new Switch('Simple Background', 'Changes the background of displayed messages to match your theme\'s background.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
 								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
-								if(this.settings.simpleBackground) {
+								if (this.settings.simpleBackground) {
 									BdApi.injectCSS("apateCSS", apateSimpleCSS);
 								} else if (this.settings.animate) {
-									BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
+									BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
 								} else {
 									BdApi.injectCSS("apateCSS", apateCSS);
 								}
@@ -365,8 +377,8 @@ module.exports = (() => {
 						this.settings = this.loadSettings(this.default);
 						// console
 						console.clear();
-						for(const author of config.info.authors) {
-							if(author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+						for (const author of config.info.authors) {
+							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
 								this.settings.devMode = true;
 							}
 						}
@@ -391,8 +403,8 @@ module.exports = (() => {
 
 					{
 						// Apate CSS
-						if(this.settings.animate) {
-							BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
+						if (this.settings.animate) {
+							BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
 						} else {
 							BdApi.injectCSS("apateCSS", apateCSS);
 						}
@@ -422,13 +434,17 @@ module.exports = (() => {
 
 								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
 									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
+
+									if(data.hiddenMsg === "" || typeof data.hiddenMsg === 'undefined') {
+										hiddenMessageDiv.remove();
+									}
 									hiddenMessageDiv.textContent = data.hiddenMsg;
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
 										let hasImage = false;
-									
+
 
 										for (let i = 0; i < linkArray.length; i++) {
 											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
@@ -494,7 +510,7 @@ module.exports = (() => {
 					}
 				};
 
-				
+
 
 				async hideMessage() {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
@@ -502,7 +518,6 @@ module.exports = (() => {
 						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
 						let input = "";
 
-						// console.log(textSegments);
 
 						for (let textSegment of textSegments) {
 							switch (textSegment.getAttribute("data-slate-object")) {
@@ -546,7 +561,7 @@ module.exports = (() => {
 
 					if (!input) return;
 
-					console.log({ input });
+
 
 					let RegExpGroups = (
 						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
@@ -564,7 +579,7 @@ module.exports = (() => {
 					}
 
 					if (!hiddenMessage) {
-						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message as *italic*!");
+						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `message *hiddenMessage*`!");
 						return;
 					}
 					if (invalidEndString) {
@@ -578,8 +593,8 @@ module.exports = (() => {
 					}
 					let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 					if (hiddenMessage.match(imageRegex)?.length > 1) {
-						BdApi.alert("Multiple Images", 
-									`You have two or more links that lead to images. 
+						BdApi.alert("Multiple Images",
+							`You have two or more links that lead to images. 
 									Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
 									will be displayed, the other ones will appear as links.`)
 					}
@@ -587,10 +602,15 @@ module.exports = (() => {
 
 					editor.moveToRangeOfDocument();
 					editor.delete();
-
-					if (this.settings.encryption === 0) {
-						coverMessage = this.getPassword() + coverMessage;
+					let pswd = ""
+					if (this.settings.encryption === 1) {
+						pswd = this.getPassword()
+						coverMessage = pswd + coverMessage;
 					}
+					else {
+						pswd = this.settings.password;
+					}
+
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
 
@@ -599,6 +619,7 @@ module.exports = (() => {
 						hide: true,
 						hiddenMsg: hiddenMessage,
 						coverMsg: coverMessage,
+						password: pswd
 					});
 				}
 				getPassword() {
@@ -612,15 +633,15 @@ module.exports = (() => {
 				}
 
 				addKeyButton() {
-					console.log()
+
 					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					
+
 					if (!form || form.querySelector(".keyButton")) return;
 					let button = document.createElement("div");
-					if(form.querySelector(DiscordSelectors.Textarea.buttons) == null ) {
+					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
 						return;
 					}
-					
+
 					form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
 					button.outerHTML = buttonHTML;
 
@@ -663,20 +684,29 @@ module.exports = (() => {
 							messageContainer.setAttribute("data-apate-contains-hidden-message", "");
 							messageContainer.setAttribute("data-apate-id", id);
 
+							let pswd = "";
+							let hiddenCloak = textContent.replace(/^\u200b/, "")
+							if (this.settings.encryption === 0) {
+								pswd = this.settings.password;
+							}
+							else {
+								pswd = hiddenCloak.replace(hiddenCloak.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
+							}
 							this.revealWorkers[this.lastWorkerId]?.postMessage({
 								id,
 								reveal: true,
-								stegCloakedMsg: textContent.replace(/^\u200b/, ""),
+								stegCloakedMsg: hiddenCloak,
+								password: pswd,
 							});
 							this.lastWorkerId++;
 							this.lastWorkerId %= this.numOfWorkers;
-
 							{
 								const messageWrapper = messageContainer.querySelector(`div[role="document"]`);
 
 								let hiddenMessageDiv = document.createElement("div");
 								hiddenMessageDiv.classList.add("apateHiddenMessage", "loading");
 								messageWrapper.append(hiddenMessageDiv);
+
 							}
 						}
 					}
