@@ -32,7 +32,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.3",
+			version: "1.0.4",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -311,8 +311,6 @@ module.exports = (() => {
 					devMode: false
 				};
 				settings = null;
-
-
 
 				getSettingsPanel() {
 					
