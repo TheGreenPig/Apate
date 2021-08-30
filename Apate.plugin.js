@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.4
+ * @version 1.0.5
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -32,7 +32,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.4",
+			version: "1.0.5",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -42,8 +42,7 @@ module.exports = (() => {
 				title: "New Features:",
 				type: "added",
 				items: [
-					"Custom encryption!",
-					"Simple Background option (Thanks to gurrrrrrett3)"
+					"Doesnt automatically display images to stop IP grabbers."
 				]
 			}
 		],
@@ -306,7 +305,7 @@ module.exports = (() => {
 					deleteInvalid: true,
 					ctrlToSend: true,
 					animate: true,
-					displayImage: true,
+					displayImage: false,
 					password: "1234",
 					devMode: false
 				};
@@ -352,10 +351,6 @@ module.exports = (() => {
 									BdApi.injectCSS("apateCSS", apateCSS);
 								}
 							}),
-							new Switch('Display Images', 'The first link that leads directly to an image will be directly displayed.', this.settings.displayImage, (i) => {
-								this.settings.displayImage = i;
-								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
-							}),
 							new Switch('Simple Background', 'Changes the background of displayed messages to match your theme\'s background.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
 								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
@@ -366,6 +361,15 @@ module.exports = (() => {
 								} else {
 									BdApi.injectCSS("apateCSS", apateCSS);
 								}
+							}),
+						),
+						new SettingGroup('Experimental').append(
+							new Switch('Display Images (USE WITH CAUTION)', 'The first link that leads directly to an image will be directly displayed. WARNING: By enabling this setting, your IP Adress might get grabbed! ', this.settings.displayImage, (i) => {
+								if(i===true) {
+									BdApi.alert("Warning!", "By enabling this setting your IP adress might get grabbed!");
+								}
+								this.settings.displayImage = i;
+								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
 						),
 					);
