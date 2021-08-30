@@ -127,6 +127,61 @@ module.exports = (() => {
 				`	animation: changeLetter 1s linear infinite;`,
 				`}`,
 			].join("\n");
+
+			let apateSimpleCSS = [
+				`.apateKeyButtonContainer {`,
+				`	display: flex;`,
+				`	justify-content: center;`,
+				`	align-items: center;`,
+				`}`,
+				`.apateEncryptionKeyButton {`,
+				`	transition: all 300ms ease;`,
+				`	overflow: hidden;`,
+				`	font-size: 1rem;`,
+				`	display: flex;`,
+				`	justify-content: center;`,
+				`	align-items: center;`,
+				`	clip-path: inset(0);`,
+				`	width: 3em;`,
+				`	height: 2.8em;`,
+				`}`,
+				`.apateEncryptionKeyContainer {`,
+				`	padding: 0;`,
+				`	width: 5rem;`,
+				`	height: 5rem;`,
+				`}`,
+				`.apateEncryptionKey {`,
+				`	transition: all 300ms ease;`,
+				`	font-size: 1.3rem;`,
+				`	width: 2em;`,
+				`	height: 2em;`,
+				`}`,
+				`.apateHiddenImg {`,
+				`	padding: 0.4em;`,
+				`	max-width: 40em;`,
+				`	max-height: 40em;`,
+				`}`,
+				`@keyframes apateRotate {`,
+				`	0%   { transform: rotate(0deg);   }`,
+				`	100% { transform: rotate(360deg); }`,
+				`}`,
+				`.apateHiddenMessage {`,
+				`	border: 2px solid var(--interactive-muted);`,
+				`	color: var(--text-normal);`,
+				`	padding: .5em;`,
+				`	margin: .3em 0;`,
+				`	width: fit-content;`,
+				`	border-radius: 0 .8em .8em .8em;`,
+				`}`,
+				`.apateHiddenMessage.loading {`,
+				`	font-style: italic;`,
+				`	color: var(--text-muted);`,
+				`}`,
+				`.apateHiddenMessage.loading::after {`,
+				`	content: "[loading hidden message...]";`,
+				`	animation: changeLetter 1s linear infinite;`,
+				`}`,
+			].join("\n");
 			
 			const apateAnimateCSS = [
 				`.apateEncryptionKey:hover {`,
@@ -290,6 +345,17 @@ module.exports = (() => {
 							new Switch('Display Images', 'The first link that leads directly to an image will be directly displayed.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
+							}),
+							new Switch('Simple Background', 'Changes the background of displayed messages to match your theme\'s background.', this.settings.simpleBackground, (i) => {
+								this.settings.simpleBackground = i;
+								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
+								if(this.settings.simpleBackground) {
+									BdApi.injectCSS("apateCSS", apateSimpleCSS);
+								} else if (this.settings.animate) {
+									BdApi.injectCSS("apateCSS", apateCSS+apateAnimateCSS);
+								} else {
+									BdApi.injectCSS("apateCSS", apateCSS);
+								}
 							}),
 						),
 					);
