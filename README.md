@@ -14,10 +14,11 @@ Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that
 
 
 ## Installing
-Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://github.com/TheGreenPig/Apate/releases/latest/download/Apate.plugin.js) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. Then go to the Plugin settings and turn both Apate and ZeresPluginLibrary on. Then restart (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
+Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. Then go to the Plugin settings and turn both Apate and ZeresPluginLibrary on. Then restart (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
 
 ## Usage
-![Demo](https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/demo.gif)
+<img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/demo.gif" alt="Demo" width="500">
+</br>
 
 Syntax:
 >Cover text \*hidden message*
