@@ -346,7 +346,7 @@ module.exports = (() => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
-							new Switch('Simple Background', 'Changes the background of displayed messages to match your background', this.settings.simpleBackground, (i) => {
+							new Switch('Simple Background', 'Changes the background of displayed messages to match your theme\'s background.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
 								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
 								if(this.settings.simpleBackground) {
@@ -364,7 +364,7 @@ module.exports = (() => {
 					{
 						this.settings = this.loadSettings(this.default);
 						// console
-						//console.clear(); --This made me angry, sorry
+						console.clear();
 						for(const author of config.info.authors) {
 							if(author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
 								this.settings.devMode = true;
