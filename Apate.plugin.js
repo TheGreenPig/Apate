@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.7
+ * @version 1.0.8
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -33,17 +33,17 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.7",
+			version: "1.0.8",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "New Features:",
-				type: "added",
+				title: "Security Update",
+				type: "fixed",
 				items: [
-					"Custom Emojis work now! (Thanks fabJunior)",
+					"Fixed a serious XSS vulnerability",
 				]
 			},
 		],
@@ -651,17 +651,19 @@ module.exports = (() => {
 										let linkArray = data.hiddenMsg.match(urlRegex);
 										let hasImage = false;
 
+										hiddenMessageDiv.textContent = data.hiddenMsg;
+
 
 										for (let i = 0; i < linkArray.length; i++) {
 											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
 												//Message has image link
 												let imageLink = linkArray[i];
-												data.hiddenMsg = `${data.hiddenMsg.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
+												hiddenMessageDiv.innerHTML  = `${hiddenMessageDiv.innerHTML.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
 												hasImage = true;
 
 											}
 											else {
-												data.hiddenMsg = data.hiddenMsg.replace(linkArray[i],
+												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(linkArray[i],
 													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
 														title="${linkArray[i]}" 
 														href="${linkArray[i]}" 
@@ -672,26 +674,26 @@ module.exports = (() => {
 														${linkArray[i]}</a>`);
 											}
 										}
-										hiddenMessageDiv.innerHTML = data.hiddenMsg;
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
+										hiddenMessageDiv.textContent = data.hiddenMsg;
+
 										let emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
 										let emojiArray = data.hiddenMsg.match(emojiRegex);
 
 										for (let i = 0; i < emojiArray.length; ++i) {
-											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length-1).split(":");
+											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-											if(!this.settings.animate) {
+											if (!this.settings.animate) {
 												emojiId = emojiId.replace(".gif", ".png")
 											}
 
-											data.hiddenMsg = data.hiddenMsg.replace(emojiArray[i],
+											hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
 												`<span class="${emojiContainerClass}" tabindex="0">
 													<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji">
 												</span>`);
 										}
-										hiddenMessageDiv.innerHTML = data.hiddenMsg
 									}
 
 									hiddenMessageDiv.classList.remove("loading");
@@ -700,7 +702,7 @@ module.exports = (() => {
 
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
-											if(data.usedPswd === "") {
+											if (data.usedPswd === "") {
 												data.usedPswd = "-No Ecryption-"
 											}
 											BdApi.alert("Password:", data.usedPswd);
@@ -756,11 +758,11 @@ module.exports = (() => {
 						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
 						let input = "";
 
-
 						for (let textSegment of textSegments) {
 							switch (textSegment.getAttribute("data-slate-object")) {
 								case ("text"): {
-									input += textSegment.textContent;
+
+									input += textSegment.textContent + "\n";
 									break;
 								}
 								case ("inline"): {
@@ -787,6 +789,8 @@ module.exports = (() => {
 					})();
 
 					if (!input) return;
+
+
 					let RegExpGroups = (
 						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
 							.exec(input.trim())?.groups
@@ -796,8 +800,8 @@ module.exports = (() => {
 					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
 					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
 
+					console.log(hiddenMessage)
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
-
 
 					if (!coverMessage) {
 						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `message *hiddenMessage*`");
@@ -805,7 +809,6 @@ module.exports = (() => {
 					}
 					//in case the user sends a one word cover message
 					if (!coverMessage.includes(" ")) {
-						console.log("test")
 						coverMessage += " \u200b";
 					}
 
@@ -823,6 +826,7 @@ module.exports = (() => {
 						return;
 					}
 					let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
+
 					if (hiddenMessage.match(imageRegex)?.length > 1) {
 						BdApi.alert("Multiple Images",
 							`You have two or more links that lead to images. 
