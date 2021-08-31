@@ -645,7 +645,7 @@ module.exports = (() => {
 
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
-									let emojiRegex = /\[[a-zA-Z_\d]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
+									let emojiRegex = /\[[a-zA-Z_~\d]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
@@ -706,7 +706,7 @@ module.exports = (() => {
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
 											if (data.usedPswd === "") {
-												data.usedPswd = "-No Ecryption-"
+												data.usedPswd = "-No Encryption-"
 											}
 											BdApi.alert("Password:", data.usedPswd);
 										})
