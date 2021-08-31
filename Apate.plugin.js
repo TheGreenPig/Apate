@@ -1,13 +1,12 @@
 /**
  * @name Apate
- * @version 1.0.6
+ * @version 1.0.7
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  */
 
-const { copyFileSync } = require("fs");
 
 /* 
  * BetterDiscord BdApi documentation:
@@ -34,7 +33,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.6",
+			version: "1.0.7",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -44,21 +43,9 @@ module.exports = (() => {
 				title: "New Features:",
 				type: "added",
 				items: [
-					"Multiple Password Support (Thanks  FrostBird347)",
-					"Added 'No loading Message' setting (Thanks 0RadicalLarry0)",
-					"Hidden messages have an indicator character to minimise the chance of decrypting with the wrong password.",
+					"Custom Emojis work now! (Thanks fabJunior)",
 				]
 			},
-			{
-				title: "Fixes:",
-				type: "fixed",
-				items: [
-					"Better Settings description (Thanks 0RadicalLarry0)",
-					"Fixed courrputed Messages with an emoji (Thanks fabJunior)",
-					"Prevented empty Cover messages (Thanks square & rauenzi)",
-					"Close Object URLs (Thanks rauenzi)",
-				]
-			}
 		],
 	};
 
@@ -563,7 +550,7 @@ module.exports = (() => {
 						),
 						passwordsGroup,
 						new SettingGroup('Display').append(
-							new Switch('Animate', 'Choose whether or not Apate animations are displayed.', this.settings.animate, (i) => {
+							new Switch('Animate', 'Choose whether or not Apate animations are displayed. (Key animation, emoji gif animation etc.)', this.settings.animate, (i) => {
 								this.settings.animate = i;
 								console.log(`Set "animate" to ${this.settings.animate}`);
 								this.refreshCSS();
@@ -694,6 +681,10 @@ module.exports = (() => {
 
 										for (let i = 0; i < emojiArray.length; ++i) {
 											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length-1).split(":");
+
+											if(!this.settings.animate) {
+												emojiId = emojiId.replace(".gif", ".png")
+											}
 
 											data.hiddenMsg = data.hiddenMsg.replace(emojiArray[i],
 												`<span class="${emojiContainerClass}" tabindex="0">
