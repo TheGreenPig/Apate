@@ -659,6 +659,7 @@ module.exports = (() => {
 
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+									let emojiRegex = /\[[ -~]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
 										let hasImage = false;
@@ -686,6 +687,22 @@ module.exports = (() => {
 										}
 										hiddenMessageDiv.innerHTML = data.hiddenMsg;
 									}
+
+									if (emojiRegex.test(data.hiddenMsg)) {
+										let emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
+										let emojiArray = data.hiddenMsg.match(emojiRegex);
+
+										for (let i = 0; i < emojiArray.length; ++i) {
+											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length-1).split(":");
+
+											data.hiddenMsg = data.hiddenMsg.replace(emojiArray[i],
+												`<span class="${emojiContainerClass}" tabindex="0">
+													<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji">
+												</span>`);
+										}
+										hiddenMessageDiv.innerHTML = data.hiddenMsg
+									}
+
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
 
@@ -760,19 +777,8 @@ module.exports = (() => {
 
 									const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
 										if (input.includes("*")) {
-											return (await new Promise((resolve) => {
-
-												BdApi.showConfirmationModal("Unsupported Emoji", `\`:${emojiName}:\` is not supported and will be sent as \`[:${emojiName}:]\`! To see a list of supported Emojis click https://tinyurl.com/yewmfeyw.`, {
-													confirmText: "Send anyways",
-													cancelText: "Don't send",
-													onConfirm: () => {
-														resolve(true);
-													},
-													onCancel: () => {
-														resolve(false);
-													},
-												});
-											}) ? `[:${emojiName}:]` : undefined);
+											let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
+											return `[${emojiName}:${emojiId}]`;
 										}
 										return `:${emojiName}:`;
 									})();
