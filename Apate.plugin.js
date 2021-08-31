@@ -703,7 +703,7 @@ module.exports = (() => {
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
 											if (data.usedPswd === "") {
-												data.usedPswd = "-No Ecryption-"
+												data.usedPswd = "-No Encryption-"
 											}
 											BdApi.alert("Password:", data.usedPswd);
 										})
