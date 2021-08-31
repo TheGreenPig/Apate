@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.0.9
+ * @version 1.2.0
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -33,17 +33,17 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.9",
+			version: "1.2.0",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Multiline Fix",
+				title: "Security update",
 				type: "fixed",
 				items: [
-					"Fixed an issue where you couldn't write multiple lines in the cover- or hidden message.",
+					"Improved the emoji regex to prevent malicious messages. (Thanks Kehto)",
 				]
 			},
 		],
@@ -645,7 +645,7 @@ module.exports = (() => {
 
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
-									let emojiRegex = /\[[ -~]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
+									let emojiRegex = /\[[a-zA-Z_\d]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
