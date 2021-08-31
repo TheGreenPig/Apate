@@ -1,11 +1,13 @@
 /**
  * @name Apate
- * @version 1.0.5
+ * @version 1.0.6
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  */
+
+const { copyFileSync } = require("fs");
 
 /* 
  * BetterDiscord BdApi documentation:
@@ -32,7 +34,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.0.5",
+			version: "1.0.6",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -42,7 +44,19 @@ module.exports = (() => {
 				title: "New Features:",
 				type: "added",
 				items: [
-					"Doesnt automatically display images to stop IP grabbers."
+					"Multiple Password Support (Thanks  FrostBird347)",
+					"Added 'No loading Message' setting (Thanks 0RadicalLarry0)",
+					"Hidden messages have an indicator character to minimise the chance of decrypting with the wrong password.",
+				]
+			},
+			{
+				title: "Fixes:",
+				type: "fixed",
+				items: [
+					"Better Settings description (Thanks 0RadicalLarry0)",
+					"Fixed courrputed Messages with an emoji (Thanks fabJunior)",
+					"Prevented empty Cover messages (Thanks square & rauenzi)",
+					"Close Object URLs (Thanks rauenzi)",
 				]
 			}
 		],
@@ -129,6 +143,65 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
+			let apateNoLoadingCSS = [
+				`.apateHiddenMessage.loading {`,
+				`	display: none;`,
+				`}`,
+				`.apateHiddenMessage.loading::after {`,
+				`display: none;`,
+				`}`,
+			].join("\n")
+
+			let apatePasswordCSS = [
+				`.form-control{`,
+				`	margin-bottom: 10px;`,
+				`}`,
+				`.btn-add{`,
+				`	background-color: rgb(12, 187, 50);`,
+				`	color: white;`,
+				`	padding: 0.5em;`,
+				`	margin-bottom: 10px;`,
+				`}`,
+				`.btn-remove{`,
+				`	padding: 0.2rem;`,
+				`	background-color: transparent;`,
+				`}`,
+				`.dynamic-list{`,
+				`	display: flex;`,
+				`	-ms-flex-direction: column;`,
+				`	flex-direction: column;`,
+				`	padding-left: 0;`,
+				`	margin-bottom: 0;`,
+				`}`,
+				`.passwordLi{`,
+				`	width: fit-content;`,
+				`	text-align: center;`,
+				`	height: 2.2em;`,
+				`	padding: 0.1em 0.1em;`,
+				`	margin-bottom: 10px;`,
+				`	background-color: #fff;`,
+				`	border: 1px solid`,
+				`	rgba(0,0,0,.125);`,
+				`	border-top-left-radius: .25rem;`,
+				`	border-top-right-radius: .25rem;`,
+				`	border-bottom-left-radius: .25rem;`,
+				`	border-bottom-right-radius: .25rem;`,
+				`}`,
+				`.ownPassword{`,
+				`	width: fit-content;`,
+				`	padding: 0.1em 0.1em;`,
+				`	margin-bottom: 10px;`,
+				`	background-color: transparent;`,
+				`	color: white;`,
+				`	border: 1px solid`,
+				`	rgba(0,0,0,.125);`,
+				`	border-top-left-radius: .25rem;`,
+				`	border-top-right-radius: .25rem;`,
+				`	border-bottom-left-radius: .25rem;`,
+				`	border-bottom-right-radius: .25rem;`,
+				`}`,
+			].join("\n");
+
 			let apateSimpleCSS = [
 				`.apateKeyButtonContainer {`,
 				`	display: flex;`,
@@ -184,7 +257,8 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
-			const apateAnimateCSS = [
+
+			let apateAnimateCSS = [
 				`.apateEncryptionKey:hover {`,
 				`	font-size: 2em;`,
 				`	fill: dodgerBlue;`,
@@ -230,7 +304,7 @@ module.exports = (() => {
 				DiscordSelectors,
 				Settings,
 			} = { ...Api, ...BdApi };
-			const { SettingPanel, SettingGroup, RadioGroup, Switch, Slider, Textbox } = Settings;
+			const { SettingPanel, SettingGroup, RadioGroup, Switch, Textbox } = Settings;
 
 			const options = [
 				{
@@ -265,20 +339,39 @@ module.exports = (() => {
 							stegCloakedMsg,
 						});
 					} else if (data.reveal) {
+						let usedPassword = "";
 						const hiddenMsg = (() => {
 							try {
 								//\uFFFD = � --> wrong password
-								let revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.password);
-								if (!revealedMessage.includes("\uFFFD")) {
-									return revealedMessage;
+								let revealedMessage = "";
+								let possibleMessages = [[]];
+								for (var i = 0; i < data.passwords.length; i++) {
+									revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.passwords[i]);
+
+									//test for correctness:
+									if (!revealedMessage.includes("\uFFFD")) {
+										//might be correct
+										if (revealedMessage.includes("\u200b")) {
+											//definetly correct
+											usedPassword = data.passwords[i];
+											return revealedMessage.replace("\u200b", "");
+										}
+										//probably an older message, store away incase nothing better fits
+										possibleMessages.push([revealedMessage, data.passwords[i]]);
+									}
 								}
+								//try without password
 								revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), ""));
 								if (!revealedMessage.includes("\uFFFD")) {
 									return revealedMessage;
 								}
-
-								console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
-								return;
+								if (possibleMessages.length === 0) {
+									//every password and even the default one had an error. You definetly dont have right the password.
+									console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
+								}
+								//return the first possible message (This might be bad because it's probably false)
+								usedPassword = possibleMessages[0][1]
+								return possibleMessages[0][0];
 							} catch {
 								return;
 							}
@@ -286,6 +379,7 @@ module.exports = (() => {
 						self.postMessage({
 							id: data.id,
 							reveal: true,
+							usedPswd: usedPassword,
 							hiddenMsg,
 						});
 					}
@@ -306,67 +400,190 @@ module.exports = (() => {
 					ctrlToSend: true,
 					animate: true,
 					displayImage: false,
-					password: "1234",
+					password: "",
+					passwords: [],
+					showLoading: true,
+					showInfo: true,
 					devMode: false
 				};
 				settings = null;
 
+
+				addPasswordFromInput() {
+					var candidate = document.getElementById("candidate");
+					if (this.settings.passwords.indexOf(candidate.value) !== -1) {
+						BdApi.alert("Password already in list.", "This password is already in your list!");
+						return;
+					}
+					this.settings.passwords.push(candidate.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, ""));
+					this.saveSettings(this.settings);
+					this.updatePasswords();
+
+				}
+				addPassword(item) {
+					var ul = document.getElementById("dynamic-list");
+					var li = document.createElement("li");
+					li.setAttribute('id', item);
+
+					if (this.settings.passwords[0] === item) {
+						//first entry aka own password
+						li.classList.add("ownPassword");
+						if (this.settings.encryption === 1) {
+							item = "-Encryption is off-";
+						}
+						li.appendChild(document.createTextNode("Own password: " + item));
+					} else {
+						li.classList.add("passwordLi")
+						li.appendChild(document.createTextNode(item));
+
+						var revButton = document.createElement("button");
+						revButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ff0000" d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg>`
+						revButton.classList.add("btn-remove");
+						revButton.addEventListener("click", () => this.removePassword(item));
+						li.appendChild(revButton);
+					}
+					ul.appendChild(li);
+				}
+				removePassword(password) {
+					if (this.settings.passwords.indexOf(password) !== -1) {
+						this.settings.passwords.splice(this.settings.passwords.indexOf(password), 1);
+					}
+					else {
+						this.settings.passwords.pop();
+					}
+					this.saveSettings(this.settings);
+					this.updatePasswords();
+				}
+				updatePasswords() {
+					if (this.settings.passwords[0] !== this.settings.password) {
+						if (this.settings.passwords.indexOf(this.settings.password) !== -1) {
+							this.removePassword(this.settings.password);
+						}
+						this.settings.passwords.shift();
+						this.settings.passwords.unshift(this.settings.password);
+						this.saveSettings(this.settings);
+					}
+					var ul = document.getElementById("dynamic-list");
+					ul.innerHTML = "";
+					for (var i = 0; i < this.settings.passwords.length; i++) {
+						this.addPassword(this.settings.passwords[i]);
+					}
+				}
+
+				refreshCSS() {
+					let animate = "";
+					let noLoading = "";
+					let info = "";
+					if (this.settings.animate) {
+						animate = apateAnimateCSS;
+					}
+					if (!this.settings.showLoading) {
+						noLoading = apateNoLoadingCSS;
+					}
+					if (this.settings.simpleBackground) {
+						BdApi.clearCSS("apateCSS");
+						BdApi.injectCSS("apateCSS", apateSimpleCSS + animate + apatePasswordCSS + noLoading);
+					}
+					else {
+						BdApi.clearCSS("apateCSS");
+						BdApi.injectCSS("apateCSS", apateCSS + animate + apatePasswordCSS + noLoading);
+					}
+				}
+
 				getSettingsPanel() {
-					
-				
+					let passwordsGroup = new SettingGroup("Passwords");
+
+					let doc = document.createElement("div");
+					doc.innerHTML = ` <div class="input-group">
+					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
+					<div class="input-group-append">
+					  <button class="btn-add" type="button">Add Password</button>
+					</div>
+				  </div>
+				  <ul id="dynamic-list">
+		  
+		  
+				  </ul>`;
+					let addButton = doc.querySelector(".btn-add");
+
+					addButton.addEventListener("click", () => this.addPasswordFromInput());
+
+					let text = document.createElement("div");
+					text.className = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ modeDefault-3a2Ph1";
+					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
+										The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
+					passwordsGroup.append(
+						doc,
+						text,
+					);
+					passwordsGroup.getElement().addEventListener("click", () => this.updatePasswords());
+
+
+					let textbox = document.createElement("div");
+					textbox.innerHTML = ` <div class="input-group">
+					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
+				  </div>`
+
+					let textInput = textbox.querySelector("input");
+					textInput.addEventListener("change", () => {
+						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "");
+						this.settings.password = textInput.value;
+						this.saveSettings(this.settings);
+						this.updatePasswords();
+					})
+
+					let passwordTitle = document.createElement("h5");
+					passwordTitle.classList = "colorStandard-2KCXvj size14-e6ZScH h5-18_1nd title-3sZWYQ defaultMarginh5-2mL-bP";
+					passwordTitle.innerHTML = "Enter password:"
+
+					let passwordSubTitle = document.createElement("div");
+					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
+					passwordSubTitle.innerHTML = "If encryption is turned off this field will be ignored. Only characters `a-Z, 0-9, space and special characters(:._, etc.)`"
+
+
 					return SettingPanel.build(() => this.saveSettings(this.settings),
-						new Switch('Delete Invalid String', 'If you enter any text after the second * you will get an error. With this option turned on, Apate automatically deletes any text that is invalid!', this.settings.deleteInvalid, (i) => {
+						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
 							this.settings.deleteInvalid = i;
 							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
-						new Switch('Control + Enter to send', 'A helpful shortcut that hides and then sends your message!', this.settings.ctrlToSend, (i) => {
+						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption.', this.settings.ctrlToSend, (i) => {
 							this.settings.ctrlToSend = i;
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
 						new SettingGroup('Encryption').append(
-							new RadioGroup('Encryption', `If encryption is on, all your messages will get an encryption and you can ready every message with the defined password.`, this.settings.encryption || 0, options, (i) => {
+							new RadioGroup('Encryption', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
 								this.settings.encryption = i;
 								console.log(`Set "encrpytion" to ${this.settings.encryption}`);
+								this.updatePasswords();
 							}),
-							new Textbox("Password", "If you turned Encryption off, this Textbox will just be ignored.", this.settings.password, (i) => {
-								if (i === "" || typeof i === 'undefined') {
-									BdApi.alert("Password Error", "Your password can't be empty!");
-									this.settings.encryption = 0;
-								}
-								else {
-									this.settings.password = i;
-								}
-							}),
+							passwordTitle,
+							textbox,
+							passwordSubTitle
 						),
+						passwordsGroup,
 						new SettingGroup('Display').append(
-							new Switch('Animate', 'Turn this off to all Apate animations.', this.settings.animate, (i) => {
+							new Switch('Animate', 'Choose whether or not Apate animations are displayed.', this.settings.animate, (i) => {
 								this.settings.animate = i;
 								console.log(`Set "animate" to ${this.settings.animate}`);
-								BdApi.clearCSS("apateCSS");
-								if (this.settings.animate) {
-									BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
-
-								} else {
-									BdApi.injectCSS("apateCSS", apateCSS);
-								}
+								this.refreshCSS();
 							}),
-							new Switch('Simple Background', 'Changes the background of displayed messages to match your theme\'s background.', this.settings.simpleBackground, (i) => {
+							new Switch('Simple Background', 'Removes the black background of encrypted messages.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
 								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
-								if (this.settings.simpleBackground) {
-									BdApi.injectCSS("apateCSS", apateSimpleCSS);
-								} else if (this.settings.animate) {
-									BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
-								} else {
-									BdApi.injectCSS("apateCSS", apateCSS);
-								}
+								this.refreshCSS();
+							}),
+							new Switch('Display loading message', 'Show [loading hidden message...] whilst Apate checks if the password is correct', this.settings.showLoading, (i) => {
+								this.settings.showLoading = i;
+							}),
+							new Switch('Show info on click', 'Lets you click on messages to see the password that was used to decrypt it.', this.settings.showInfo, (i) => {
+								this.settings.showInfo = i;
 							}),
 						),
 						new SettingGroup('Experimental').append(
-							new Switch('Display Images (USE WITH CAUTION)', 'The first link that leads directly to an image will be directly displayed. WARNING: By enabling this setting, your IP Adress might get grabbed! ', this.settings.displayImage, (i) => {
-								if(i===true) {
-									BdApi.alert("Warning!", "By enabling this setting your IP adress might get grabbed!");
+							new Switch('Display Images (USE WITH CAUTION)', 'Links to images will be displayed. WARNING: Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.', this.settings.displayImage, (i) => {
+								if (i === true) {
+									BdApi.alert("Warning!", "Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.");
 								}
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
@@ -377,8 +594,6 @@ module.exports = (() => {
 				async start() {
 					{
 						this.settings = this.loadSettings(this.default);
-						// console
-						console.clear();
 						for (const author of config.info.authors) {
 							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
 								this.settings.devMode = true;
@@ -405,11 +620,7 @@ module.exports = (() => {
 
 					{
 						// Apate CSS
-						if (this.settings.animate) {
-							BdApi.injectCSS("apateCSS", apateCSS + apateAnimateCSS);
-						} else {
-							BdApi.injectCSS("apateCSS", apateCSS);
-						}
+						this.refreshCSS();
 					}
 
 					{
@@ -425,6 +636,7 @@ module.exports = (() => {
 							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
 						]));
 
+
 						for (let i in [...Array(this.numOfWorkers)]) {
 							const worker = new window.Worker(URL.createObjectURL(new Blob(
 								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
@@ -437,10 +649,14 @@ module.exports = (() => {
 								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
 									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
 
-									if(data.hiddenMsg === "" || typeof data.hiddenMsg === 'undefined') {
+									if (data.hiddenMsg === "" || typeof data.hiddenMsg === 'undefined') {
 										hiddenMessageDiv.remove();
 									}
+
 									hiddenMessageDiv.textContent = data.hiddenMsg;
+
+
+
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
 									if (urlRegex.test(data.hiddenMsg)) {
@@ -459,25 +675,32 @@ module.exports = (() => {
 											else {
 												data.hiddenMsg = data.hiddenMsg.replace(linkArray[i],
 													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
-																title="${linkArray[i]}" 
-																href="${linkArray[i]}" 
-																rel="noreferrer noopener" 
-																target="_blank" 
-																role="button" 
-																tabindex="0"">
-																${linkArray[i]}</a>`);
+														title="${linkArray[i]}" 
+														href="${linkArray[i]}" 
+														rel="noreferrer noopener" 
+														target="_blank" 
+														role="button" 
+														tabindex="0"">
+														${linkArray[i]}</a>`);
 											}
 										}
 										hiddenMessageDiv.innerHTML = data.hiddenMsg;
 									}
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
+
+
+									if (this.settings.showInfo) {
+										hiddenMessageDiv.addEventListener("click", () => {
+											BdApi.alert("Password:", data.usedPswd);
+										})
+									}
 								}
 							});
 
 							this.revealWorkers.push(worker);
+							URL.revokeObjectURL(worker);
 						}
-
 
 						this.hideWorker = new window.Worker(URL.createObjectURL(new Blob(
 							[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
@@ -501,7 +724,9 @@ module.exports = (() => {
 								document.querySelector(".apateEncryptionKey")?.classList.remove("calculating");
 							}
 						});
+
 					}
+					URL.revokeObjectURL(this.hideWorker);
 
 					{
 						// Discord emojis
@@ -562,21 +787,25 @@ module.exports = (() => {
 					})();
 
 					if (!input) return;
-
-
-
 					let RegExpGroups = (
 						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
 							.exec(input.trim())?.groups
 					);
 
-					let coverMessage = RegExpGroups?.coverMessage?.trim() || "\u200b";
+					let coverMessage = RegExpGroups?.coverMessage?.trim();
 					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
 					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
 
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
+
+					if (!coverMessage) {
+						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `message *hiddenMessage*`");
+						return;
+					}
+					//in case the user sends a one word cover message
 					if (!coverMessage.includes(" ")) {
+						console.log("test")
 						coverMessage += " \u200b";
 					}
 
@@ -585,7 +814,7 @@ module.exports = (() => {
 						return;
 					}
 					if (invalidEndString) {
-						BdApi.alert("Invalid input!", "There can't be a string after the hidden message!");
+						BdApi.alert("Invalid input!", "There can't be a string after the hidden message! Syntax: `message *hiddenMessage*`");
 						if (this.settings.deleteInvalid) {
 							editor.moveToRangeOfDocument();
 							editor.delete();
@@ -612,7 +841,7 @@ module.exports = (() => {
 					else {
 						pswd = this.settings.password;
 					}
-
+					hiddenMessage += "\u200b"; //used as a verification if the password was correct 
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
 
@@ -676,9 +905,17 @@ module.exports = (() => {
 					for (const [i, messageContainer] of [...messageContainers].reverse().entries()) {
 						messageContainer.setAttribute("data-apate-seen", "");
 
-						const textContent = messageContainer.querySelector(
+						const domMessage = messageContainer.querySelector(
 							`div[class*="contents-"][role="document"] > div[class*="markup-"][class*="messageContent-"]`
-						).textContent;
+						).cloneNode(true);
+
+						const messageEmojis = domMessage.querySelectorAll(`span[class*="emojiContainer-"]`);
+
+						for (let emoji of messageEmojis) {
+							emoji.innerHTML = emoji.children[0].alt;
+						}
+
+						const textContent = domMessage.textContent;
 
 						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-apate-contains-hidden-message")) {
 							const id = `apate-${timeStr}-${randomStr}-${i}`;
@@ -686,19 +923,14 @@ module.exports = (() => {
 							messageContainer.setAttribute("data-apate-contains-hidden-message", "");
 							messageContainer.setAttribute("data-apate-id", id);
 
-							let pswd = "";
+							let pswd = this.settings.passwords;
 							let hiddenCloak = textContent.replace(/^\u200b/, "")
-							if (this.settings.encryption === 0) {
-								pswd = this.settings.password;
-							}
-							else {
-								pswd = hiddenCloak.replace(hiddenCloak.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
-							}
+							// pswd = hiddenCloak.replace(hiddenCloak.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
 							this.revealWorkers[this.lastWorkerId]?.postMessage({
 								id,
 								reveal: true,
 								stegCloakedMsg: hiddenCloak,
-								password: pswd,
+								passwords: pswd,
 							});
 							this.lastWorkerId++;
 							this.lastWorkerId %= this.numOfWorkers;
