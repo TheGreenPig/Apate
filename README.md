@@ -29,7 +29,20 @@ Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the mes
 
  - The hidden message should turn *italic* if you did it right
  - There can't be a string after the hidden message. The second `*` should be the last character
- - Most settings in the App dont require a restart, but it might help
+
+## Passwords
+In Apate you can set your own password and then only people that have your password in their list can read your messages. 
+
+**To set your password:** 
+Go into `Settings > Plugins > Apate Settings (Cogwheel) > Encryption` and enter the password you want into the Textbox. 
+
+**To  manage your password list:** 
+Go into `Settings > Plugins > Apate Settings (Cogwheel) > Passwords`. 
+<br>If you want to add a password, enter it into the Textbox and press `Add Password`. The password should appear in the list below and then Apate should decrypt all messages with that specific password automatically. To remove a password, press the ❌ Symbol.
+ >Note:
+ >- Your personal password is always automatically in your list
+ >- The more passwords you have in your list, the longer the decryption prosses will take
+ >- The higher up a password is, the more priority it has (put passwords you use often high up)
 
 
 ## Authors
