@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.1
+ * @version 1.2.2
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -33,7 +33,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.2.1",
+			version: "1.2.2",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -44,14 +44,16 @@ module.exports = (() => {
 				type: "added",
 				items: [
 					"Generate random password button.",
+					"Download password list button.",
 				]
 			},
 			{
 				title: "Fixes",
 				type: "fixed",
 				items: [
-					"Text is aligned in center when there is an emoji in the message.",
+					"Text is aligned in center when there is an emoji in the message. (Thanks Kehto)",
 					"Better Password list formatting.",
+					"Better Defaul Emoji Support (Thanks Kehto)",
 				]
 			},
 		],
@@ -168,6 +170,13 @@ module.exports = (() => {
 				`	background-color: rgb(12, 187, 50);`,
 				`	color: white;`,
 				`	padding: 0.5em;`,
+				`	margin-bottom: 10px;`,
+				`}`,
+				`.downloadListButton{`,
+				`	background-color: Teal;`,
+				`	color: white;`,
+				`	padding: 0.3em;`,
+				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
 				`}`,
 				`.btn-remove{`,
@@ -543,6 +552,11 @@ module.exports = (() => {
 					for (var i = 0; i < this.settings.passwords.length; i++) {
 						this.addPassword(this.settings.passwords[i]);
 					}
+					console.log("refresh")
+					let download = document.querySelector(".downloadListButton");
+					if(download) {
+						download.href = `data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}`;
+					}
 				}
 
 				refreshCSS() {
@@ -568,7 +582,7 @@ module.exports = (() => {
 				generatePassword(input) {
 
 					var result = '';
-					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>,.?/~_+-=|\\: ';
+					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>.?/~_+-=|\\: ';
 					var charactersLength = characters.length;
 					var length = Math.random() * (50 - 15) + 15
 					for ( var i = 0; i<length; i++ ) {
@@ -588,6 +602,7 @@ module.exports = (() => {
 					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
 					<div class="input-group-append">
 					  <button class="btn-add" type="button">Add Password</button>
+					  <a class="downloadListButton" href="data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}" download="ApatePasswordList.txt">Download Password List</a>
 					</div>
 				  </div>
 				  <ul id="dynamic-list">
@@ -614,6 +629,7 @@ module.exports = (() => {
 					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
 					<button class="btn-add" type="button">Generate Password</button>
 
+
 				  </div>`
 					addButton = textbox.querySelector(".btn-add")
 
@@ -623,7 +639,7 @@ module.exports = (() => {
 
 					textInput.value = this.settings.password;
 					textInput.addEventListener("change", () => {
-						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "");
+						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>.?/~_+\-=|\\: ]*/g, "");
 						this.settings.password = textInput.value;
 						this.saveSettings(this.settings);
 						this.updatePasswords();
