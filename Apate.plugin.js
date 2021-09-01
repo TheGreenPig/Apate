@@ -437,7 +437,6 @@ module.exports = (() => {
 				hideWorker;
 				lastWorkerId = 0;
 				numOfWorkers = 16;
-				discordEmojis;
 
 				default = {
 					encryption: 1,
@@ -734,6 +733,8 @@ module.exports = (() => {
 							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
 						]));
 
+						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
+						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
 
 						for (let i in [...Array(this.numOfWorkers)]) {
 							const worker = new window.Worker(URL.createObjectURL(new Blob(
@@ -753,7 +754,6 @@ module.exports = (() => {
 
 									hiddenMessageDiv.textContent = data.hiddenMsg;
 
-
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
 									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
@@ -761,8 +761,6 @@ module.exports = (() => {
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
 										let hasImage = false;
-
-
 
 										for (let i = 0; i < linkArray.length; i++) {
 											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
@@ -787,8 +785,6 @@ module.exports = (() => {
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
-
-										let emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
 										let emojiArray = data.hiddenMsg.match(emojiRegex);
 
 										let bigEmoji = "";
@@ -803,20 +799,27 @@ module.exports = (() => {
 
 											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-											if (!this.settings.animate) {
-												emojiId = emojiId.replace(".gif", ".png")
-											}
+											if (emojiId === "default") {
+												let emoji = discordEmojiModule.getByName(emojiName);
 
-											hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-												`<span class="${emojiContainerClass}" tabindex="0">
-													<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-													</span>`);
+												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+													`<span class="${emojiContainerClass}" tabindex="0">
+														<img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+														</span>`);
+											} else {
+												if (!this.settings.animate) {
+													emojiId = emojiId.replace(".gif", ".png")
+												}
+
+												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+													`<span class="${emojiContainerClass}" tabindex="0">
+														<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+														</span>`);
+											}
 										}
 									}
 
 									hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(/\\n/g, '<br>');
-
-
 
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
@@ -869,14 +872,6 @@ module.exports = (() => {
 
 					}
 					URL.revokeObjectURL(this.hideWorker);
-
-					{
-						// Discord emojis
-
-						this.discordEmojis = await (await window.fetch(
-							`https://raw.githubusercontent.com/TheGreenPig/Apate/main/discord-emojis.json?anti-cache=${Date.now().toString(36)}`
-						)).json();
-					}
 				};
 
 
@@ -904,13 +899,17 @@ module.exports = (() => {
 									if (textSegment.querySelector("img.emoji")) {
 										const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
 
-										const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
-											if (input.includes("*")) {
-												let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
-												return `[${emojiName}:${emojiId}]`;
+										let emojiText = `:${emojiName}:`;
+
+										if (input.includes("*")) {
+											let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
+
+											if (emojiId === undefined) { // emojiId is undefined when it's a discord default emoji
+												emojiText = `[${emojiName}:default]`;
+											} else {
+												emojiText = `[${emojiName}:${emojiId}]`;
 											}
-											return `:${emojiName}:`;
-										})();
+										}
 
 
 										if (!emojiText) return;
