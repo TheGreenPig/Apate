@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.0
+ * @version 1.2.1
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -33,21 +33,42 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.2.0",
+			version: "1.2.1",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Security update",
+				title: "New features",
+				type: "added",
+				items: [
+					"Every Password has a unique color",
+					"Better info messages",
+				]
+			},
+			{
+				title: "Fixes",
 				type: "fixed",
 				items: [
-					"Improved the emoji regex to prevent malicious messages. (Thanks Kehto)",
+					"Mentions dont get turned into :undefined: (Thanks fabJunior)",
+					"Custom Emojis are big (jumboable), if the message has no other text.",
 				]
 			},
 		],
 	};
+	class HTMLWrapper extends BdApi.React.Component {
+		componentDidMount() {
+			this.refs.element.appendChild(this.props.children);
+		}
+
+		render() {
+			return BdApi.React.createElement("div", {
+				className: "react-wrapper",
+				ref: "element"
+			});
+		}
+	}
 
 	return !global.ZeresPluginLibrary ? class {
 		load() {
@@ -163,10 +184,11 @@ module.exports = (() => {
 				`.passwordLi{`,
 				`	width: fit-content;`,
 				`	text-align: center;`,
+				`	font-weight: bold;`,
 				`	height: 2.2em;`,
 				`	padding: 0.1em 0.1em;`,
 				`	margin-bottom: 10px;`,
-				`	background-color: #fff;`,
+				`	background-color: #000;`,
 				`	border: 1px solid`,
 				`	rgba(0,0,0,.125);`,
 				`	border-top-left-radius: .25rem;`,
@@ -179,7 +201,6 @@ module.exports = (() => {
 				`	padding: 0.1em 0.1em;`,
 				`	margin-bottom: 10px;`,
 				`	background-color: transparent;`,
-				`	color: white;`,
 				`	border: 1px solid`,
 				`	rgba(0,0,0,.125);`,
 				`	border-top-left-radius: .25rem;`,
@@ -287,6 +308,40 @@ module.exports = (() => {
 				`</div>`,
 			].join("\n");
 
+
+			const colors = [
+				"MediumVioletRed",
+				"PaleVioletRed",
+				"LightPink",
+				"Red",
+				"IndianRed",
+				"OrangeRed",
+				"DarkOrange",
+				"DarkKhaki",
+				"Gold",
+				"Yellow",
+				"Chocolate",
+				"RosyBrown",
+				"DarkGreen",
+				"ForestGreen",
+				"Olive",
+				"LimeGreen",
+				"MediumSeaGreen",
+				"SpringGreen",
+				"Chartreuse",
+				"Teal",
+				"LightSeaGreen",
+				"DarkTurquoise",
+				"Aquamarine",
+				"MediumBlue",
+				"DeepSkyBlue",
+				"LightBlue",
+				"Purple",
+				"DarkViolet",
+				"Fuchsia",
+				"Orchid",
+				"Plum",
+			];
 			const {
 				DiscordSelectors,
 				Settings,
@@ -389,17 +444,28 @@ module.exports = (() => {
 					displayImage: false,
 					password: "",
 					passwords: [],
+					passwordColorTable: ['white'],
 					showLoading: true,
 					showInfo: true,
 					devMode: false
 				};
 				settings = null;
 
-
+				addColor(){
+					let newColor = colors[Math.floor(Math.random()*colors.length)];
+					while(this.settings.passwordColorTable.some(e => e === newColor)) {
+						newColor = colors[Math.floor(Math.random()*colors.length)];
+					}
+					this.settings.passwordColorTable.push(newColor);
+				}
 				addPasswordFromInput() {
 					var candidate = document.getElementById("candidate");
 					if (this.settings.passwords.indexOf(candidate.value) !== -1) {
 						BdApi.alert("Password already in list.", "This password is already in your list!");
+						return;
+					}
+					if (this.settings.passwords.length >= 31) { //we dont count the first one 
+						BdApi.alert("Too many passwords.", "You can only have 30 passwords in your list.");
 						return;
 					}
 					this.settings.passwords.push(candidate.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, ""));
@@ -418,6 +484,7 @@ module.exports = (() => {
 						if (this.settings.encryption === 1) {
 							item = "-Encryption is off-";
 						}
+
 						li.appendChild(document.createTextNode("Own password: " + item));
 					} else {
 						li.classList.add("passwordLi")
@@ -429,14 +496,33 @@ module.exports = (() => {
 						revButton.addEventListener("click", () => this.removePassword(item));
 						li.appendChild(revButton);
 					}
+					let colorLen = this.settings.passwordColorTable.length;
+					let passwordLen = this.settings.passwords.length;
+
+					if (colorLen > passwordLen) {
+						//need to remove colors
+						for(var i = 0; i<colorLen-passwordLen; i++) {
+							this.settings.passwordColorTable.pop();
+						}
+						this.saveSettings(this.settings);
+					}
+					if (colorLen < passwordLen) {
+						//need to add colors
+						for(var i = 0; i<passwordLen-colorLen; i++) {
+							this.addColor()
+						}
+						this.saveSettings(this.settings);
+					}
+
+					let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
+					li.setAttribute('style', `color:${color}`);
 					ul.appendChild(li);
 				}
 				removePassword(password) {
 					if (this.settings.passwords.indexOf(password) !== -1) {
-						this.settings.passwords.splice(this.settings.passwords.indexOf(password), 1);
-					}
-					else {
-						this.settings.passwords.pop();
+						let index = this.settings.passwords.indexOf(password)
+						this.settings.passwords.splice(index, 1);
+						this.settings.passwordColorTable.splice(index, 1);
 					}
 					this.saveSettings(this.settings);
 					this.updatePasswords();
@@ -512,6 +598,7 @@ module.exports = (() => {
 				  </div>`
 
 					let textInput = textbox.querySelector("input");
+					textInput.value = this.settings.password;
 					textInput.addEventListener("change", () => {
 						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "");
 						this.settings.password = textInput.value;
@@ -521,11 +608,11 @@ module.exports = (() => {
 
 					let passwordTitle = document.createElement("h5");
 					passwordTitle.classList = "colorStandard-2KCXvj size14-e6ZScH h5-18_1nd title-3sZWYQ defaultMarginh5-2mL-bP";
-					passwordTitle.innerHTML = "Enter password:"
+					passwordTitle.textContent = "Enter password:"
 
 					let passwordSubTitle = document.createElement("div");
 					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
-					passwordSubTitle.innerHTML = "If encryption is turned off this field will be ignored. Only characters `a-Z, 0-9, space and special characters(:._, etc.)`"
+					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters `a-Z, 0-9, space and special characters(:._, etc.)`"
 
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
@@ -645,7 +732,7 @@ module.exports = (() => {
 
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
-									let emojiRegex = /\[[a-zA-Z_~\d]+?:\d+\.(png|gif)\]/g; // [ -~] are all printable ascii characters
+									let emojiRegex = /\[[a-zA-Z_~\d-]+?:\d+\.(png|gif)\]/g;
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
@@ -680,6 +767,14 @@ module.exports = (() => {
 										let emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
 										let emojiArray = data.hiddenMsg.match(emojiRegex);
 
+										let bigEmoji = "";
+
+										//						remove the custom emoji	 remove the standart emoji
+										let rest = data.hiddenMsg.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
+										if (rest.length === 0) {
+											bigEmoji = "jumboable"
+										}
+
 										for (let i = 0; i < emojiArray.length; ++i) {
 
 											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
@@ -690,14 +785,14 @@ module.exports = (() => {
 
 											hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
 												`<span class="${emojiContainerClass}" tabindex="0">
-													<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji">
+													<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
 													</span>`);
 										}
 									}
-									
+
 									hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(/\\n/g, '<br>');
 
-								
+
 
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
@@ -705,10 +800,17 @@ module.exports = (() => {
 
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
+											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
+											let style=""
 											if (data.usedPswd === "") {
 												data.usedPswd = "-No Encryption-"
+												passwordIndex = "-No Encryption-"
+												style = `style="font-style: italic;"`;
+											} else{
+												style = `style="color:${this.settings.passwordColorTable[passwordIndex]}"`;
 											}
-											BdApi.alert("Password:", data.usedPswd);
+											const html = Object.assign(document.createElement("div"), { innerHTML: `Password used: <b><div ${style}>${data.usedPswd}</div></b>\nPassword index: <b><div ${style}>${passwordIndex}</div></b>`, className: "markup-2BOw-j messageContent-2qWWxC" });
+											BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, html));
 										})
 									}
 								}
@@ -856,7 +958,7 @@ module.exports = (() => {
 					else {
 						pswd = this.settings.password;
 					}
-					hiddenMessage = hiddenMessage.replace(/[^ \S]{2}|[^ \S]{1}/g, "\\n") //replace new line with actual \n
+					hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
 					console.log(hiddenMessage)
 					hiddenMessage += "\u200b"; //used as a verification if the password was correct 
 
