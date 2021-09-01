@@ -761,36 +761,38 @@ module.exports = (() => {
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
-										let emojiArray = data.hiddenMsg.match(emojiRegex);
+										for (let line of data.hiddenMsg.split("\\n")) {
+											let emojiArray = line.match(emojiRegex);
+											let bigEmoji = "";
 
-										let bigEmoji = "";
+											if (emojiArray === null) continue; // no emoji on this line
 
-										//						remove the custom emoji	 remove the standart emoji
-										let rest = data.hiddenMsg.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
-										if (rest.length === 0) {
-											bigEmoji = "jumboable"
-										}
+											//						remove the custom emoji	 remove the standart emoji
+											let rest = line.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
+											if (rest.length === 0) {
+												bigEmoji = "jumboable"
+											}
 
-										for (let i = 0; i < emojiArray.length; ++i) {
+											for (let i = 0; i < emojiArray.length; ++i) {
+												let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
+												if (emojiId === "default") {
+													let emoji = discordEmojiModule.getByName(emojiName);
 
-											if (emojiId === "default") {
-												let emoji = discordEmojiModule.getByName(emojiName);
+													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+														`<span class="${emojiContainerClass}" tabindex="0">
+															<img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+															</span>`);
+												} else {
+													if (!this.settings.animate) {
+														emojiId = emojiId.replace(".gif", ".png")
+													}
 
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-													`<span class="${emojiContainerClass}" tabindex="0">
-														<img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-														</span>`);
-											} else {
-												if (!this.settings.animate) {
-													emojiId = emojiId.replace(".gif", ".png")
+													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+														`<span class="${emojiContainerClass}" tabindex="0">
+															<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+															</span>`);
 												}
-
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-													`<span class="${emojiContainerClass}" tabindex="0">
-														<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-														</span>`);
 											}
 										}
 									}
