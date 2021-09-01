@@ -774,20 +774,24 @@ module.exports = (() => {
 								}
 								case ("inline"): {
 									newLine = false;
-									const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
 
-									const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
-										if (input.includes("*")) {
-											let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
-											return `[${emojiName}:${emojiId}]`;
-										}
-										return `:${emojiName}:`;
-									})();
+									if (textSegment.querySelector("img.emoji")) {
+										const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
 
-									if (!emojiText) return;
+										const emojiText = this.discordEmojis?.[emojiName] || await (async () => {
+											if (input.includes("*")) {
+												let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
+												return `[${emojiName}:${emojiId}]`;
+											}
+											return `:${emojiName}:`;
+										})();
 
-									input += emojiText;
+										if (!emojiText) return;
 
+										input += emojiText;
+									} else if (textSegment.querySelector("span.mention")) {
+										input += textSegment.textContent;
+									}
 									break;
 								}
 							}
