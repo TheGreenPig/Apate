@@ -48,8 +48,13 @@ Go into `Settings > Plugins > Apate Settings (Cogwheel) > Passwords`.
 ## Authors
 
 <img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg" alt="Apate Logo" width="80" align="right"></img>
-><a href="https://github.com/BenjaminAster"><img src="https://github.com/BenjaminAster.png?size=60"><p>BenjaminAster</p></a>
 ><a href="https://github.com/TheGreenPig"><img src="https://github.com/thegreenpig.png?size=60"><p>TheGreenPig</p></a>
+><a href="https://github.com/BenjaminAster"><img src="https://github.com/BenjaminAster.png?size=60"><p>BenjaminAster</p></a>
+
+## Contributors
+<img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg" alt="Apate Logo" width="80" align="right"></img>
+><a href="https://github.com/fabJunior"><img width="60" height="60" src="https://cdn.discordapp.com/avatars/517142662231359488/a_575e07e409428a9ceb90022d0443d304.webp?size=256"><p>Kehto</p></a>
+><a href="https://github.com/gurrrrrrett3"><img width="60" height="60" src="https://github.com/gurrrrrrett3.png?size=60"><p>gurrrrrrett3</p></a>
 
 
 
