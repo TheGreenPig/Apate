@@ -43,16 +43,15 @@ module.exports = (() => {
 				title: "New features",
 				type: "added",
 				items: [
-					"Every Password has a unique color",
-					"Better info messages",
+					"Generate random password button.",
 				]
 			},
 			{
 				title: "Fixes",
 				type: "fixed",
 				items: [
-					"Mentions dont get turned into :undefined: (Thanks fabJunior)",
-					"Custom Emojis are big (jumboable), if the message has no other text.",
+					"Text is aligned in center when there is an emoji in the message.",
+					"Better Password list formatting.",
 				]
 			},
 		],
@@ -130,7 +129,8 @@ module.exports = (() => {
 				`.apateHiddenMessage {`,
 				`	border: 2px solid var(--interactive-muted);`,
 				`	color: var(--text-normal);`,
-				`	padding: .5em;`,
+				`	padding: 0.4em 0.5em;`,
+				`	line-height: normal;`,
 				`	margin: .3em 0;`,
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
@@ -171,7 +171,9 @@ module.exports = (() => {
 				`	margin-bottom: 10px;`,
 				`}`,
 				`.btn-remove{`,
-				`	padding: 0.2rem;`,
+				`	font-size: 1.3em;`,
+				`	padding: 0em;`,
+				`	margin-right: -0.2em;`,
 				`	background-color: transparent;`,
 				`}`,
 				`.dynamic-list{`,
@@ -185,8 +187,8 @@ module.exports = (() => {
 				`	width: fit-content;`,
 				`	text-align: center;`,
 				`	font-weight: bold;`,
-				`	height: 2.2em;`,
-				`	padding: 0.1em 0.1em;`,
+				`	padding: 0.4em 0.5em;`,
+				`	line-height: normal;`,
 				`	margin-bottom: 10px;`,
 				`	background-color: #000;`,
 				`	border: 1px solid`,
@@ -250,7 +252,8 @@ module.exports = (() => {
 				`.apateHiddenMessage {`,
 				`	border: 2px solid var(--interactive-muted);`,
 				`	color: var(--text-normal);`,
-				`	padding: .5em;`,
+				`	padding: 0.4em 0.5em;`,
+				`	line-height: normal;`,
 				`	margin: .3em 0;`,
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
@@ -451,10 +454,10 @@ module.exports = (() => {
 				};
 				settings = null;
 
-				addColor(){
-					let newColor = colors[Math.floor(Math.random()*colors.length)];
-					while(this.settings.passwordColorTable.some(e => e === newColor)) {
-						newColor = colors[Math.floor(Math.random()*colors.length)];
+				addColor() {
+					let newColor = colors[Math.floor(Math.random() * colors.length)];
+					while (this.settings.passwordColorTable.some(e => e === newColor)) {
+						newColor = colors[Math.floor(Math.random() * colors.length)];
 					}
 					this.settings.passwordColorTable.push(newColor);
 				}
@@ -491,7 +494,7 @@ module.exports = (() => {
 						li.appendChild(document.createTextNode(item));
 
 						var revButton = document.createElement("button");
-						revButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="#ff0000" d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z"/></svg>`
+						revButton.innerHTML = `❌`
 						revButton.classList.add("btn-remove");
 						revButton.addEventListener("click", () => this.removePassword(item));
 						li.appendChild(revButton);
@@ -501,14 +504,14 @@ module.exports = (() => {
 
 					if (colorLen > passwordLen) {
 						//need to remove colors
-						for(var i = 0; i<colorLen-passwordLen; i++) {
+						for (var i = 0; i < colorLen - passwordLen; i++) {
 							this.settings.passwordColorTable.pop();
 						}
 						this.saveSettings(this.settings);
 					}
 					if (colorLen < passwordLen) {
 						//need to add colors
-						for(var i = 0; i<passwordLen-colorLen; i++) {
+						for (var i = 0; i < passwordLen - colorLen; i++) {
 							this.addColor()
 						}
 						this.saveSettings(this.settings);
@@ -563,6 +566,21 @@ module.exports = (() => {
 					}
 				}
 
+				generatePassword(input) {
+
+					var result = '';
+					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>,.?/~_+-=|\\: ';
+					var charactersLength = characters.length;
+					var length = Math.random() * (50 - 15) + 15
+					for ( var i = 0; i<length; i++ ) {
+						result += characters.charAt(Math.floor(Math.random() * charactersLength));
+					}
+					input.value = result;
+					this.settings.password = input.value;
+					this.saveSettings(this.settings);
+					this.updatePasswords();
+				}
+
 				getSettingsPanel() {
 					let passwordsGroup = new SettingGroup("Passwords");
 
@@ -595,9 +613,15 @@ module.exports = (() => {
 					let textbox = document.createElement("div");
 					textbox.innerHTML = ` <div class="input-group">
 					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
+					<button class="btn-add" type="button">Generate Password</button>
+
 				  </div>`
+					addButton = textbox.querySelector(".btn-add")
 
 					let textInput = textbox.querySelector("input");
+					addButton.addEventListener("click", () => this.generatePassword(textInput));
+
+
 					textInput.value = this.settings.password;
 					textInput.addEventListener("change", () => {
 						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "");
@@ -732,7 +756,7 @@ module.exports = (() => {
 
 									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
-									let emojiRegex = /\[[a-zA-Z_~\d-]+?:\d+\.(png|gif)\]/g;
+									let emojiRegex = /\[[a-zA-Z_\d]+?:\d+\.(png|gif)\]/g;
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
@@ -801,12 +825,12 @@ module.exports = (() => {
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
 											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
-											let style=""
+											let style = ""
 											if (data.usedPswd === "") {
 												data.usedPswd = "-No Encryption-"
 												passwordIndex = "-No Encryption-"
 												style = `style="font-style: italic;"`;
-											} else{
+											} else {
 												style = `style="color:${this.settings.passwordColorTable[passwordIndex]}"`;
 											}
 											const html = Object.assign(document.createElement("div"), { innerHTML: `Password used: <b><div ${style}>${data.usedPswd}</div></b>\nPassword index: <b><div ${style}>${passwordIndex}</div></b>`, className: "markup-2BOw-j messageContent-2qWWxC" });
@@ -888,6 +912,7 @@ module.exports = (() => {
 											return `:${emojiName}:`;
 										})();
 
+
 										if (!emojiText) return;
 
 										input += emojiText;
@@ -959,7 +984,6 @@ module.exports = (() => {
 						pswd = this.settings.password;
 					}
 					hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
-					console.log(hiddenMessage)
 					hiddenMessage += "\u200b"; //used as a verification if the password was correct 
 
 					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
