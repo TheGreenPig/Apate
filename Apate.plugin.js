@@ -1,12 +1,11 @@
 /**
  * @name Apate
- * @version 1.2.2
+ * @version 1.2.3
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  */
-
 
 /* 
  * BetterDiscord BdApi documentation:
@@ -33,7 +32,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.2.2",
+			version: "1.2.3",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -43,17 +42,8 @@ module.exports = (() => {
 				title: "New features",
 				type: "added",
 				items: [
-					"Generate random password button.",
-					"Download password list button.",
-				]
-			},
-			{
-				title: "Fixes",
-				type: "fixed",
-				items: [
-					"Text is aligned in center when there is an emoji in the message. (Thanks Kehto)",
-					"Better Password list formatting.",
-					"Better Defaul Emoji Support (Thanks Kehto)",
+					"Import password list button.",
+					"You can copy passwords in the list or info message with a button now.",
 				]
 			},
 		],
@@ -179,10 +169,16 @@ module.exports = (() => {
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
 				`}`,
-				`.btn-remove{`,
+				`.uploadListButton{`,
+				`	background-color: Teal;`,
+				`	color: white;`,
+				`	padding: 0.3em;`,
+				`	font-size: 1em;`,
+				`	margin-bottom: 10px;`,
+				`}`,
+				`.btn-passwords{`,
 				`	font-size: 1.3em;`,
 				`	padding: 0em;`,
-				`	margin-right: -0.2em;`,
 				`	background-color: transparent;`,
 				`}`,
 				`.dynamic-list{`,
@@ -462,6 +458,7 @@ module.exports = (() => {
 				};
 				settings = null;
 
+
 				addColor() {
 					let newColor = colors[Math.floor(Math.random() * colors.length)];
 					while (this.settings.passwordColorTable.some(e => e === newColor)) {
@@ -471,6 +468,7 @@ module.exports = (() => {
 				}
 				addPasswordFromInput() {
 					var candidate = document.getElementById("candidate");
+					candidate.value = candidate.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "")
 					if (this.settings.passwords.indexOf(candidate.value) !== -1) {
 						BdApi.alert("Password already in list.", "This password is already in your list!");
 						return;
@@ -479,7 +477,12 @@ module.exports = (() => {
 						BdApi.alert("Too many passwords.", "You can only have 30 passwords in your list.");
 						return;
 					}
-					this.settings.passwords.push(candidate.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, ""));
+					if (candidate.value === "") {
+						BdApi.alert("Invalid input.", "Please enter a valid password in the Textbox!");
+						return;
+					}
+					console.log(candidate.value);
+					this.settings.passwords.push(candidate.value);
 					this.saveSettings(this.settings);
 					this.updatePasswords();
 
@@ -489,6 +492,21 @@ module.exports = (() => {
 					var li = document.createElement("li");
 					li.setAttribute('id', item);
 
+					var copyButton = document.createElement("button");
+					copyButton.innerHTML = `📋`
+					copyButton.classList.add("btn-passwords");
+					copyButton.setAttribute("title", "Copy Password")
+					copyButton.addEventListener("click", () => {
+						navigator.clipboard.writeText(item);
+						BdApi.showToast("Copied password!", { type: "success" });
+					});
+
+					var revButton = document.createElement("button");
+					revButton.innerHTML = `❌`
+					revButton.classList.add("btn-passwords");
+					revButton.setAttribute("title", "Remove Password")
+					revButton.addEventListener("click", () => this.removePassword(item));
+
 					if (this.settings.passwords[0] === item) {
 						//first entry aka own password
 						li.classList.add("ownPassword");
@@ -497,15 +515,16 @@ module.exports = (() => {
 						}
 
 						li.appendChild(document.createTextNode("Own password: " + item));
+						li.appendChild(copyButton);
+
+
 					} else {
 						li.classList.add("passwordLi")
 						li.appendChild(document.createTextNode(item));
 
-						var revButton = document.createElement("button");
-						revButton.innerHTML = `❌`
-						revButton.classList.add("btn-remove");
-						revButton.addEventListener("click", () => this.removePassword(item));
+
 						li.appendChild(revButton);
+						li.appendChild(copyButton);
 					}
 					let colorLen = this.settings.passwordColorTable.length;
 					let passwordLen = this.settings.passwords.length;
@@ -552,9 +571,8 @@ module.exports = (() => {
 					for (var i = 0; i < this.settings.passwords.length; i++) {
 						this.addPassword(this.settings.passwords[i]);
 					}
-					console.log("refresh")
 					let download = document.querySelector(".downloadListButton");
-					if(download) {
+					if (download) {
 						download.href = `data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}`;
 					}
 				}
@@ -585,7 +603,7 @@ module.exports = (() => {
 					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>.?/~_+-=|\\: ';
 					var charactersLength = characters.length;
 					var length = Math.random() * (50 - 15) + 15
-					for ( var i = 0; i<length; i++ ) {
+					for (var i = 0; i < length; i++) {
 						result += characters.charAt(Math.floor(Math.random() * charactersLength));
 					}
 					input.value = result;
@@ -594,29 +612,91 @@ module.exports = (() => {
 					this.updatePasswords();
 				}
 
+				importPasswordList() {
+					const fileInput = document.getElementById("file-input");
+					if (fileInput.files.length === 0) {
+						fileInput.addEventListener("change", fileUploaded, false);
+						function fileUploaded() {
+							//click again to notify importPasswordList
+							document.querySelector(".uploadListButton").click();
+							this.value = "";
+						}
+					}
+					else {
+						// file was successfully uploaded
+						const file = fileInput.files[0];
+
+						var fs = require("fs");
+						var importedPasswords = fs.readFileSync(file.path, "utf-8").split("\n");
+
+						BdApi.showConfirmationModal("Import List?", "Your entire password list and your password will be overriden! The first entry of your imported list will become your new password.", {
+							confirmText: "Import",
+							cancelText: "Cancel",
+							danger: true,
+							onConfirm: () => {
+								let errorPasswords = [];
+								if (importedPasswords.length > 31) {
+									BdApi.alert("Too many passwords.", `The last ${importedPasswords.length - 31} passwords will not be added into your list.`);
+									importedPasswords = importedPasswords.slice(0, 31);
+								}
+								this.settings.passwords = [];
+								this.saveSettings(this.settings);
+								for (var i = 0; i < importedPasswords.length; i++) {
+									importedPasswords[i] = importedPasswords[i].trim().replace("\r\n", "");
+									let correctPassword = importedPasswords[i].replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>,.?/~_+\-=|\\: ]*/g, "");
+									if (correctPassword !== importedPasswords[i]) {
+										errorPasswords.push(importedPasswords[i]);
+									}
+									else {
+										this.settings.passwords.push(importedPasswords[i]);
+										this.saveSettings(this.settings);
+									}
+								}
+								this.settings.password = this.settings.passwords[0];
+								this.saveSettings(this.settings);
+								this.updatePasswords();
+								if (errorPasswords.length > 0) {
+									BdApi.alert("Some passwords contained errors!", `Passwords: ${errorPasswords.join(", ")}`);
+								}
+								BdApi.showToast("Passwords imported!", { type: "success" });
+							},
+						});
+					}
+				}
+
 				getSettingsPanel() {
 					let passwordsGroup = new SettingGroup("Passwords");
 
 					let doc = document.createElement("div");
+
 					doc.innerHTML = ` <div class="input-group">
-					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
-					<div class="input-group-append">
-					  <button class="btn-add" type="button">Add Password</button>
-					  <a class="downloadListButton" href="data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}" download="ApatePasswordList.txt">Download Password List</a>
-					</div>
-				  </div>
-				  <ul id="dynamic-list">
-		  
-		  
-				  </ul>`;
+					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
+					 <div class="input-group-append">
+					   <button class="btn-add" type="button">Add Password</button>
+					   <button class= "downloadListButton" onclick="document.getElementById('file-output').click();">Download Password List</button>
+					   <a id="file-output" href="data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}" download="ApatePasswordList.txt"></a>
+					   <button class="uploadListButton" onclick="document.getElementById('file-input').click();">Import Password List</button>
+					   <input id="file-input" type="file" name="name" style="display: none;" accept=".txt"/>
+ 
+					 </div>
+				   </div>
+				   <ul id="dynamic-list">
+		   
+		   
+				   </ul>`;
 					let addButton = doc.querySelector(".btn-add");
+					let uploadButton = doc.querySelector(".uploadListButton");
 
 					addButton.addEventListener("click", () => this.addPasswordFromInput());
+					uploadButton.addEventListener("click", () => this.importPasswordList());
+
+
+
 
 					let text = document.createElement("div");
 					text.className = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ modeDefault-3a2Ph1";
 					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
-										The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
+										 The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
 					passwordsGroup.append(
 						doc,
 						text,
@@ -626,11 +706,11 @@ module.exports = (() => {
 
 					let textbox = document.createElement("div");
 					textbox.innerHTML = ` <div class="input-group">
-					<input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
-					<button class="btn-add" type="button">Generate Password</button>
-
-
-				  </div>`
+					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
+					 <button class="btn-add" type="button">Generate Password</button>
+ 
+ 
+				   </div>`
 					addButton = textbox.querySelector(".btn-add")
 
 					let textInput = textbox.querySelector("input");
@@ -789,48 +869,50 @@ module.exports = (() => {
 											else {
 												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(linkArray[i],
 													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
-													title="${linkArray[i]}" 
-													href="${linkArray[i]}" 
-													rel="noreferrer noopener" 
-													target="_blank" 
-													role="button" 
-													tabindex="0"">
-													${linkArray[i]}</a>`);
+													 title="${linkArray[i]}" 
+													 href="${linkArray[i]}" 
+													 rel="noreferrer noopener" 
+													 target="_blank" 
+													 role="button" 
+													 tabindex="0"">
+													 ${linkArray[i]}</a>`);
 											}
 										}
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
-										let emojiArray = data.hiddenMsg.match(emojiRegex);
+										for (let line of data.hiddenMsg.split("\\n")) {
+											let emojiArray = line.match(emojiRegex);
+											let bigEmoji = "";
 
-										let bigEmoji = "";
+											if (emojiArray === null) continue; // no emoji on this line
 
-										//						remove the custom emoji	 remove the standart emoji
-										let rest = data.hiddenMsg.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
-										if (rest.length === 0) {
-											bigEmoji = "jumboable"
-										}
+											//						remove the custom emoji	 remove the standart emoji
+											let rest = line.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
+											if (rest.length === 0) {
+												bigEmoji = "jumboable"
+											}
 
-										for (let i = 0; i < emojiArray.length; ++i) {
+											for (let i = 0; i < emojiArray.length; ++i) {
+												let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-											let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
+												if (emojiId === "default") {
+													let emoji = discordEmojiModule.getByName(emojiName);
 
-											if (emojiId === "default") {
-												let emoji = discordEmojiModule.getByName(emojiName);
+													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+														`<span class="${emojiContainerClass}" tabindex="0">
+															 <img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+															 </span>`);
+												} else {
+													if (!this.settings.animate) {
+														emojiId = emojiId.replace(".gif", ".png")
+													}
 
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-													`<span class="${emojiContainerClass}" tabindex="0">
-														<img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-														</span>`);
-											} else {
-												if (!this.settings.animate) {
-													emojiId = emojiId.replace(".gif", ".png")
+													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
+														`<span class="${emojiContainerClass}" tabindex="0">
+															 <img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
+															 </span>`);
 												}
-
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-													`<span class="${emojiContainerClass}" tabindex="0">
-														<img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-														</span>`);
 											}
 										}
 									}
@@ -845,15 +927,32 @@ module.exports = (() => {
 										hiddenMessageDiv.addEventListener("click", () => {
 											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
 											let style = ""
+
+
 											if (data.usedPswd === "") {
 												data.usedPswd = "-No Encryption-"
 												passwordIndex = "-No Encryption-"
 												style = `style="font-style: italic;"`;
 											} else {
 												style = `style="color:${this.settings.passwordColorTable[passwordIndex]}"`;
+
+												var copyButton = document.createElement("button");
+												copyButton.innerHTML = `📋`
+												copyButton.classList.add("btn-passwords");
+												copyButton.setAttribute("title", "Copy Password")
+												copyButton.addEventListener("click", () => {
+													navigator.clipboard.writeText(data.usedPswd);
+													BdApi.showToast("Copied password!", { type: "success" });
+												});
 											}
-											const html = Object.assign(document.createElement("div"), { innerHTML: `Password used: <b><div ${style}>${data.usedPswd}</div></b>\nPassword index: <b><div ${style}>${passwordIndex}</div></b>`, className: "markup-2BOw-j messageContent-2qWWxC" });
-											BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, html));
+											let htmlText = document.createElement("div");
+											htmlText.innerHTML = `Password used: <b><div ${style}>${data.usedPswd}</div></b>\nPassword index: <b><div ${style}>${passwordIndex}</div></b>`;
+											htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
+											if(copyButton) {
+												htmlText.querySelector("div").appendChild(copyButton);
+											}
+
+											BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
 										})
 									}
 								}
@@ -983,8 +1082,8 @@ module.exports = (() => {
 					if (hiddenMessage.match(imageRegex)?.length > 1) {
 						BdApi.alert("Multiple Images",
 							`You have two or more links that lead to images. 
-									Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
-									will be displayed, the other ones will appear as links.`)
+									 Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
+									 will be displayed, the other ones will appear as links.`)
 					}
 
 
