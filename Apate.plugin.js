@@ -1,10 +1,11 @@
 /**
  * @name Apate
- * @version 1.2.3
+ * @version 1.2.4
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
+ * @authorLink https://github.com/TheGreenPig
  */
 
 /* 
@@ -32,7 +33,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.2.3",
+			version: "1.2.4",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -42,8 +43,16 @@ module.exports = (() => {
 				title: "New features",
 				type: "added",
 				items: [
-					"Import password list button.",
-					"You can copy passwords in the list or info message with a button now.",
+					"Generates Passwords that are easier to identify.",
+					"Save password when changed, but only if it was used.",
+					"Send message with different encryption one time (right click Key)",
+				]
+			},
+			{
+				title: "Removed features",
+				type: "fixed",
+				items: [
+					"Removed support for old Apate messages without verification character (To improve decryption speed).",
 				]
 			},
 		],
@@ -60,6 +69,7 @@ module.exports = (() => {
 			});
 		}
 	}
+
 
 	return !global.ZeresPluginLibrary ? class {
 		load() {
@@ -205,6 +215,7 @@ module.exports = (() => {
 				`}`,
 				`.ownPassword{`,
 				`	width: fit-content;`,
+				`	color: white;`,
 				`	padding: 0.1em 0.1em;`,
 				`	margin-bottom: 10px;`,
 				`	background-color: transparent;`,
@@ -214,6 +225,9 @@ module.exports = (() => {
 				`	border-top-right-radius: .25rem;`,
 				`	border-bottom-left-radius: .25rem;`,
 				`	border-bottom-right-radius: .25rem;`,
+				`}`,
+				`.selectedPassword{`,
+				`	background-color: white;`,
 				`}`,
 			].join("\n");
 
@@ -300,7 +314,7 @@ module.exports = (() => {
 
 			const buttonHTML = [
 				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">`,
-				`	<button aria-label="Send Message" tabindex="0" type="button" `,
+				`	<button aria-label="Send Message" tabindex="0" type="button"`,
 				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button `,
 				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"`,
 				`	>`,
@@ -353,8 +367,10 @@ module.exports = (() => {
 			const {
 				DiscordSelectors,
 				Settings,
+				Tooltip
 			} = { ...Api, ...BdApi };
 			const { SettingPanel, SettingGroup, RadioGroup, Switch, Textbox } = Settings;
+
 
 			const options = [
 				{
@@ -368,10 +384,10 @@ module.exports = (() => {
 					value: 1
 				}
 			];
+
 			const worker = (stegCloakBlobURL) => {
 				self.importScripts(stegCloakBlobURL);
 				const stegCloak = new StegCloak();
-
 				self.addEventListener("message", (evt) => {
 					const data = evt.data;
 
@@ -390,38 +406,29 @@ module.exports = (() => {
 						});
 					} else if (data.reveal) {
 						let usedPassword = "";
+
+
 						const hiddenMsg = (() => {
 							try {
 								//\uFFFD = � --> wrong password
 								let revealedMessage = "";
-								let possibleMessages = [[]];
+								revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), ""));
+
+								//check no password
+								if (revealedMessage.endsWith("\u200b")) {
+									//has indicator character
+									return revealedMessage.slice(0, -1);
+								}
+
+								//check all other passwords
 								for (var i = 0; i < data.passwords.length; i++) {
 									revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.passwords[i]);
-
-									//test for correctness:
-									if (!revealedMessage.includes("\uFFFD")) {
-										//might be correct
-										if (revealedMessage.includes("\u200b")) {
-											//definetly correct
-											usedPassword = data.passwords[i];
-											return revealedMessage.replace("\u200b", "");
-										}
-										//probably an older message, store away incase nothing better fits
-										possibleMessages.push([revealedMessage, data.passwords[i]]);
+									if (revealedMessage.endsWith("\u200b")) {
+										//has indicator character
+										usedPassword = data.passwords[i];
+										return revealedMessage.slice(0, -1);
 									}
 								}
-								//try without password
-								revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), ""));
-								if (!revealedMessage.includes("\uFFFD")) {
-									return revealedMessage;
-								}
-								if (possibleMessages.length === 0) {
-									//every password and even the default one had an error. You definetly dont have right the password.
-									console.error(`%c${cloaked}"%c had a %cfaulty password%c! Output: %c"${revealedMessage}`, "color: Fuchsia", "color: white", "color:red", "color: white", "color: DarkGreen");
-								}
-								//return the first possible message (This might be bad because it's probably false)
-								usedPassword = possibleMessages[0][1]
-								return possibleMessages[0][0];
 							} catch {
 								return;
 							}
@@ -454,6 +461,7 @@ module.exports = (() => {
 					passwordColorTable: ['white'],
 					showLoading: true,
 					showInfo: true,
+					saveCurrentPassword: false,
 					devMode: false
 				};
 				settings = null;
@@ -481,7 +489,7 @@ module.exports = (() => {
 						BdApi.alert("Invalid input.", "Please enter a valid password in the Textbox!");
 						return;
 					}
-					console.log(candidate.value);
+
 					this.settings.passwords.push(candidate.value);
 					this.saveSettings(this.settings);
 					this.updatePasswords();
@@ -562,7 +570,9 @@ module.exports = (() => {
 						if (this.settings.passwords.indexOf(this.settings.password) !== -1) {
 							this.removePassword(this.settings.password);
 						}
-						this.settings.passwords.shift();
+						if (!this.settings.saveCurrentPassword) {
+							this.settings.passwords.shift();
+						}
 						this.settings.passwords.unshift(this.settings.password);
 						this.saveSettings(this.settings);
 					}
@@ -598,18 +608,23 @@ module.exports = (() => {
 				}
 
 				generatePassword(input) {
+					const url = 'https://random-word-api.herokuapp.com/word?number=3';
+					fetch(url)
+						.then(data => { return data.json() })
+						.then(res => {
+							var result = res.join("_") + "_"
+							var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>.?/~_+-=|\\: ';
+							var charactersLength = characters.length;
 
-					var result = '';
-					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>.?/~_+-=|\\: ';
-					var charactersLength = characters.length;
-					var length = Math.random() * (50 - 15) + 15
-					for (var i = 0; i < length; i++) {
-						result += characters.charAt(Math.floor(Math.random() * charactersLength));
-					}
-					input.value = result;
-					this.settings.password = input.value;
-					this.saveSettings(this.settings);
-					this.updatePasswords();
+							var length = Math.random() * (40 - 15) + 15;
+							for (var i = 0; i < length; i++) {
+								result += characters.charAt(Math.floor(Math.random() * charactersLength));
+							}
+							input.value = result.substring(0, 50);
+							this.settings.password = input.value;
+							this.saveSettings(this.settings);
+							this.updatePasswords();
+						})
 				}
 
 				importPasswordList() {
@@ -720,6 +735,7 @@ module.exports = (() => {
 					textInput.value = this.settings.password;
 					textInput.addEventListener("change", () => {
 						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>.?/~_+\-=|\\: ]*/g, "");
+						this.settings.saveCurrentPassword = false;
 						this.settings.password = textInput.value;
 						this.saveSettings(this.settings);
 						this.updatePasswords();
@@ -731,7 +747,7 @@ module.exports = (() => {
 
 					let passwordSubTitle = document.createElement("div");
 					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
-					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters `a-Z, 0-9, space and special characters(:._, etc.)`"
+					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters a-Z, 0-9, space and special characters(:._, etc.). Tip: Right click the Key, to encrpyt a message with a certian password only once."
 
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
@@ -768,9 +784,11 @@ module.exports = (() => {
 							}),
 							new Switch('Display loading message', 'Show [loading hidden message...] whilst Apate checks if the password is correct', this.settings.showLoading, (i) => {
 								this.settings.showLoading = i;
+								this.refreshCSS();
 							}),
 							new Switch('Show info on click', 'Lets you click on messages to see the password that was used to decrypt it.', this.settings.showInfo, (i) => {
 								this.settings.showInfo = i;
+								this.refreshCSS();
 							}),
 						),
 						new SettingGroup('Experimental').append(
@@ -787,6 +805,9 @@ module.exports = (() => {
 				async start() {
 					{
 						this.settings = this.loadSettings(this.default);
+
+
+
 						for (const author of config.info.authors) {
 							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
 								this.settings.devMode = true;
@@ -926,15 +947,24 @@ module.exports = (() => {
 									if (this.settings.showInfo) {
 										hiddenMessageDiv.addEventListener("click", () => {
 											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
+											let color = this.settings.passwordColorTable[passwordIndex];
+											if (passwordIndex > 1) {
+												this.settings.passwords.splice(passwordIndex, 1);
+												this.settings.passwordColorTable.splice(passwordIndex, 1);
+
+												this.settings.passwords.splice(1, 0, data.usedPswd);
+												this.settings.passwordColorTable.splice(1, 0, color);
+												this.saveSettings(this.settings);
+											}
 											let style = ""
 
 
 											if (data.usedPswd === "") {
 												data.usedPswd = "-No Encryption-"
 												passwordIndex = "-No Encryption-"
-												style = `style="font-style: italic;"`;
+												style = `style="font-style: italic; font-size:1em;"`;
 											} else {
-												style = `style="color:${this.settings.passwordColorTable[passwordIndex]}"`;
+												style = `style="color:${color}; font-size:0.9em;"`;
 
 												var copyButton = document.createElement("button");
 												copyButton.innerHTML = `📋`
@@ -946,9 +976,9 @@ module.exports = (() => {
 												});
 											}
 											let htmlText = document.createElement("div");
-											htmlText.innerHTML = `Password used: <b><div ${style}>${data.usedPswd}</div></b>\nPassword index: <b><div ${style}>${passwordIndex}</div></b>`;
+											htmlText.innerHTML = `Password used: <b><div ${style}>${data.usedPswd}</div></b>`;
 											htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
-											if(copyButton) {
+											if (copyButton) {
 												htmlText.querySelector("div").appendChild(copyButton);
 											}
 
@@ -989,9 +1019,7 @@ module.exports = (() => {
 					URL.revokeObjectURL(this.hideWorker);
 				};
 
-
-
-				async hideMessage() {
+				async hideMessage(password) {
 					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
 					let input = await (async () => {
 						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
@@ -1090,12 +1118,19 @@ module.exports = (() => {
 					editor.moveToRangeOfDocument();
 					editor.delete();
 					let pswd = ""
-					if (this.settings.encryption === 1) {
-						pswd = this.getPassword()
-						coverMessage = pswd + coverMessage;
-					}
+					if(typeof password !== "undefined" || password==="") {
+						pswd = password;
+					} 
 					else {
-						pswd = this.settings.password;
+						if (this.settings.encryption === 1) {
+							pswd = this.getPassword();
+							coverMessage = pswd + coverMessage;
+						}
+						else {
+							pswd = this.settings.password;
+						}
+						this.settings.saveCurrentPassword = true;
+						this.saveSettings(this.settings);
 					}
 					hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
 					hiddenMessage += "\u200b"; //used as a verification if the password was correct 
@@ -1132,8 +1167,73 @@ module.exports = (() => {
 
 					form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
 					button.outerHTML = buttonHTML;
-
 					button = form.querySelector(".keyButton");
+
+					button.addEventListener("click", () => this.hideMessage());
+
+					let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
+
+					button.addEventListener('hover', () => { tooptip.showAbove(); });
+
+					button.addEventListener('contextmenu',  (ev) => {
+						ev.preventDefault();
+						BdApi.showConfirmationModal("Send message with different encryption?", "The password you choose will only be used on this message.", {
+							confirmText: "Choose password",
+							cancelText: "Cancel",
+							onConfirm: () => {
+								var ul = document.createElement("ul");
+								var noEncrypt = document.createElement("li");
+								noEncrypt.setAttribute('id', "");
+								noEncrypt.classList.add("passwordLi");
+								noEncrypt.textContent="-No Encryption-";
+								noEncrypt.setAttribute('style', `color:SlateGray;`);
+
+								if(this.settings.encryption===1) {
+									noEncrypt.classList.add("selectedPassword");
+								}
+								noEncrypt.addEventListener("click", (e) => {
+									ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+									e.target.classList.add("selectedPassword");
+								})
+
+								ul.appendChild(noEncrypt)
+								for(var i=0; i < this.settings.passwords.length; i++) {
+									let item = this.settings.passwords[i]
+									var li = document.createElement("li");
+									li.setAttribute('id', item);
+	
+									li.classList.add("passwordLi")
+									li.textContent = item;
+				
+									let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
+									if(i===0) {
+										li.setAttribute('style', `color:SlateGray;`);
+										if(this.settings.encryption===0) {
+											li.classList.add("selectedPassword");
+										}
+									} else {
+										li.setAttribute('style', `color:${color}`);
+									}
+									li.addEventListener("click", (e) => {
+										ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+										e.target.classList.add("selectedPassword");
+									})
+									ul.appendChild(li);
+								}
+
+								BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
+									confirmText: "Send",
+									cancelText: "Cancel",
+									onConfirm: () => {
+										let password = ul.querySelector(".selectedPassword").id;
+										this.hideMessage(password)
+									}
+								});
+							},
+
+						});
+						return false;
+					}, false);
 
 					if (this.settings.ctrlToSend) {
 
@@ -1145,7 +1245,6 @@ module.exports = (() => {
 						});
 					}
 
-					button.addEventListener("click", () => this.hideMessage());
 				};
 
 				addHiddenMessageBanners() {
@@ -1182,7 +1281,7 @@ module.exports = (() => {
 
 							let pswd = this.settings.passwords;
 							let hiddenCloak = textContent.replace(/^\u200b/, "")
-							// pswd = hiddenCloak.replace(hiddenCloak.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), "");
+
 							this.revealWorkers[this.lastWorkerId]?.postMessage({
 								id,
 								reveal: true,
