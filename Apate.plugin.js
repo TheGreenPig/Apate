@@ -121,8 +121,8 @@ module.exports = (() => {
 				`}`,
 				`.apateHiddenImg {`,
 				`	padding: 0.4em;`,
-				`	max-width: 40em;`,
-				`	max-height: 40em;`,
+				`	max-width: 400px;`,
+				`	max-height: 300px;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -883,7 +883,7 @@ module.exports = (() => {
 											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
 												//Message has image link
 												let imageLink = linkArray[i];
-												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
+												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink, "")}</br><img class="apateHiddenImg" src="https://ip.webmasterapi.com/api/imageproxy/${imageLink}"></img>`;
 												hasImage = true;
 
 											}
