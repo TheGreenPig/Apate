@@ -136,6 +136,7 @@ module.exports = (() => {
 				`	margin: .3em 0;`,
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
+				`	max-width: 100%;`,
 				`	background-image: `,
 				`		repeating-linear-gradient(-45deg, `,
 				`		var(--background-tertiary) 0em, `,
@@ -168,9 +169,10 @@ module.exports = (() => {
 				`}`,
 				`.btn-add{`,
 				`	background-color: rgb(12, 187, 50);`,
+				`	font-size: 1em;`,
 				`	color: white;`,
-				`	padding: 0.5em;`,
-				`	margin-bottom: 10px;`,
+				`	padding: 0.3em;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.downloadListButton{`,
 				`	background-color: Teal;`,
@@ -178,6 +180,7 @@ module.exports = (() => {
 				`	padding: 0.3em;`,
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.uploadListButton{`,
 				`	background-color: Teal;`,
@@ -185,6 +188,7 @@ module.exports = (() => {
 				`	padding: 0.3em;`,
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.btn-passwords{`,
 				`	font-size: 1.3em;`,
@@ -275,6 +279,7 @@ module.exports = (() => {
 				`	line-height: normal;`,
 				`	margin: .3em 0;`,
 				`	width: fit-content;`,
+				`	max-width: 100%;`,
 				`	border-radius: 0 .8em .8em .8em;`,
 				`}`,
 				`.apateHiddenMessage.loading {`,
@@ -501,7 +506,7 @@ module.exports = (() => {
 					li.setAttribute('id', item);
 
 					var copyButton = document.createElement("button");
-					copyButton.innerHTML = `📋`
+					copyButton.textContent= `📋`
 					copyButton.classList.add("btn-passwords");
 					copyButton.setAttribute("title", "Copy Password")
 					copyButton.addEventListener("click", () => {
@@ -510,7 +515,7 @@ module.exports = (() => {
 					});
 
 					var revButton = document.createElement("button");
-					revButton.innerHTML = `❌`
+					revButton.textContent = `❌`
 					revButton.classList.add("btn-passwords");
 					revButton.setAttribute("title", "Remove Password")
 					revButton.addEventListener("click", () => this.removePassword(item));
@@ -790,12 +795,7 @@ module.exports = (() => {
 								this.settings.showInfo = i;
 								this.refreshCSS();
 							}),
-						),
-						new SettingGroup('Experimental').append(
-							new Switch('Display Images (USE WITH CAUTION)', 'Links to images will be displayed. WARNING: Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.', this.settings.displayImage, (i) => {
-								if (i === true) {
-									BdApi.alert("Warning!", "Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.");
-								}
+							new Switch('Display Images.', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
@@ -871,8 +871,8 @@ module.exports = (() => {
 
 									hiddenMessageDiv.textContent = data.hiddenMsg;
 
-									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
-									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
+									let imageRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)\.(?:jpg|gif|png|jpeg|svg)/g;
 									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 
 									if (urlRegex.test(data.hiddenMsg)) {
@@ -880,7 +880,7 @@ module.exports = (() => {
 										let hasImage = false;
 
 										for (let i = 0; i < linkArray.length; i++) {
-											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
+											if (imageRegex.test(linkArray[i]) && !hasImage && this.settings.displayImage) {
 												//Message has image link
 												let imageLink = new URL(linkArray[i]);
 
@@ -892,7 +892,15 @@ module.exports = (() => {
 												}
 
 												imageLink.href = imageLink.href.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink.href, "")}</br><img class="apateHiddenImg" src="${url}"></img>`;
+												hiddenMessageDiv.textContent = hiddenMessageDiv.textContent.replace(imageLink.href, "");
+
+												hiddenMessageDiv.appendChild(document.createElement("br"))
+												
+												let img = document.createElement("img");
+												img.className = "apateHiddenImg";
+												img.setAttribute("src", url);
+												
+												hiddenMessageDiv.appendChild(img);
 
 												hasImage = true;
 											}
@@ -1113,14 +1121,6 @@ module.exports = (() => {
 							editor.insertText(`${coverMessage}*${hiddenMessage}*`);
 						}
 						return;
-					}
-					let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
-
-					if (hiddenMessage.match(imageRegex)?.length > 1) {
-						BdApi.alert("Multiple Images",
-							`You have two or more links that lead to images. 
-									 Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
-									 will be displayed, the other ones will appear as links.`)
 					}
 
 
