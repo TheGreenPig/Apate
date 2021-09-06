@@ -882,10 +882,19 @@ module.exports = (() => {
 										for (let i = 0; i < linkArray.length; i++) {
 											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
 												//Message has image link
-												let imageLink = linkArray[i];
-												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink, "")}</br><img class="apateHiddenImg" src="https://ip.webmasterapi.com/api/imageproxy/${imageLink}"></img>`;
-												hasImage = true;
+												let imageLink = new URL(linkArray[i]);
 
+												let url;
+												if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
+													url = imageLink.href;
+												} else {
+													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+												}
+
+												imageLink.href = imageLink.href.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink.href, "")}</br><img class="apateHiddenImg" src="${url}"></img>`;
+
+												hasImage = true;
 											}
 											else {
 												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(linkArray[i],
