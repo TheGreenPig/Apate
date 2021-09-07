@@ -43,7 +43,7 @@ module.exports = (() => {
 
 			],
 			version: "1.2.7",
-			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
+			description: "Apate lets you hide messages in other messages! - Usage: `coverText \*hiddenText\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
@@ -404,7 +404,7 @@ module.exports = (() => {
 					deleteInvalid: true,
 					ctrlToSend: true,
 					animate: true,
-					displayImage: false,
+					displayImage: true,
 					password: "",
 					passwords: [],
 					passwordColorTable: ['white'],
@@ -412,7 +412,8 @@ module.exports = (() => {
 					showInfo: true,
 					saveCurrentPassword: false,
 					showChoosePasswordConfirm: true,
-					hiddenAboutMe: "",
+					hiddenAboutMe: false,
+					hiddenAboutMeText: "",
 					devMode: false
 				};
 				settings = null;
@@ -539,14 +540,13 @@ module.exports = (() => {
 				}
 
 				refreshCSS() {
-					let compact, animate, noLoading, simpleBackground;
-					animate = noLoading = simpleBackground = "";
+					let compact, animate, noLoading, simpleBackground, aboutMe;
+					animate = noLoading = simpleBackground = aboutMe = "";
 
 					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
 					compact = `.${compactClass} .apateHiddenMessage {
 						  text-indent: 0;
 					}`;
-
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
 					}
@@ -556,7 +556,11 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
-					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading);
+					if(!this.settings.hiddenAboutMe) {
+						aboutMe = `.apateAboutMeSettings { display: none;}`;
+					}
+					BdApi.clearCSS("apateCSS")
+					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + aboutMe);
 				}
 
 				/**
@@ -682,19 +686,23 @@ module.exports = (() => {
 					}
 				}
 				hideAboutMeMessage() {
+					if(this.settings.hiddenAboutMeText==="") {
+						BdApi.alert("Invalid Message", "The hidden message you chose is empty!");
+						return;
+					}
 					const stegCloak = new StegCloak();
 
 					let oldBio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
 					if (!oldBio.includes(" ")) {
-						BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message.")
+						BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message.");
 						oldBio += " \u200B";
 					}
-					let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMe, "", oldBio);
+					let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
 
 					if(newBio.length>190) {
-						BdApi.alert("Bio too long!", "Either shorten the text in the About Me page, or your hidden message.");
+						BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message.");
 					} else{
-						console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMe}.`);
+						console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
 						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
 
 						accountUpdateModule.saveAccountChanges({bio: newBio});
@@ -773,29 +781,34 @@ module.exports = (() => {
 
 
 					let aboutMeDiv = document.createElement("div");
-					aboutMeDiv.innerHTML = ` <div class="input-group">
+					aboutMeDiv.classList.add("apateAboutMeSettings");
+					let aboutMeTitle = document.createElement("label");
+					aboutMeTitle.classList = "title-31JmR4";
+					aboutMeTitle.textContent = "Hidden About Me Message:"
+ 
+					let aboutMeSubTitle = document.createElement("div");
+					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
+					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read. If you change your About Me page, your hidden message will be resetted."
+ 
+					aboutMeDiv.appendChild(aboutMeTitle)
+
+					aboutMeDiv.innerHTML += ` <div class="input-group">
 					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" required placeholder="Hidden Message!" maxlength="50" title="Hidden About Me message">
 				   </div>`
 
 				   	let aboutMeInput = aboutMeDiv.querySelector("input");
 
-					aboutMeInput.value = this.settings.hiddenAboutMe;
+					aboutMeInput.value = this.settings.hiddenAboutMeText;
 					aboutMeInput.addEventListener("change", () => {
 						
-						this.settings.hiddenAboutMe = aboutMeInput.value;
+						this.settings.hiddenAboutMeText = aboutMeInput.value;
 						this.saveSettings(this.settings);
 						
 						//TODO make it so that this gets executed when the about me page changes as well.
 						this.hideAboutMeMessage();
 					})
 
-					let aboutMeTitle = document.createElement("label");
-					aboutMeTitle.classList = "title-31JmR4";
-					aboutMeTitle.textContent = "Hidden about me Message:"
-
-					let aboutMeSubTitle = document.createElement("div");
-					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
-					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read. If you change your about me Page, your hidden message will be resetted."
+					aboutMeDiv.appendChild(aboutMeSubTitle)
 
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
@@ -808,13 +821,16 @@ module.exports = (() => {
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
-						aboutMeTitle,
-						aboutMeInput,
-						aboutMeSubTitle,
+						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
+							this.settings.hiddenAboutMe = i;
+							console.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
+							this.refreshCSS();
+						}),
+						aboutMeDiv,
 						new SettingGroup('Encryption').append(
-							new RadioGroup('Encryption', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
+							new RadioGroup('', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
 								this.settings.encryption = i;
-								console.log(`Set "encrpytion" to ${this.settings.encryption}`);
+								console.log(`Set "encryption" to ${this.settings.encryption}`);
 								this.updatePasswords();
 							}),
 							passwordTitle,
