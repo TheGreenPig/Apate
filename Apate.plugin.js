@@ -612,6 +612,51 @@ module.exports = (() => {
 					}
 				}
 
+				testImage(url, timeoutT) {
+					return new Promise(function (resolve, reject) {
+						var timeout = timeoutT || 5000;
+						var timer, img = new Image();
+						img.onerror = img.onabort = function () {
+							clearTimeout(timer);
+							reject("error");
+						};
+						img.onload = function () {
+							clearTimeout(timer);
+							resolve("success");
+						};
+						timer = setTimeout(function () {
+							// reset .src to invalid URL so it stops previous
+							// loading, but doesn't trigger new load
+							img.src = "//!!!!/test.jpg";
+							reject("timeout");
+						}, timeout);
+						img.src = url;
+					});
+				}
+
+				/**
+				 * Properly replaces a piece of text in a Text Node with a Node (like replacing the string "\n" with a <br> tag) without using .innerHTML
+				 * @param  {Text}	 haystack	The Text Node to scan
+				 * @param  {String}  needle		The text to look for in the haystack
+				 * @param  {Node}	 node		The node that replaces the needle
+				 * @return {Text}				Returns the Text Node after the newly inserted node
+				 */
+				replaceTextWithNode(haystack, needle, node) {
+					let parentNode = haystack.parentNode;
+
+					let partBefore = haystack.nodeValue.substring(0, haystack.nodeValue.indexOf(needle));
+					let partAfter = haystack.nodeValue.substring(haystack.nodeValue.indexOf(needle) + needle.length);
+
+					let beforeNode = document.createTextNode(partBefore);
+					parentNode.replaceChild(beforeNode, haystack);
+
+					node = parentNode.insertBefore(node, beforeNode.nextSibling);
+
+					let afterNode = document.createTextNode(partAfter);
+
+					return parentNode.insertBefore(afterNode, node.nextSibling);
+				}
+
 				generatePassword(input) {
 					const url = 'https://random-word-api.herokuapp.com/word?number=3';
 					fetch(url)
@@ -869,18 +914,35 @@ module.exports = (() => {
 										hiddenMessageDiv.remove();
 									}
 
-									hiddenMessageDiv.textContent = data.hiddenMsg;
+									let textNode = document.createTextNode(data.hiddenMsg)
+									hiddenMessageDiv.appendChild(textNode);
 
 									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
-									let imageRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)\.(?:jpg|gif|png|jpeg|svg)/g;
 									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
-										let hasImage = false;
 
 										for (let i = 0; i < linkArray.length; i++) {
-											if (imageRegex.test(linkArray[i]) && !hasImage && this.settings.displayImage) {
+											let link = document.createElement("a");
+											link.classList.add("anchor-3Z-8Bb", "anchorUnderlineOnHover-2ESHQB", `loop-${i}`);
+											link.title = linkArray[i];
+											link.href = linkArray[i];
+											link.rel = "noreferrer noopener";
+											link.target = "_blank";
+											link.role = "button";
+											link.tabindex = 0;
+											link.text = linkArray[i];
+
+											let s = textNode.nodeValue;
+
+											textNode = this.replaceTextWithNode(textNode, link.href, link);
+
+											if (textNode === null) {
+												textNode = hiddenMessageDiv.appendChild(document.createTextNode(""));
+											}
+
+											if (this.settings.displayImage && i < 3) { //only scan the first 3 links
 												//Message has image link
 												let imageLink = new URL(linkArray[i]);
 
@@ -891,71 +953,74 @@ module.exports = (() => {
 													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
 												}
 
-												imageLink.href = imageLink.href.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-												hiddenMessageDiv.textContent = hiddenMessageDiv.textContent.replace(imageLink.href, "");
+												this.testImage(url).then(() => {													
+													hiddenMessageDiv.removeChild(link);
+													
+													hiddenMessageDiv.appendChild(document.createElement("br"))
+													
+													let img = document.createElement("img");
+													img.classList.add("apateHiddenImg");
+													img.src = url;
 
-												hiddenMessageDiv.appendChild(document.createElement("br"))
-												
-												let img = document.createElement("img");
-												img.className = "apateHiddenImg";
-												img.setAttribute("src", url);
-												
-												hiddenMessageDiv.appendChild(img);
+													hiddenMessageDiv.appendChild(img);
+												}).catch(() => {});
+											}
+										}
+									}
 
-												hasImage = true;
-											}
-											else {
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(linkArray[i],
-													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
-													 title="${linkArray[i]}" 
-													 href="${linkArray[i]}" 
-													 rel="noreferrer noopener" 
-													 target="_blank" 
-													 role="button" 
-													 tabindex="0"">
-													 ${linkArray[i]}</a>`);
-											}
+									for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
+										let child = hiddenMessageDiv.childNodes[i]
+										if (child.nodeName !== "#text") continue;
+
+										while (child.nodeValue.indexOf("\\n") >= 0) {
+											child = this.replaceTextWithNode(child, "\\n", document.createElement("br"));
 										}
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
-										for (let line of data.hiddenMsg.split("\\n")) {
-											let emojiArray = line.match(emojiRegex);
-											let bigEmoji = "";
+										for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
+											let child = hiddenMessageDiv.childNodes[i];
+											if (child.nodeName !== "#text") continue;
 
-											if (emojiArray === null) continue; // no emoji on this line
+											let emojiArray = child.nodeValue.match(emojiRegex);
 
-											//						remove the custom emoji	 remove the standart emoji
-											let rest = line.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
-											if (rest.length === 0) {
-												bigEmoji = "jumboable"
-											}
+											if (emojiArray) {
+												let bigEmoji = null;
 
-											for (let i = 0; i < emojiArray.length; ++i) {
-												let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
+												let rest = child.nodeValue.replace(emojiRegex, "").trim().replace("\u200B", "");
+												if (rest.length === 0) {
+													bigEmoji = "jumboable"
+												}
 
-												if (emojiId === "default") {
-													let emoji = discordEmojiModule.getByName(emojiName);
+												for (let i = 0; i < emojiArray.length; ++i) {
+													let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-														`<span class="${emojiContainerClass}" tabindex="0">
-															 <img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-															 </span>`);
-												} else {
-													if (!this.settings.animate) {
-														emojiId = emojiId.replace(".gif", ".png")
+													let emojiContainer = document.createElement("span");
+													emojiContainer.classList.add(emojiContainerClass);
+													emojiContainer.tabindex = 0;
+
+													let img = document.createElement("img");
+													img.setAttribute("aria-label", emojiName);
+													img.alt = emojiName;
+													img.classList.add("emoji", bigEmoji);
+
+													emojiContainer.appendChild(img);
+
+													if (emojiId === "default") {
+														img.src = discordEmojiModule.getByName(emojiName).url;
+													} else {
+														if (!this.settings.animate) {
+															emojiId = emojiId.replace(".gif", ".png")
+														}
+
+														img.src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
 													}
 
-													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-														`<span class="${emojiContainerClass}" tabindex="0">
-															 <img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-															 </span>`);
+													child = this.replaceTextWithNode(child, emojiArray[i], emojiContainer);
 												}
 											}
 										}
 									}
-
-									hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(/\\n/g, '<br>');
 
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
