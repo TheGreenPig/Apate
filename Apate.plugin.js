@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.7
+ * @version 1.2.8
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,17 +42,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.7",
+			version: "1.2.8",
 			description: "Apate lets you hide messages in other messages! - Usage: `coverText \*hiddenText\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Fixed:",
-				type: "fixed",
+				title: "Features Added:",
+				type: "added",
 				items: [
-					"Css hotfix",
+					"Hide messages in the About Me section.",
 				]
 			},
 		],
@@ -155,6 +155,9 @@ module.exports = (() => {
 				`}`,
 				`.apateAboutMeHidden {`,
 				`	max-width: 90%;`,
+				`	font-size: 14px;`,
+				`	margin-top: -0.6rem;`,
+				`	margin-bottom: 0.6rem;`,
 				`}`,
 			].join("\n");
 
@@ -871,9 +874,6 @@ module.exports = (() => {
 						if (typeof StegCloak === "undefined") {
 							let stegCloakScript = document.createElement("script");
 							stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
-							stegCloakScript.addEventListener("load", (evt) => {
-								stegCloakLoaded();
-							});
 							document.head.append(stegCloakScript);
 						}
 
@@ -1124,6 +1124,60 @@ module.exports = (() => {
 
 					}
 					URL.revokeObjectURL(this.hideWorker);
+
+					{
+						const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
+						const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+						const aboutMeCache = {};
+
+						function hashCode(s) {
+							for(var i = 0, h = 0; i < s.length; i++)
+								h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+							return h;
+						}
+
+						function getBioHiddenMessage(bio) {
+							if(bio.charAt(0) === "\u200B") {
+								let bioHash = hashCode(bio);
+
+								if (aboutMeCache[bioHash] == undefined) {
+									const stegCloak = new StegCloak();
+									let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
+
+									aboutMeCache[hashCode(bio)] = hiddenMessage;
+								}
+
+								return aboutMeCache[bioHash];
+							}
+
+							return null;
+						}
+
+						BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
+							let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+							if (hiddenMessage != null) {
+								ret.props.children = [
+									BdApi.React.createElement("div", {class: "apateAboutMeHidden apateHiddenMessage"}, hiddenMessage),
+									ret.props.children
+								];
+							}
+						});
+
+						BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
+							let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+							let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+
+							let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+							if (hiddenMessage != null) {
+								aboutMe.props.children = [
+									aboutMe.props.children,
+									BdApi.React.createElement("div", {class: "apateAboutMeHidden apateHiddenMessage"}, hiddenMessage),
+								];
+							}
+						});
+					}
 				};
 
 				async hideMessage(password) {
@@ -1431,34 +1485,13 @@ module.exports = (() => {
 						}
 					}
 				};
-				observer(mutationRecord) {
-					if (!mutationRecord.addedNodes) return;
 
-					let popOutArray = Array.from(document.querySelectorAll('*[class^="aboutMeBody-"], *[class^="userBio-"]'));
-					popOutArray.forEach(popOut => {
-						if(popOut && !popOut.classList.contains("apateSeenAboutMe")) {
-							if(popOut.textContent.charAt(0) === "\u200B") {
-								const stegCloak = new StegCloak();
-								let hiddenMessage = stegCloak.reveal(popOut.textContent.substring(1), "").trim();
-		
-								let hiddenMessageHtml = document.createElement("div");
-								hiddenMessageHtml.innerHTML = hiddenMessage;
-								hiddenMessageHtml.className = "apateAboutMeHidden apateHiddenMessage"
-								popOut.appendChild(hiddenMessageHtml)
-							}
-							
-							popOut.classList.add("apateSeenAboutMe");
-						}
-					})
-
-					this.addHiddenMessageBanners();
-					this.addKeyButton();
-				};
 				stop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
 					}
 					BdApi.clearCSS("apateCSS");
+					BdApi.Patcher.unpatchAll("Apate");
 				};
 			};
 		};
