@@ -153,6 +153,9 @@ module.exports = (() => {
 				`	content: "[loading hidden message...]";`,
 				`	animation: changeLetter 1s linear infinite;`,
 				`}`,
+				`.apateAboutMeHidden {`,
+				`	max-width: 90%;`,
+				`}`,
 			].join("\n");
 
 			let apateNoLoadingCSS = [
@@ -409,6 +412,7 @@ module.exports = (() => {
 					showInfo: true,
 					saveCurrentPassword: false,
 					showChoosePasswordConfirm: true,
+					hiddenAboutMe: "",
 					devMode: false
 				};
 				settings = null;
@@ -677,6 +681,25 @@ module.exports = (() => {
 						});
 					}
 				}
+				hideAboutMeMessage() {
+					const stegCloak = new StegCloak();
+
+					let oldBio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
+					if (!oldBio.includes(" ")) {
+						BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message.")
+						oldBio += " \u200B";
+					}
+					let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMe, "", oldBio);
+
+					if(newBio.length>190) {
+						BdApi.alert("Bio too long!", "Either shorten the text in the About Me page, or your hidden message.");
+					} else{
+						console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMe}.`);
+						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+
+						accountUpdateModule.saveAccountChanges({bio: newBio});
+					}
+				}
 
 				getSettingsPanel() {
 					let passwordsGroup = new SettingGroup("Passwords");
@@ -740,13 +763,39 @@ module.exports = (() => {
 						this.updatePasswords();
 					})
 
-					let passwordTitle = document.createElement("h5");
-					passwordTitle.classList = "colorStandard-2KCXvj size14-e6ZScH h5-18_1nd title-3sZWYQ defaultMarginh5-2mL-bP";
+					let passwordTitle = document.createElement("label");
+					passwordTitle.classList = "title-31JmR4";
 					passwordTitle.textContent = "Enter password:"
 
 					let passwordSubTitle = document.createElement("div");
 					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
 					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters a-Z, 0-9, space and special characters(:._, etc.). Tip: Right click the Key, to encrpyt a message with a certian password only once."
+
+
+					let aboutMeDiv = document.createElement("div");
+					aboutMeDiv.innerHTML = ` <div class="input-group">
+					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" required placeholder="Hidden Message!" maxlength="50" title="Hidden About Me message">
+				   </div>`
+
+				   	let aboutMeInput = aboutMeDiv.querySelector("input");
+
+					aboutMeInput.value = this.settings.hiddenAboutMe;
+					aboutMeInput.addEventListener("change", () => {
+						
+						this.settings.hiddenAboutMe = aboutMeInput.value;
+						this.saveSettings(this.settings);
+						
+						//TODO make it so that this gets executed when the about me page changes as well.
+						this.hideAboutMeMessage();
+					})
+
+					let aboutMeTitle = document.createElement("label");
+					aboutMeTitle.classList = "title-31JmR4";
+					aboutMeTitle.textContent = "Hidden about me Message:"
+
+					let aboutMeSubTitle = document.createElement("div");
+					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
+					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read. If you change your about me Page, your hidden message will be resetted."
 
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
@@ -759,6 +808,9 @@ module.exports = (() => {
 							this.addKeyButton();
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
+						aboutMeTitle,
+						aboutMeInput,
+						aboutMeSubTitle,
 						new SettingGroup('Encryption').append(
 							new RadioGroup('Encryption', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
 								this.settings.encryption = i;
@@ -800,7 +852,14 @@ module.exports = (() => {
 					{
 						this.settings = this.loadSettings(this.default);
 
-
+						if (typeof StegCloak === "undefined") {
+							let stegCloakScript = document.createElement("script");
+							stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
+							stegCloakScript.addEventListener("load", (evt) => {
+								stegCloakLoaded();
+							});
+							document.head.append(stegCloakScript);
+						}
 
 						for (const author of config.info.authors) {
 							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
@@ -1358,6 +1417,24 @@ module.exports = (() => {
 				};
 				observer(mutationRecord) {
 					if (!mutationRecord.addedNodes) return;
+
+					let popOutArray = Array.from(document.querySelectorAll('*[class^="aboutMeBody-"], *[class^="userBio-"]'));
+					popOutArray.forEach(popOut => {
+						if(popOut && !popOut.classList.contains("apateSeenAboutMe")) {
+							if(popOut.textContent.charAt(0) === "\u200B") {
+								const stegCloak = new StegCloak();
+								let hiddenMessage = stegCloak.reveal(popOut.textContent.substring(1), "").trim();
+		
+								let hiddenMessageHtml = document.createElement("div");
+								hiddenMessageHtml.innerHTML = hiddenMessage;
+								hiddenMessageHtml.className = "apateAboutMeHidden apateHiddenMessage"
+								popOut.appendChild(hiddenMessageHtml)
+							}
+							
+							popOut.classList.add("apateSeenAboutMe");
+						}
+					})
+
 					this.addHiddenMessageBanners();
 					this.addKeyButton();
 				};
