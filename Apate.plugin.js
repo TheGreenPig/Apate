@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.4
+ * @version 1.2.5
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig & Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -33,7 +33,7 @@ module.exports = (() => {
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
 			}],
-			version: "1.2.4",
+			version: "1.2.5",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -43,16 +43,9 @@ module.exports = (() => {
 				title: "New features",
 				type: "added",
 				items: [
-					"Generates Passwords that are easier to identify.",
-					"Save password when changed, but only if it was used.",
-					"Send message with different encryption one time (right click Key)",
-				]
-			},
-			{
-				title: "Removed features",
-				type: "fixed",
-				items: [
-					"Removed support for old Apate messages without verification character (To improve decryption speed).",
+					"Uses an image proxy so sending images are safe (Thanks Kehto).",
+					"Better formatting for images.",
+					"Compact mode Support (Thanks Kehto).",
 				]
 			},
 		],
@@ -239,6 +232,11 @@ module.exports = (() => {
 			let apateSimpleCSS = [
 				`.apateHiddenMessage {`,
 				`	background: none;`,
+				`}`,
+			].join("\n");
+			let apateCompactCSS = [
+				`.apateHiddenMessage {`,
+				`	text-indent: 0;`,
 				`}`,
 			].join("\n");
 
@@ -544,9 +542,10 @@ module.exports = (() => {
 				}
 
 				refreshCSS() {
-					let animate = "";
-					let noLoading = "";
-					let simpleBackground = ""
+					let compact, animate, noLoading, simpleBackground;
+					if(ZLibrary.DiscordModules.UserSettingsStore.messageDisplayCompact) {
+						compact = apateCompactCSS;
+					}
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
 					}
@@ -556,7 +555,7 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
-					BdApi.injectCSS("apateCSS", apateCSS + animate + simpleBackground + apatePasswordCSS + noLoading);
+					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading);
 				}
 
 				/**
