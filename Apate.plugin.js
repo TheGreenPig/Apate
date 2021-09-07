@@ -1485,7 +1485,11 @@ module.exports = (() => {
 						}
 					}
 				};
-
+				observer(mutationRecord) {
+					if (!mutationRecord.addedNodes) return;
+					this.addHiddenMessageBanners();
+					this.addKeyButton();
+				};
 				stop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
