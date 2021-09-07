@@ -120,9 +120,10 @@ module.exports = (() => {
 				`	height: 2em;`,
 				`}`,
 				`.apateHiddenImg {`,
-				`	padding: 0.4em;`,
-				`	max-width: 40em;`,
-				`	max-height: 40em;`,
+				`	margin: 10px;`,
+				`	border-radius: 0.3em;`,
+				`	max-width: 500px;`,
+				`	max-height: 400px;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -136,6 +137,7 @@ module.exports = (() => {
 				`	margin: .3em 0;`,
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
+				`	max-width: 100%;`,
 				`	background-image: `,
 				`		repeating-linear-gradient(-45deg, `,
 				`		var(--background-tertiary) 0em, `,
@@ -168,9 +170,10 @@ module.exports = (() => {
 				`}`,
 				`.btn-add{`,
 				`	background-color: rgb(12, 187, 50);`,
+				`	font-size: 1em;`,
 				`	color: white;`,
-				`	padding: 0.5em;`,
-				`	margin-bottom: 10px;`,
+				`	padding: 0.3em;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.downloadListButton{`,
 				`	background-color: Teal;`,
@@ -178,6 +181,7 @@ module.exports = (() => {
 				`	padding: 0.3em;`,
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.uploadListButton{`,
 				`	background-color: Teal;`,
@@ -185,6 +189,7 @@ module.exports = (() => {
 				`	padding: 0.3em;`,
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
+				`	border-radius: .25rem;`,
 				`}`,
 				`.btn-passwords{`,
 				`	font-size: 1.3em;`,
@@ -232,58 +237,8 @@ module.exports = (() => {
 			].join("\n");
 
 			let apateSimpleCSS = [
-				`.apateKeyButtonContainer {`,
-				`	display: flex;`,
-				`	justify-content: center;`,
-				`	align-items: center;`,
-				`}`,
-				`.apateEncryptionKeyButton {`,
-				`	transition: all 300ms ease;`,
-				`	overflow: hidden;`,
-				`	font-size: 1rem;`,
-				`	display: flex;`,
-				`	justify-content: center;`,
-				`	align-items: center;`,
-				`	clip-path: inset(0);`,
-				`	width: 3em;`,
-				`	height: 2.8em;`,
-				`}`,
-				`.apateEncryptionKeyContainer {`,
-				`	padding: 0;`,
-				`	width: 5rem;`,
-				`	height: 5rem;`,
-				`}`,
-				`.apateEncryptionKey {`,
-				`	transition: all 300ms ease;`,
-				`	font-size: 1.3rem;`,
-				`	width: 2em;`,
-				`	height: 2em;`,
-				`}`,
-				`.apateHiddenImg {`,
-				`	padding: 0.4em;`,
-				`	max-width: 40em;`,
-				`	max-height: 40em;`,
-				`}`,
-				`@keyframes apateRotate {`,
-				`	0%   { transform: rotate(0deg);   }`,
-				`	100% { transform: rotate(360deg); }`,
-				`}`,
 				`.apateHiddenMessage {`,
-				`	border: 2px solid var(--interactive-muted);`,
-				`	color: var(--text-normal);`,
-				`	padding: 0.4em 0.5em;`,
-				`	line-height: normal;`,
-				`	margin: .3em 0;`,
-				`	width: fit-content;`,
-				`	border-radius: 0 .8em .8em .8em;`,
-				`}`,
-				`.apateHiddenMessage.loading {`,
-				`	font-style: italic;`,
-				`	color: var(--text-muted);`,
-				`}`,
-				`.apateHiddenMessage.loading::after {`,
-				`	content: "[loading hidden message...]";`,
-				`	animation: changeLetter 1s linear infinite;`,
+				`	background: none;`,
 				`}`,
 			].join("\n");
 
@@ -462,6 +417,7 @@ module.exports = (() => {
 					showLoading: true,
 					showInfo: true,
 					saveCurrentPassword: false,
+					showChoosePasswordConfirm: true,
 					devMode: false
 				};
 				settings = null;
@@ -501,7 +457,7 @@ module.exports = (() => {
 					li.setAttribute('id', item);
 
 					var copyButton = document.createElement("button");
-					copyButton.innerHTML = `📋`
+					copyButton.textContent = `📋`
 					copyButton.classList.add("btn-passwords");
 					copyButton.setAttribute("title", "Copy Password")
 					copyButton.addEventListener("click", () => {
@@ -510,7 +466,7 @@ module.exports = (() => {
 					});
 
 					var revButton = document.createElement("button");
-					revButton.innerHTML = `❌`
+					revButton.textContent = `❌`
 					revButton.classList.add("btn-passwords");
 					revButton.setAttribute("title", "Remove Password")
 					revButton.addEventListener("click", () => this.removePassword(item));
@@ -590,7 +546,7 @@ module.exports = (() => {
 				refreshCSS() {
 					let animate = "";
 					let noLoading = "";
-					let info = "";
+					let simpleBackground = ""
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
 					}
@@ -598,13 +554,60 @@ module.exports = (() => {
 						noLoading = apateNoLoadingCSS;
 					}
 					if (this.settings.simpleBackground) {
-						BdApi.clearCSS("apateCSS");
-						BdApi.injectCSS("apateCSS", apateSimpleCSS + animate + apatePasswordCSS + noLoading);
+						simpleBackground = apateSimpleCSS;
 					}
-					else {
-						BdApi.clearCSS("apateCSS");
-						BdApi.injectCSS("apateCSS", apateCSS + animate + apatePasswordCSS + noLoading);
-					}
+					BdApi.injectCSS("apateCSS", apateCSS + animate + simpleBackground + apatePasswordCSS + noLoading);
+				}
+
+				/**
+				 * Tests if the given url is a valid image url
+				 * @param  {string}	The url
+				 * @param  {int}	Number of milliseconds before returning a timeout error (default 5 000)
+				 * @return {string}	Returns "success", "error" or "timeout"
+				 */
+				testImage(url, timeoutT) {
+					return new Promise(function (resolve, reject) {
+						var timeout = timeoutT || 5000;
+						var timer, img = new Image();
+						img.onerror = img.onabort = function () {
+							clearTimeout(timer);
+							reject("error");
+						};
+						img.onload = function () {
+							clearTimeout(timer);
+							resolve("success");
+						};
+						timer = setTimeout(function () {
+							// reset .src to invalid URL so it stops previous
+							// loading, but doesn't trigger new load
+							img.src = "//!!!!/test.jpg";
+							reject("timeout");
+						}, timeout);
+						img.src = url;
+					});
+				}
+
+				/**
+				 * Properly replaces a piece of text in a Text Node with a Node (like replacing the string "\n" with a <br> tag) without using .innerHTML
+				 * @param  {Text}	 haystack	The Text Node to scan
+				 * @param  {String}  needle		The text to look for in the haystack
+				 * @param  {Node}	 node		The node that replaces the needle
+				 * @return {Text}				Returns the Text Node after the newly inserted node
+				 */
+				replaceTextWithNode(haystack, needle, node) {
+					let parentNode = haystack.parentNode;
+
+					let partBefore = haystack.nodeValue.substring(0, haystack.nodeValue.indexOf(needle));
+					let partAfter = haystack.nodeValue.substring(haystack.nodeValue.indexOf(needle) + needle.length);
+
+					let beforeNode = document.createTextNode(partBefore);
+					parentNode.replaceChild(beforeNode, haystack);
+
+					node = parentNode.insertBefore(node, beforeNode.nextSibling);
+
+					let afterNode = document.createTextNode(partAfter);
+
+					return parentNode.insertBefore(afterNode, node.nextSibling);
 				}
 
 				generatePassword(input) {
@@ -790,12 +793,7 @@ module.exports = (() => {
 								this.settings.showInfo = i;
 								this.refreshCSS();
 							}),
-						),
-						new SettingGroup('Experimental').append(
-							new Switch('Display Images (USE WITH CAUTION)', 'Links to images will be displayed. WARNING: Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.', this.settings.displayImage, (i) => {
-								if (i === true) {
-									BdApi.alert("Warning!", "Any image links hosted on an IP logger will be displayed as well, this can reveal your IP address.");
-								}
+							new Switch('Display Images.', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
@@ -869,76 +867,114 @@ module.exports = (() => {
 										hiddenMessageDiv.remove();
 									}
 
-									hiddenMessageDiv.textContent = data.hiddenMsg;
+									let textNode = document.createTextNode(data.hiddenMsg)
+									hiddenMessageDiv.appendChild(textNode);
 
-									let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
-									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
 									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
-										let hasImage = false;
+
 
 										for (let i = 0; i < linkArray.length; i++) {
-											if (imageRegex.test(linkArray[i]) && hasImage === false && this.settings.displayImage) {
-												//Message has image link
-												let imageLink = linkArray[i];
-												hiddenMessageDiv.innerHTML = `${hiddenMessageDiv.innerHTML.replace(imageLink, "")}</br><img class="apateHiddenImg" src="${imageLink}"></img>`;
-												hasImage = true;
+											let link = document.createElement("a");
+											link.classList.add("anchor-3Z-8Bb", "anchorUnderlineOnHover-2ESHQB", `loop-${i}`);
+											link.title = linkArray[i];
+											link.href = linkArray[i];
+											link.rel = "noreferrer noopener";
+											link.target = "_blank";
+											link.role = "button";
+											link.tabindex = 0;
+											link.text = linkArray[i];
 
+											let s = textNode.nodeValue;
+
+											textNode = this.replaceTextWithNode(textNode, link.href, link);
+
+											if (textNode === null) {
+												textNode = hiddenMessageDiv.appendChild(document.createTextNode(""));
 											}
-											else {
-												hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(linkArray[i],
-													`<a class="anchor-3Z-8Bb anchorUnderlineOnHover-2ESHQB" 
-													 title="${linkArray[i]}" 
-													 href="${linkArray[i]}" 
-													 rel="noreferrer noopener" 
-													 target="_blank" 
-													 role="button" 
-													 tabindex="0"">
-													 ${linkArray[i]}</a>`);
+
+											if (this.settings.displayImage && i < 3) { //only scan the first 3 links
+												//Message has image link
+												let imageLink = new URL(linkArray[i]);
+
+												let url;
+												if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
+													url = imageLink.href;
+												} else {
+													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+												}
+
+												this.testImage(url).then(() => {
+													hiddenMessageDiv.removeChild(link);
+
+
+													let img = document.createElement("img");
+													img.classList.add("apateHiddenImg");
+													img.src = url;
+
+													hiddenMessageDiv.appendChild(img);
+													hiddenMessageDiv.insertBefore(document.createElement("br"), img)
+												}).catch(() => { });
 											}
+										}
+									}
+
+									for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
+										let child = hiddenMessageDiv.childNodes[i]
+										if (child.nodeName !== "#text") continue;
+
+										while (child.nodeValue.indexOf("\\n") >= 0) {
+											child = this.replaceTextWithNode(child, "\\n", document.createElement("br"));
 										}
 									}
 
 									if (emojiRegex.test(data.hiddenMsg)) {
-										for (let line of data.hiddenMsg.split("\\n")) {
-											let emojiArray = line.match(emojiRegex);
-											let bigEmoji = "";
+										for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
+											let child = hiddenMessageDiv.childNodes[i];
+											if (child.nodeName !== "#text") continue;
 
-											if (emojiArray === null) continue; // no emoji on this line
+											let emojiArray = child.nodeValue.match(emojiRegex);
 
-											//						remove the custom emoji	 remove the standart emoji
-											let rest = line.replace(emojiRegex, "").replace(/[\\n ]/g, "").trim().replace("\u200B", "");
-											if (rest.length === 0) {
-												bigEmoji = "jumboable"
-											}
+											if (emojiArray) {
+												let bigEmoji = null;
 
-											for (let i = 0; i < emojiArray.length; ++i) {
-												let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
+												let rest = child.nodeValue.replace(emojiRegex, "").trim().replace("\u200B", "");
+												if (rest.length === 0) {
+													bigEmoji = "jumboable"
+												}
 
-												if (emojiId === "default") {
-													let emoji = discordEmojiModule.getByName(emojiName);
+												for (let i = 0; i < emojiArray.length; ++i) {
+													let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
 
-													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-														`<span class="${emojiContainerClass}" tabindex="0">
-															 <img aria-label="${emojiName}" src="${emoji.url}" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-															 </span>`);
-												} else {
-													if (!this.settings.animate) {
-														emojiId = emojiId.replace(".gif", ".png")
+													let emojiContainer = document.createElement("span");
+													emojiContainer.classList.add(emojiContainerClass);
+													emojiContainer.tabindex = 0;
+
+													let img = document.createElement("img");
+													img.setAttribute("aria-label", emojiName);
+													img.alt = emojiName;
+													img.classList.add("emoji", bigEmoji);
+
+													emojiContainer.appendChild(img);
+
+													if (emojiId === "default") {
+														img.src = discordEmojiModule.getByName(emojiName).url;
+													} else {
+														if (!this.settings.animate) {
+															emojiId = emojiId.replace(".gif", ".png")
+														}
+
+														img.src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
 													}
 
-													hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(emojiArray[i],
-														`<span class="${emojiContainerClass}" tabindex="0">
-															 <img aria-label="${emojiName}" src="https://cdn.discordapp.com/emojis/${emojiId}?v=1" alt=":${emojiName}:" class="emoji ${bigEmoji}">
-															 </span>`);
+													child = this.replaceTextWithNode(child, emojiArray[i], emojiContainer);
 												}
 											}
 										}
 									}
-
-									hiddenMessageDiv.innerHTML = hiddenMessageDiv.innerHTML.replace(/\\n/g, '<br>');
 
 									hiddenMessageDiv.classList.remove("loading");
 									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
@@ -1105,22 +1141,14 @@ module.exports = (() => {
 						}
 						return;
 					}
-					let imageRegex = /(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg|svg)/gi;
-
-					if (hiddenMessage.match(imageRegex)?.length > 1) {
-						BdApi.alert("Multiple Images",
-							`You have two or more links that lead to images. 
-									 Only the first one (${hiddenMessage.match(imageRegex)[0]}) 
-									 will be displayed, the other ones will appear as links.`)
-					}
 
 
 					editor.moveToRangeOfDocument();
 					editor.delete();
 					let pswd = ""
-					if(typeof password !== "undefined" || password==="") {
+					if (typeof password !== "undefined" || password === "") {
 						pswd = password;
-					} 
+					}
 					else {
 						if (this.settings.encryption === 1) {
 							pswd = this.getPassword();
@@ -1154,6 +1182,56 @@ module.exports = (() => {
 					}
 					return password;
 				}
+				displayPasswordChoose() {
+					var ul = document.createElement("ul");
+					var noEncrypt = document.createElement("li");
+					noEncrypt.setAttribute('id', "");
+					noEncrypt.classList.add("passwordLi");
+					noEncrypt.textContent = "-No Encryption-";
+					noEncrypt.setAttribute('style', `color:SlateGray;`);
+
+					if (this.settings.encryption === 1) {
+						noEncrypt.classList.add("selectedPassword");
+					}
+					noEncrypt.addEventListener("click", (e) => {
+						ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+						e.target.classList.add("selectedPassword");
+					})
+
+					ul.appendChild(noEncrypt)
+					for (var i = 0; i < this.settings.passwords.length; i++) {
+						let item = this.settings.passwords[i]
+						var li = document.createElement("li");
+						li.setAttribute('id', item);
+
+						li.classList.add("passwordLi")
+						li.textContent = item;
+
+						let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
+						if (i === 0) {
+							li.setAttribute('style', `color:SlateGray;`);
+							if (this.settings.encryption === 0) {
+								li.classList.add("selectedPassword");
+							}
+						} else {
+							li.setAttribute('style', `color:${color}`);
+						}
+						li.addEventListener("click", (e) => {
+							ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+							e.target.classList.add("selectedPassword");
+						})
+						ul.appendChild(li);
+					}
+
+					BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
+						confirmText: "Send",
+						cancelText: "Cancel",
+						onConfirm: () => {
+							let password = ul.querySelector(".selectedPassword").id;
+							this.hideMessage(password)
+						}
+					});
+				}
 
 				addKeyButton() {
 
@@ -1175,63 +1253,44 @@ module.exports = (() => {
 
 					button.addEventListener('hover', () => { tooptip.showAbove(); });
 
-					button.addEventListener('contextmenu',  (ev) => {
+					button.addEventListener('contextmenu', (ev) => {
 						ev.preventDefault();
-						BdApi.showConfirmationModal("Send message with different encryption?", "The password you choose will only be used on this message.", {
-							confirmText: "Choose password",
-							cancelText: "Cancel",
-							onConfirm: () => {
-								var ul = document.createElement("ul");
-								var noEncrypt = document.createElement("li");
-								noEncrypt.setAttribute('id', "");
-								noEncrypt.classList.add("passwordLi");
-								noEncrypt.textContent="-No Encryption-";
-								noEncrypt.setAttribute('style', `color:SlateGray;`);
 
-								if(this.settings.encryption===1) {
-									noEncrypt.classList.add("selectedPassword");
-								}
-								noEncrypt.addEventListener("click", (e) => {
-									ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
-									e.target.classList.add("selectedPassword");
-								})
+						if (this.settings.showChoosePasswordConfirm) {
+							let checkbox = document.createElement("input");
+							checkbox.setAttribute("type", "checkbox");
+							checkbox.setAttribute("id", "apateDontShowAgain");
+							checkbox.setAttribute("title", "Don't show again.");
 
-								ul.appendChild(noEncrypt)
-								for(var i=0; i < this.settings.passwords.length; i++) {
-									let item = this.settings.passwords[i]
-									var li = document.createElement("li");
-									li.setAttribute('id', item);
-	
-									li.classList.add("passwordLi")
-									li.textContent = item;
-				
-									let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
-									if(i===0) {
-										li.setAttribute('style', `color:SlateGray;`);
-										if(this.settings.encryption===0) {
-											li.classList.add("selectedPassword");
-										}
-									} else {
-										li.setAttribute('style', `color:${color}`);
+							let info = document.createElement("div");
+							info.textContent = "The password you choose will only be used on this message."
+							info.className = "markdown-11q6EU paragraph-3Ejjt0";
+
+							let infoCheckBox = document.createElement("div");
+							infoCheckBox.textContent = "Don't show this message again:"
+							infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+							infoCheckBox.appendChild(checkbox)
+
+							let htmlText = document.createElement("div")
+							htmlText.appendChild(info);
+							htmlText.appendChild(document.createElement("br"))
+							htmlText.appendChild(infoCheckBox)
+
+							BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+								confirmText: "Choose password",
+								cancelText: "Cancel",
+								onConfirm: () => {
+									if (document.getElementById("apateDontShowAgain").checked === true) {
+										this.settings.showChoosePasswordConfirm = false;
+										this.saveSettings(this.settings);
 									}
-									li.addEventListener("click", (e) => {
-										ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
-										e.target.classList.add("selectedPassword");
-									})
-									ul.appendChild(li);
-								}
+									this.displayPasswordChoose();
+								},
 
-								BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
-									confirmText: "Send",
-									cancelText: "Cancel",
-									onConfirm: () => {
-										let password = ul.querySelector(".selectedPassword").id;
-										this.hideMessage(password)
-									}
-								});
-							},
-
-						});
+							});
+						} else {
+							this.displayPasswordChoose();
+						}
 						return false;
 					}, false);
 
