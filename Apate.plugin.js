@@ -1,8 +1,8 @@
 /**
  * @name Apate
- * @version 1.2.5
+ * @version 1.2.6
  * @description Hide your secret Discord messages in other messages!
- * @author TheGreenPig & Aster
+ * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  * @authorLink https://github.com/TheGreenPig
@@ -24,28 +24,36 @@ module.exports = (() => {
 		info: {
 			name: "Apate",
 			authors: [{
+				name: "AGreenPig",
+				discord_id: "427179231164760066",
+				github_username: "TheGreenPig"
+			}, 
+			{
+				name: "Kehto",
+				discord_id: "517142662231359488",
+				github_username: "fabJunior",
+			}, 
+			{
 				name: "Aster",
 				discord_id: "534335982200291328",
 				github_username: "BenjaminAster",
 				website: "https://benjaminaster.com/"
-			}, {
-				name: "AGreenPig",
-				discord_id: "427179231164760066",
-				github_username: "TheGreenPig"
-			}],
-			version: "1.2.5",
+			}, 
+		
+		
+		],
+			version: "1.2.6",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "New features",
-				type: "added",
+				title: "Fixed:",
+				type: "fixed",
 				items: [
-					"Uses an image proxy so sending images are safe (Thanks Kehto).",
-					"Better formatting for images.",
-					"Compact mode Support (Thanks Kehto).",
+					"Minor css fix for compact mode.",
+					"Added author",
 				]
 			},
 		],
@@ -232,11 +240,6 @@ module.exports = (() => {
 			let apateSimpleCSS = [
 				`.apateHiddenMessage {`,
 				`	background: none;`,
-				`}`,
-			].join("\n");
-			let apateCompactCSS = [
-				`.apateHiddenMessage {`,
-				`	text-indent: 0;`,
 				`}`,
 			].join("\n");
 
@@ -543,8 +546,12 @@ module.exports = (() => {
 
 				refreshCSS() {
 					let compact, animate, noLoading, simpleBackground;
+					compact = animate = noLoading = simpleBackground = "";
 					if(ZLibrary.DiscordModules.UserSettingsStore.messageDisplayCompact) {
-						compact = apateCompactCSS;
+						let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
+						compact = `.${compactClass} .apateHiddenMessage {
+						  text-indent: 0;
+						}`;
 					}
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
