@@ -120,9 +120,10 @@ module.exports = (() => {
 				`	height: 2em;`,
 				`}`,
 				`.apateHiddenImg {`,
-				`	padding: 0.4em;`,
-				`	max-width: 400px;`,
-				`	max-height: 300px;`,
+				`	margin: 10px;`,
+				`	border-radius: 0.3em;`,
+				`	max-width: 500px;`,
+				`	max-height: 400px;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -236,59 +237,8 @@ module.exports = (() => {
 			].join("\n");
 
 			let apateSimpleCSS = [
-				`.apateKeyButtonContainer {`,
-				`	display: flex;`,
-				`	justify-content: center;`,
-				`	align-items: center;`,
-				`}`,
-				`.apateEncryptionKeyButton {`,
-				`	transition: all 300ms ease;`,
-				`	overflow: hidden;`,
-				`	font-size: 1rem;`,
-				`	display: flex;`,
-				`	justify-content: center;`,
-				`	align-items: center;`,
-				`	clip-path: inset(0);`,
-				`	width: 3em;`,
-				`	height: 2.8em;`,
-				`}`,
-				`.apateEncryptionKeyContainer {`,
-				`	padding: 0;`,
-				`	width: 5rem;`,
-				`	height: 5rem;`,
-				`}`,
-				`.apateEncryptionKey {`,
-				`	transition: all 300ms ease;`,
-				`	font-size: 1.3rem;`,
-				`	width: 2em;`,
-				`	height: 2em;`,
-				`}`,
-				`.apateHiddenImg {`,
-				`	padding: 0.4em;`,
-				`	max-width: 40em;`,
-				`	max-height: 40em;`,
-				`}`,
-				`@keyframes apateRotate {`,
-				`	0%   { transform: rotate(0deg);   }`,
-				`	100% { transform: rotate(360deg); }`,
-				`}`,
 				`.apateHiddenMessage {`,
-				`	border: 2px solid var(--interactive-muted);`,
-				`	color: var(--text-normal);`,
-				`	padding: 0.4em 0.5em;`,
-				`	line-height: normal;`,
-				`	margin: .3em 0;`,
-				`	width: fit-content;`,
-				`	max-width: 100%;`,
-				`	border-radius: 0 .8em .8em .8em;`,
-				`}`,
-				`.apateHiddenMessage.loading {`,
-				`	font-style: italic;`,
-				`	color: var(--text-muted);`,
-				`}`,
-				`.apateHiddenMessage.loading::after {`,
-				`	content: "[loading hidden message...]";`,
-				`	animation: changeLetter 1s linear infinite;`,
+				`	background: none;`,
 				`}`,
 			].join("\n");
 
@@ -467,6 +417,7 @@ module.exports = (() => {
 					showLoading: true,
 					showInfo: true,
 					saveCurrentPassword: false,
+					showChoosePasswordConfirm: true,
 					devMode: false
 				};
 				settings = null;
@@ -506,7 +457,7 @@ module.exports = (() => {
 					li.setAttribute('id', item);
 
 					var copyButton = document.createElement("button");
-					copyButton.textContent= `📋`
+					copyButton.textContent = `📋`
 					copyButton.classList.add("btn-passwords");
 					copyButton.setAttribute("title", "Copy Password")
 					copyButton.addEventListener("click", () => {
@@ -595,7 +546,7 @@ module.exports = (() => {
 				refreshCSS() {
 					let animate = "";
 					let noLoading = "";
-					let info = "";
+					let simpleBackground = ""
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
 					}
@@ -603,13 +554,9 @@ module.exports = (() => {
 						noLoading = apateNoLoadingCSS;
 					}
 					if (this.settings.simpleBackground) {
-						BdApi.clearCSS("apateCSS");
-						BdApi.injectCSS("apateCSS", apateSimpleCSS + animate + apatePasswordCSS + noLoading);
+						simpleBackground = apateSimpleCSS;
 					}
-					else {
-						BdApi.clearCSS("apateCSS");
-						BdApi.injectCSS("apateCSS", apateCSS + animate + apatePasswordCSS + noLoading);
-					}
+					BdApi.injectCSS("apateCSS", apateCSS + animate + simpleBackground + apatePasswordCSS + noLoading);
 				}
 
 				/**
@@ -929,6 +876,7 @@ module.exports = (() => {
 									if (urlRegex.test(data.hiddenMsg)) {
 										let linkArray = data.hiddenMsg.match(urlRegex);
 
+
 										for (let i = 0; i < linkArray.length; i++) {
 											let link = document.createElement("a");
 											link.classList.add("anchor-3Z-8Bb", "anchorUnderlineOnHover-2ESHQB", `loop-${i}`);
@@ -959,17 +907,17 @@ module.exports = (() => {
 													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
 												}
 
-												this.testImage(url).then(() => {													
+												this.testImage(url).then(() => {
 													hiddenMessageDiv.removeChild(link);
-													
-													hiddenMessageDiv.appendChild(document.createElement("br"))
-													
+
+
 													let img = document.createElement("img");
 													img.classList.add("apateHiddenImg");
 													img.src = url;
 
 													hiddenMessageDiv.appendChild(img);
-												}).catch(() => {});
+													hiddenMessageDiv.insertBefore(document.createElement("br"), img)
+												}).catch(() => { });
 											}
 										}
 									}
@@ -1198,9 +1146,9 @@ module.exports = (() => {
 					editor.moveToRangeOfDocument();
 					editor.delete();
 					let pswd = ""
-					if(typeof password !== "undefined" || password==="") {
+					if (typeof password !== "undefined" || password === "") {
 						pswd = password;
-					} 
+					}
 					else {
 						if (this.settings.encryption === 1) {
 							pswd = this.getPassword();
@@ -1234,6 +1182,56 @@ module.exports = (() => {
 					}
 					return password;
 				}
+				displayPasswordChoose() {
+					var ul = document.createElement("ul");
+					var noEncrypt = document.createElement("li");
+					noEncrypt.setAttribute('id', "");
+					noEncrypt.classList.add("passwordLi");
+					noEncrypt.textContent = "-No Encryption-";
+					noEncrypt.setAttribute('style', `color:SlateGray;`);
+
+					if (this.settings.encryption === 1) {
+						noEncrypt.classList.add("selectedPassword");
+					}
+					noEncrypt.addEventListener("click", (e) => {
+						ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+						e.target.classList.add("selectedPassword");
+					})
+
+					ul.appendChild(noEncrypt)
+					for (var i = 0; i < this.settings.passwords.length; i++) {
+						let item = this.settings.passwords[i]
+						var li = document.createElement("li");
+						li.setAttribute('id', item);
+
+						li.classList.add("passwordLi")
+						li.textContent = item;
+
+						let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
+						if (i === 0) {
+							li.setAttribute('style', `color:SlateGray;`);
+							if (this.settings.encryption === 0) {
+								li.classList.add("selectedPassword");
+							}
+						} else {
+							li.setAttribute('style', `color:${color}`);
+						}
+						li.addEventListener("click", (e) => {
+							ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+							e.target.classList.add("selectedPassword");
+						})
+						ul.appendChild(li);
+					}
+
+					BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
+						confirmText: "Send",
+						cancelText: "Cancel",
+						onConfirm: () => {
+							let password = ul.querySelector(".selectedPassword").id;
+							this.hideMessage(password)
+						}
+					});
+				}
 
 				addKeyButton() {
 
@@ -1255,63 +1253,44 @@ module.exports = (() => {
 
 					button.addEventListener('hover', () => { tooptip.showAbove(); });
 
-					button.addEventListener('contextmenu',  (ev) => {
+					button.addEventListener('contextmenu', (ev) => {
 						ev.preventDefault();
-						BdApi.showConfirmationModal("Send message with different encryption?", "The password you choose will only be used on this message.", {
-							confirmText: "Choose password",
-							cancelText: "Cancel",
-							onConfirm: () => {
-								var ul = document.createElement("ul");
-								var noEncrypt = document.createElement("li");
-								noEncrypt.setAttribute('id', "");
-								noEncrypt.classList.add("passwordLi");
-								noEncrypt.textContent="-No Encryption-";
-								noEncrypt.setAttribute('style', `color:SlateGray;`);
 
-								if(this.settings.encryption===1) {
-									noEncrypt.classList.add("selectedPassword");
-								}
-								noEncrypt.addEventListener("click", (e) => {
-									ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
-									e.target.classList.add("selectedPassword");
-								})
+						if (this.settings.showChoosePasswordConfirm) {
+							let checkbox = document.createElement("input");
+							checkbox.setAttribute("type", "checkbox");
+							checkbox.setAttribute("id", "apateDontShowAgain");
+							checkbox.setAttribute("title", "Don't show again.");
 
-								ul.appendChild(noEncrypt)
-								for(var i=0; i < this.settings.passwords.length; i++) {
-									let item = this.settings.passwords[i]
-									var li = document.createElement("li");
-									li.setAttribute('id', item);
-	
-									li.classList.add("passwordLi")
-									li.textContent = item;
-				
-									let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
-									if(i===0) {
-										li.setAttribute('style', `color:SlateGray;`);
-										if(this.settings.encryption===0) {
-											li.classList.add("selectedPassword");
-										}
-									} else {
-										li.setAttribute('style', `color:${color}`);
+							let info = document.createElement("div");
+							info.textContent = "The password you choose will only be used on this message."
+							info.className = "markdown-11q6EU paragraph-3Ejjt0";
+
+							let infoCheckBox = document.createElement("div");
+							infoCheckBox.textContent = "Don't show this message again:"
+							infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+							infoCheckBox.appendChild(checkbox)
+
+							let htmlText = document.createElement("div")
+							htmlText.appendChild(info);
+							htmlText.appendChild(document.createElement("br"))
+							htmlText.appendChild(infoCheckBox)
+
+							BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+								confirmText: "Choose password",
+								cancelText: "Cancel",
+								onConfirm: () => {
+									if (document.getElementById("apateDontShowAgain").checked === true) {
+										this.settings.showChoosePasswordConfirm = false;
+										this.saveSettings(this.settings);
 									}
-									li.addEventListener("click", (e) => {
-										ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
-										e.target.classList.add("selectedPassword");
-									})
-									ul.appendChild(li);
-								}
+									this.displayPasswordChoose();
+								},
 
-								BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
-									confirmText: "Send",
-									cancelText: "Cancel",
-									onConfirm: () => {
-										let password = ul.querySelector(".selectedPassword").id;
-										this.hideMessage(password)
-									}
-								});
-							},
-
-						});
+							});
+						} else {
+							this.displayPasswordChoose();
+						}
 						return false;
 					}, false);
 
