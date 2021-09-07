@@ -612,6 +612,12 @@ module.exports = (() => {
 					}
 				}
 
+				/**
+				 * Tests if the given url is a valid image url
+				 * @param  {string}	The url
+				 * @param  {int}	Number of milliseconds before returning a timeout error (default 5 000)
+				 * @return {string}	Returns "success", "error" or "timeout"
+				 */
 				testImage(url, timeoutT) {
 					return new Promise(function (resolve, reject) {
 						var timeout = timeoutT || 5000;
