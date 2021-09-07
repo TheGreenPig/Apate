@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.6
+ * @version 1.2.7
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -27,22 +27,22 @@ module.exports = (() => {
 				name: "AGreenPig",
 				discord_id: "427179231164760066",
 				github_username: "TheGreenPig"
-			}, 
+			},
 			{
 				name: "Kehto",
 				discord_id: "517142662231359488",
 				github_username: "fabJunior",
-			}, 
+			},
 			{
 				name: "Aster",
 				discord_id: "534335982200291328",
 				github_username: "BenjaminAster",
 				website: "https://benjaminaster.com/"
-			}, 
-		
-		
-		],
-			version: "1.2.6",
+			},
+
+
+			],
+			version: "1.2.7",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,8 +52,7 @@ module.exports = (() => {
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Minor css fix for compact mode.",
-					"Added author",
+					"Css hotfix",
 				]
 			},
 		],
@@ -206,7 +205,7 @@ module.exports = (() => {
 				`}`,
 				`.passwordLi{`,
 				`	width: fit-content;`,
-				`	text-align: center;`,
+				`	text-align: left;`,
 				`	font-weight: bold;`,
 				`	padding: 0.4em 0.5em;`,
 				`	line-height: normal;`,
@@ -220,17 +219,8 @@ module.exports = (() => {
 				`	border-bottom-right-radius: .25rem;`,
 				`}`,
 				`.ownPassword{`,
-				`	width: fit-content;`,
 				`	color: white;`,
-				`	padding: 0.1em 0.1em;`,
-				`	margin-bottom: 10px;`,
 				`	background-color: transparent;`,
-				`	border: 1px solid`,
-				`	rgba(0,0,0,.125);`,
-				`	border-top-left-radius: .25rem;`,
-				`	border-top-right-radius: .25rem;`,
-				`	border-bottom-left-radius: .25rem;`,
-				`	border-bottom-right-radius: .25rem;`,
 				`}`,
 				`.selectedPassword{`,
 				`	background-color: white;`,
@@ -474,7 +464,7 @@ module.exports = (() => {
 
 					if (this.settings.passwords[0] === item) {
 						//first entry aka own password
-						li.classList.add("ownPassword");
+						li.classList.add("passwordLi","ownPassword");
 						if (this.settings.encryption === 1) {
 							item = "-Encryption is off-";
 						}
@@ -546,13 +536,13 @@ module.exports = (() => {
 
 				refreshCSS() {
 					let compact, animate, noLoading, simpleBackground;
-					compact = animate = noLoading = simpleBackground = "";
-					if(ZLibrary.DiscordModules.UserSettingsStore.messageDisplayCompact) {
-						let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
-						compact = `.${compactClass} .apateHiddenMessage {
+					animate = noLoading = simpleBackground = "";
+
+					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
+					compact = `.${compactClass} .apateHiddenMessage {
 						  text-indent: 0;
-						}`;
-					}
+					}`;
+
 					if (this.settings.animate) {
 						animate = apateAnimateCSS;
 					}
@@ -819,16 +809,16 @@ module.exports = (() => {
 						}
 						if (this.settings.devMode) {
 							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
-								'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; backdround-size: contain;',
+								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, Kehto, Aster`,
+								'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; background-size: contain;',
 								``,
 								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 							);
 						}
 						else {
 							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By Aster & AGreenPig`,
-								'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; backdround-size: contain;',
+								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, Kehto, Aster`,
+								'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; background-size: contain;',
 								``,
 								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 							);
