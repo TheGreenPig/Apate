@@ -1149,8 +1149,8 @@ module.exports = (() => {
 						});
 
 						BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
-							let infoSection = ret.props.children.find(child => child.props.className.includes("userInfoSection-"));
-							let aboutMe = infoSection.props.children.find(child => child.props.children.some(subChild => subChild.props.className.includes("userBio-")));
+							let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+							let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
 
 							let hiddenMessage = getBioHiddenMessage(props.user.bio);
 
