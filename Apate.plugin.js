@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.7
+ * @version 1.2.8
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,17 +42,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.7",
+			version: "1.2.8",
 			description: "Apate lets you hide messages in other messages! - Usage: coverText *hiddenText*",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Fixed:",
-				type: "fixed",
+				title: "Features Added:",
+				type: "added",
 				items: [
-					"Css hotfix",
+					"Hide messages in the About Me section.",
 				]
 			},
 		],
@@ -858,9 +858,6 @@ module.exports = (() => {
 						if (typeof StegCloak === "undefined") {
 							let stegCloakScript = document.createElement("script");
 							stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
-							stegCloakScript.addEventListener("load", (evt) => {
-								stegCloakLoaded();
-							});
 							document.head.append(stegCloakScript);
 						}
 
