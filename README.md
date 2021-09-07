@@ -14,7 +14,7 @@ Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that
 
 
 ## Installing
-Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. Then go to the Plugin settings and turn both Apate and ZeresPluginLibrary on. Then restart (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
+Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. If you see a `There is an update for Apate avalible!` Banner message, click it to fully update Apate. 
 
 ## Usage
 <img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/demo.gif" alt="Demo" width="500">
@@ -27,23 +27,31 @@ Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the mes
 
 **Note:**
 
- - The hidden message should turn *italic* if you did it right
- - There can't be a string after the hidden message. The second `*` should be the last character
+- The hidden message should turn *italic* if you did it right
+- There can't be a string after the hidden message. The second `*` should be the last character.
 
 ## Passwords
 In Apate you can set your own password and then only people that have your password in their list can read your messages. 
 
 **To set your password:** 
-Go into `Settings > Plugins > Apate Settings (Cogwheel) > Encryption` and enter the password you want into the Textbox. 
+
+Go into `Settings > Plugins > Apate Settings (Cogwheel) > Encryption` and enter the password you want into the Textbox. This will be your default password and all your messages will be encrypted with it, as long as you have Encrpytion on. If you don't want to generate a password yourself, you can hit the `Generate Password` Button. It will create a password out of three english words and then random symbols to make the password both secure and easy to identify.
 
 **To  manage your password list:** 
+
 Go into `Settings > Plugins > Apate Settings (Cogwheel) > Passwords`. 
 <br>If you want to add a password, enter it into the Textbox and press `Add Password`. The password should appear in the list below and then Apate should decrypt all messages with that specific password automatically. To remove a password, press the ❌ Symbol.
- >Note:
- >- Your personal password is always automatically in your list
- >- The more passwords you have in your list, the longer the decryption prosses will take
- >- The higher up a password is, the more priority it has (put passwords you use often high up)
 
+**Import / Export Password list:**
+
+In case you want to save your password list to make sure you don't lose it you can press the `Download Password list` button. It will promt you to save your list as a `.txt` file. If you then want to import that password list, simply press `Import Password list` and select your file. Notice **ALL YOUR PASSWORDS WILL BE LOST** when you import a new list. Save your password list before importing a new one, just to be sure you dont loose anything. 
+Note:
+- Your personal password is always automatically in your list (if you used it at least once).
+- The more passwords you have in your list, the longer the decryption prosses will take.
+- The higher up a password is, the more priority it has (passwords you use often will automatically move up the list).
+
+## Quickly changing between passwords 
+By default, the message will be sent with your chosen password (if encrpytion is turned on). If you want to send a message with a different (or no) password once, you can right-click the key on the bottom right to select a password. This will **NOT** change your default password.
 
 ## Authors
 
