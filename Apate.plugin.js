@@ -768,7 +768,7 @@ module.exports = (() => {
  
 					let aboutMeSubTitle = document.createElement("div");
 					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
-					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read. If you change your About Me page, your hidden message will be resetted."
+					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read."
  
 					aboutMeDiv.appendChild(aboutMeTitle)
 
