@@ -688,29 +688,6 @@ module.exports = (() => {
 						});
 					}
 				}
-				hideAboutMeMessage() {
-					if(this.settings.hiddenAboutMeText==="") {
-						BdApi.alert("Invalid Message", "The hidden message you chose is empty!");
-						return;
-					}
-					const stegCloak = new StegCloak();
-
-					let oldBio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
-					if (!oldBio.includes(" ")) {
-						BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message.");
-						oldBio += " \u200B";
-					}
-					let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
-
-					if(newBio.length>190) {
-						BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message.");
-					} else{
-						console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
-						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
-
-						accountUpdateModule.saveAccountChanges({bio: newBio});
-					}
-				}
 
 				getSettingsPanel() {
 					let passwordsGroup = new SettingGroup("Passwords");
@@ -791,7 +768,7 @@ module.exports = (() => {
  
 					let aboutMeSubTitle = document.createElement("div");
 					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
-					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read. If you change your About Me page, your hidden message will be resetted."
+					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read."
  
 					aboutMeDiv.appendChild(aboutMeTitle)
 
@@ -807,8 +784,10 @@ module.exports = (() => {
 						this.settings.hiddenAboutMeText = aboutMeInput.value;
 						this.saveSettings(this.settings);
 						
-						//TODO make it so that this gets executed when the about me page changes as well.
-						this.hideAboutMeMessage();
+						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+						let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
+
+						accountUpdateModule.saveAccountChanges({bio});
 					})
 
 					aboutMeDiv.appendChild(aboutMeSubTitle)
@@ -1128,6 +1107,8 @@ module.exports = (() => {
 					{
 						const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
 						const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+						const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+						const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
 						const aboutMeCache = {};
 
 						function hashCode(s) {
@@ -1175,6 +1156,30 @@ module.exports = (() => {
 									aboutMe.props.children,
 									BdApi.React.createElement("div", {class: "apateAboutMeHidden apateHiddenMessage"}, hiddenMessage),
 								];
+							}
+						});
+
+						BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
+							if (!typeof(patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
+								return
+							}
+
+							const stegCloak = new StegCloak();
+
+							let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
+
+							if (!oldBio.trim().includes(" ")) {
+								BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
+								return
+							}
+
+							let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
+
+							if (newBio.length > BIO_MAX_LENGTH) {
+								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
+							} else {
+								console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
+								patch.bio = newBio;
 							}
 						});
 					}
