@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.8
+ * @version 1.2.9
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,17 +42,19 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.8",
+			version: "1.2.9",
 			description: "Apate lets you hide messages in other messages! - Usage: `coverText \*hiddenText\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Features Added:",
-				type: "added",
+				title: "Fixed:",
+				type: "fixed",
 				items: [
-					"Hide messages in the About Me section.",
+					"Hides secret About Me message when the cover text gets changed as well.",
+					"Don't show password setting when Encryption is turned off.",
+					"Don't make unnecessary empty lines when a message has images, but no text.",
 				]
 			},
 		],
@@ -472,7 +474,7 @@ module.exports = (() => {
 
 					if (this.settings.passwords[0] === item) {
 						//first entry aka own password
-						li.classList.add("passwordLi","ownPassword");
+						li.classList.add("passwordLi", "ownPassword");
 						if (this.settings.encryption === 1) {
 							item = "-Encryption is off-";
 						}
@@ -559,8 +561,11 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
-					if(!this.settings.hiddenAboutMe) {
+					if (!this.settings.hiddenAboutMe) {
 						aboutMe = `.apateAboutMeSettings { display: none;}`;
+					}
+					if (this.settings.encryption === 1) {
+						aboutMe = `.apateEncrpytionSettings { display: none;}`;
 					}
 					BdApi.clearCSS("apateCSS")
 					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + aboutMe);
@@ -729,35 +734,37 @@ module.exports = (() => {
 					passwordsGroup.getElement().addEventListener("click", () => this.updatePasswords());
 
 
-					let textbox = document.createElement("div");
-					textbox.innerHTML = ` <div class="input-group">
-					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
-					 <button class="btn-add" type="button">Generate Password</button>
- 
- 
-				   </div>`
-					addButton = textbox.querySelector(".btn-add")
-
-					let textInput = textbox.querySelector("input");
-					addButton.addEventListener("click", () => this.generatePassword(textInput));
-
-
-					textInput.value = this.settings.password;
-					textInput.addEventListener("change", () => {
-						textInput.value = textInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>.?/~_+\-=|\\: ]*/g, "");
-						this.settings.saveCurrentPassword = false;
-						this.settings.password = textInput.value;
-						this.saveSettings(this.settings);
-						this.updatePasswords();
-					})
-
+					let encryptionDiv = document.createElement("div");
+					encryptionDiv.classList.add("apateEncrpytionSettings")
 					let passwordTitle = document.createElement("label");
 					passwordTitle.classList = "title-31JmR4";
 					passwordTitle.textContent = "Enter password:"
 
+					encryptionDiv.appendChild(passwordTitle);
+					encryptionDiv.innerHTML += ` <div class="input-group">
+					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
+					 <button class="btn-generate btn-add" type="button">Generate Password</button>
+ 
+ 
+				   </div>`
+					let passwordInput = encryptionDiv.querySelector("input");
+					passwordInput.value = this.settings.password;
+					passwordInput.addEventListener("change", () => {
+						passwordInput.value = passwordInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>.?/~_+\-=|\\: ]*/g, "");
+						this.settings.saveCurrentPassword = false;
+						this.settings.password = passwordInput.value;
+						this.saveSettings(this.settings);
+						this.updatePasswords();
+					})
+
 					let passwordSubTitle = document.createElement("div");
 					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
 					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters a-Z, 0-9, space and special characters(:._, etc.). Tip: Right click the Key, to encrpyt a message with a certian password only once."
+
+					encryptionDiv.appendChild(passwordSubTitle);
+					let generateButton = encryptionDiv.querySelector(".btn-generate")
+					generateButton.addEventListener("click", () => this.generatePassword(passwordInput));
+
 
 
 					let aboutMeDiv = document.createElement("div");
@@ -765,29 +772,29 @@ module.exports = (() => {
 					let aboutMeTitle = document.createElement("label");
 					aboutMeTitle.classList = "title-31JmR4";
 					aboutMeTitle.textContent = "Hidden About Me Message:"
- 
+
 					let aboutMeSubTitle = document.createElement("div");
 					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
 					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read."
- 
+
 					aboutMeDiv.appendChild(aboutMeTitle)
 
 					aboutMeDiv.innerHTML += ` <div class="input-group">
 					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" required placeholder="Hidden Message!" maxlength="50" title="Hidden About Me message">
 				   </div>`
 
-				   	let aboutMeInput = aboutMeDiv.querySelector("input");
+					let aboutMeInput = aboutMeDiv.querySelector("input");
 
 					aboutMeInput.value = this.settings.hiddenAboutMeText;
 					aboutMeInput.addEventListener("change", () => {
-						
+
 						this.settings.hiddenAboutMeText = aboutMeInput.value;
 						this.saveSettings(this.settings);
-						
+
 						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
 						let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
 
-						accountUpdateModule.saveAccountChanges({bio});
+						accountUpdateModule.saveAccountChanges({ bio });
 					})
 
 					aboutMeDiv.appendChild(aboutMeSubTitle)
@@ -814,10 +821,9 @@ module.exports = (() => {
 								this.settings.encryption = i;
 								console.log(`Set "encryption" to ${this.settings.encryption}`);
 								this.updatePasswords();
+								this.refreshCSS();
 							}),
-							passwordTitle,
-							textbox,
-							passwordSubTitle
+							encryptionDiv,
 						),
 						passwordsGroup,
 						new SettingGroup('Display').append(
@@ -839,7 +845,7 @@ module.exports = (() => {
 								this.settings.showInfo = i;
 								this.refreshCSS();
 							}),
-							new Switch('Display Images.', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy.', this.settings.displayImage, (i) => {
+							new Switch('Display Images.', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
@@ -938,8 +944,6 @@ module.exports = (() => {
 											link.tabindex = 0;
 											link.text = linkArray[i];
 
-											let s = textNode.nodeValue;
-
 											textNode = this.replaceTextWithNode(textNode, link.href, link);
 
 											if (textNode === null) {
@@ -960,15 +964,21 @@ module.exports = (() => {
 												this.testImage(url).then(() => {
 													hiddenMessageDiv.removeChild(link);
 
-
 													let img = document.createElement("img");
 													img.classList.add("apateHiddenImg");
 													img.src = url;
 
 													hiddenMessageDiv.appendChild(img);
-													hiddenMessageDiv.insertBefore(document.createElement("br"), img)
+
+													hiddenMessageDiv.insertBefore(document.createElement("div"), img)
+
+													if(hiddenMessageDiv.textContent.trim() ==="") {
+														hiddenMessageDiv.querySelectorAll('br').forEach(e => e.remove());
+													}
 												}).catch(() => { });
+
 											}
+
 										}
 									}
 
@@ -1112,13 +1122,13 @@ module.exports = (() => {
 						const aboutMeCache = {};
 
 						function hashCode(s) {
-							for(var i = 0, h = 0; i < s.length; i++)
+							for (var i = 0, h = 0; i < s.length; i++)
 								h = Math.imul(31, h) + s.charCodeAt(i) | 0;
 							return h;
 						}
 
 						function getBioHiddenMessage(bio) {
-							if(bio.charAt(0) === "\u200B") {
+							if (bio.charAt(0) === "\u200B") {
 								let bioHash = hashCode(bio);
 
 								if (aboutMeCache[bioHash] == undefined) {
@@ -1139,7 +1149,7 @@ module.exports = (() => {
 
 							if (hiddenMessage != null) {
 								ret.props.children = [
-									BdApi.React.createElement("div", {class: "apateAboutMeHidden apateHiddenMessage"}, hiddenMessage),
+									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
 									ret.props.children
 								];
 							}
@@ -1154,13 +1164,13 @@ module.exports = (() => {
 							if (hiddenMessage != null) {
 								aboutMe.props.children = [
 									aboutMe.props.children,
-									BdApi.React.createElement("div", {class: "apateAboutMeHidden apateHiddenMessage"}, hiddenMessage),
+									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
 								];
 							}
 						});
 
 						BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
-							if (!typeof(patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
+							if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
 								return
 							}
 
@@ -1173,7 +1183,7 @@ module.exports = (() => {
 								return
 							}
 
-							let newBio = "\u200B"+stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
+							let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
 
 							if (newBio.length > BIO_MAX_LENGTH) {
 								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
@@ -1249,7 +1259,7 @@ module.exports = (() => {
 
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
-					if (!coverMessage) {
+					if (!coverMessage && !this.settings.devMode) {
 						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `message *hiddenMessage*`");
 						return;
 					}
