@@ -43,7 +43,7 @@ module.exports = (() => {
 
 			],
 			version: "1.2.9",
-			description: "Apate lets you hide messages in other messages! - Usage: `coverText \*hiddenText\*`",
+			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
@@ -1260,20 +1260,20 @@ module.exports = (() => {
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
 					if (!coverMessage && !this.settings.devMode) {
-						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `message *hiddenMessage*`");
+						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `cover message *hidden message*`");
 						return;
 					}
+
 					//in case the user sends a one word cover message
-					if (!coverMessage.includes(" ")) {
+					if (!/\S +\S/g.test.coverMessage) {
 						coverMessage += " \u200b";
 					}
-
 					if (!hiddenMessage) {
-						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `message *hiddenMessage*`!");
+						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
 						return;
 					}
 					if (invalidEndString) {
-						BdApi.alert("Invalid input!", "There can't be a string after the hidden message! Syntax: `message *hiddenMessage*`");
+						BdApi.alert("Invalid input!", "There can't be a string after the hidden message! Syntax: `cover message *hidden message*`");
 						if (this.settings.deleteInvalid) {
 							editor.moveToRangeOfDocument();
 							editor.delete();
