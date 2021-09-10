@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.9
+ * @version 1.2.10
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,19 +42,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.9",
+			version: "1.2.10",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Fixed:",
-				type: "fixed",
+				title: "Added features:",
+				type: "added",
 				items: [
-					"Hides secret About Me message when the cover text gets changed as well.",
-					"Don't show password setting when Encryption is turned off.",
-					"Don't make unnecessary empty lines when a message has images, but no text.",
+					"You can remove they Key button in the Settings now.",
 				]
 			},
 		],
@@ -419,6 +417,7 @@ module.exports = (() => {
 					showChoosePasswordConfirm: true,
 					hiddenAboutMe: false,
 					hiddenAboutMeText: "",
+					showKeyButton: true,
 					devMode: false
 				};
 				settings = null;
@@ -697,6 +696,8 @@ module.exports = (() => {
 				getSettingsPanel() {
 					let passwordsGroup = new SettingGroup("Passwords");
 
+					passwordsGroup.getElement().id = "passwordsGroupCollapsed";
+
 					let doc = document.createElement("div");
 
 					doc.innerHTML = ` <div class="input-group">
@@ -727,10 +728,9 @@ module.exports = (() => {
 					text.className = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ modeDefault-3a2Ph1";
 					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
 										 The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
-					passwordsGroup.append(
-						doc,
-						text,
-					);
+
+					doc.appendChild(text);
+					passwordsGroup.append(doc);
 					passwordsGroup.getElement().addEventListener("click", () => this.updatePasswords());
 
 
@@ -805,9 +805,11 @@ module.exports = (() => {
 							this.settings.deleteInvalid = i;
 							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
-						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption.', this.settings.ctrlToSend, (i) => {
+						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
 							this.settings.ctrlToSend = i;
-							this.addKeyButton();
+							if(!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+								BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
+							}
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 						}),
 						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
@@ -845,14 +847,21 @@ module.exports = (() => {
 								this.settings.showInfo = i;
 								this.refreshCSS();
 							}),
-							new Switch('Display Images.', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
+							new Switch('Display Images', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
+							}),
+							new Switch('Show Key button', 'Chooses if the Key Button should be displayed or not. You will have to switch channels for the changes to take effect.', this.settings.showKeyButton, (i) => {
+								this.settings.showKeyButton = i;
+								if(!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
+								}
+								console.log(`Set "showKeyButton" to ${this.settings.showKeyButton}`);
 							}),
 						),
 					);
 				}
-				async start() {
+				async onStart() {
 					{
 						this.settings = this.loadSettings(this.default);
 
@@ -972,7 +981,7 @@ module.exports = (() => {
 
 													hiddenMessageDiv.insertBefore(document.createElement("div"), img)
 
-													if(hiddenMessageDiv.textContent.trim() ==="") {
+													if (hiddenMessageDiv.textContent.trim() === "") {
 														hiddenMessageDiv.querySelectorAll('br').forEach(e => e.remove());
 													}
 												}).catch(() => { });
@@ -1324,6 +1333,7 @@ module.exports = (() => {
 				}
 				displayPasswordChoose() {
 					var ul = document.createElement("ul");
+					
 					var noEncrypt = document.createElement("li");
 					noEncrypt.setAttribute('id', "");
 					noEncrypt.classList.add("passwordLi");
@@ -1374,68 +1384,68 @@ module.exports = (() => {
 				}
 
 				addKeyButton() {
-
-					const form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-
-					if (!form || form.querySelector(".keyButton")) return;
+					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
+					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true") return;
 					let button = document.createElement("div");
 					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
 						return;
 					}
+					if (this.settings.showKeyButton) {
 
-					form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
-					button.outerHTML = buttonHTML;
-					button = form.querySelector(".keyButton");
+						form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
+						button.outerHTML = buttonHTML;
+						button = form.querySelector(".keyButton");
 
-					button.addEventListener("click", () => this.hideMessage());
+						button.addEventListener("click", () => this.hideMessage());
 
-					let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
+						let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
 
-					button.addEventListener('hover', () => { tooptip.showAbove(); });
+						button.addEventListener('hover', () => { tooptip.showAbove(); });
 
-					button.addEventListener('contextmenu', (ev) => {
-						ev.preventDefault();
+						button.addEventListener('contextmenu', (ev) => {
+							ev.preventDefault();
+							if (this.settings.showChoosePasswordConfirm) {
+								let checkbox = document.createElement("input");
+								checkbox.setAttribute("type", "checkbox");
+								checkbox.setAttribute("id", "apateDontShowAgain");
+								checkbox.setAttribute("title", "Don't show again.");
 
-						if (this.settings.showChoosePasswordConfirm) {
-							let checkbox = document.createElement("input");
-							checkbox.setAttribute("type", "checkbox");
-							checkbox.setAttribute("id", "apateDontShowAgain");
-							checkbox.setAttribute("title", "Don't show again.");
+								let info = document.createElement("div");
+								info.textContent = "The password you choose will only be used on this message."
+								info.className = "markdown-11q6EU paragraph-3Ejjt0";
 
-							let info = document.createElement("div");
-							info.textContent = "The password you choose will only be used on this message."
-							info.className = "markdown-11q6EU paragraph-3Ejjt0";
+								let infoCheckBox = document.createElement("div");
+								infoCheckBox.textContent = "Don't show this message again:"
+								infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+								infoCheckBox.appendChild(checkbox)
 
-							let infoCheckBox = document.createElement("div");
-							infoCheckBox.textContent = "Don't show this message again:"
-							infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
-							infoCheckBox.appendChild(checkbox)
+								let htmlText = document.createElement("div")
+								htmlText.appendChild(info);
+								htmlText.appendChild(document.createElement("br"))
+								htmlText.appendChild(infoCheckBox)
 
-							let htmlText = document.createElement("div")
-							htmlText.appendChild(info);
-							htmlText.appendChild(document.createElement("br"))
-							htmlText.appendChild(infoCheckBox)
+								BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+									confirmText: "Choose password",
+									cancelText: "Cancel",
+									onConfirm: () => {
+										if (document.getElementById("apateDontShowAgain").checked === true) {
+											this.settings.showChoosePasswordConfirm = false;
+											this.saveSettings(this.settings);
+										}
+										this.displayPasswordChoose();
+									},
 
-							BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
-								confirmText: "Choose password",
-								cancelText: "Cancel",
-								onConfirm: () => {
-									if (document.getElementById("apateDontShowAgain").checked === true) {
-										this.settings.showChoosePasswordConfirm = false;
-										this.saveSettings(this.settings);
-									}
-									this.displayPasswordChoose();
-								},
+								});
+							} else {
+								this.displayPasswordChoose();
+							}
+							return false;
+						}, false);
+					}
 
-							});
-						} else {
-							this.displayPasswordChoose();
-						}
-						return false;
-					}, false);
 
 					if (this.settings.ctrlToSend) {
-
+						form.setAttribute("hasApateListener", "true")
 						form.addEventListener("keyup", (evt) => {
 							if (evt.key === "Enter" && evt.ctrlKey) {
 								evt.preventDefault();
@@ -1443,6 +1453,7 @@ module.exports = (() => {
 							}
 						});
 					}
+
 
 				};
 
@@ -1505,7 +1516,7 @@ module.exports = (() => {
 					this.addHiddenMessageBanners();
 					this.addKeyButton();
 				};
-				stop() {
+				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
 					}
