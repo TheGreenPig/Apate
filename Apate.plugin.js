@@ -54,6 +54,7 @@ module.exports = (() => {
 				items: [
 					"Shift Click for no encryption.",
 					"Added Key position option.",
+					"Added Alt+Control+Enter shortcut to choose the password.",
 				]
 			},
 			{
@@ -451,6 +452,7 @@ module.exports = (() => {
 					hiddenAboutMeText: "",
 					keyPosition: 0,
 					shiftNoEncryption: true,
+					altChoosePassword: true,
 					devMode: false
 				};
 				settings = null;
@@ -901,6 +903,10 @@ module.exports = (() => {
 							new Switch('Shift for no encryption', 'If turned on, shift-clicking the Key or sending a message with Ctrl+Shift+Enter will send the message without encryption. You will have to switch channels for the changes to take effect.', this.settings.shiftNoEncryption, (i) => {
 								this.settings.shiftNoEncryption = i;
 								console.log(`Set "shiftNoEncryption" to ${this.settings.shiftNoEncryption}`);
+							}),
+							new Switch('Alt for choose Password', 'If turned on, you can choose the password you want to use with Ctrl+Alt+Enter. You will have to switch channels for the changes to take effect.', this.settings.altChoosePassword, (i) => {
+								this.settings.altChoosePassword = i;
+								console.log(`Set "altChoosePassword" to ${this.settings.altChoosePassword}`);
 							}),
 						),
 					);
@@ -1427,6 +1433,44 @@ module.exports = (() => {
 					});
 				}
 
+				displayPasswordChooseConfirm() {
+					if (this.settings.showChoosePasswordConfirm) {
+						let checkbox = document.createElement("input");
+						checkbox.setAttribute("type", "checkbox");
+						checkbox.setAttribute("id", "apateDontShowAgain");
+						checkbox.setAttribute("title", "Don't show again.");
+
+						let info = document.createElement("div");
+						info.textContent = "The password you choose will only be used on this message."
+						info.className = "markdown-11q6EU paragraph-3Ejjt0";
+
+						let infoCheckBox = document.createElement("div");
+						infoCheckBox.textContent = "Don't show this message again:"
+						infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+						infoCheckBox.appendChild(checkbox)
+
+						let htmlText = document.createElement("div")
+						htmlText.appendChild(info);
+						htmlText.appendChild(document.createElement("br"))
+						htmlText.appendChild(infoCheckBox)
+
+						BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+							confirmText: "Choose password",
+							cancelText: "Cancel",
+							onConfirm: () => {
+								if (document.getElementById("apateDontShowAgain").checked === true) {
+									this.settings.showChoosePasswordConfirm = false;
+									this.saveSettings(this.settings);
+								}
+								this.displayPasswordChoose();
+							},
+
+						});
+					} else {
+						this.displayPasswordChoose();
+					}
+				}
+
 				addKeyButton() {
 
 					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
@@ -1461,41 +1505,7 @@ module.exports = (() => {
 
 						button.addEventListener('contextmenu', (ev) => {
 							ev.preventDefault();
-							if (this.settings.showChoosePasswordConfirm) {
-								let checkbox = document.createElement("input");
-								checkbox.setAttribute("type", "checkbox");
-								checkbox.setAttribute("id", "apateDontShowAgain");
-								checkbox.setAttribute("title", "Don't show again.");
-
-								let info = document.createElement("div");
-								info.textContent = "The password you choose will only be used on this message."
-								info.className = "markdown-11q6EU paragraph-3Ejjt0";
-
-								let infoCheckBox = document.createElement("div");
-								infoCheckBox.textContent = "Don't show this message again:"
-								infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
-								infoCheckBox.appendChild(checkbox)
-
-								let htmlText = document.createElement("div")
-								htmlText.appendChild(info);
-								htmlText.appendChild(document.createElement("br"))
-								htmlText.appendChild(infoCheckBox)
-
-								BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
-									confirmText: "Choose password",
-									cancelText: "Cancel",
-									onConfirm: () => {
-										if (document.getElementById("apateDontShowAgain").checked === true) {
-											this.settings.showChoosePasswordConfirm = false;
-											this.saveSettings(this.settings);
-										}
-										this.displayPasswordChoose();
-									},
-
-								});
-							} else {
-								this.displayPasswordChoose();
-							}
+							this.displayPasswordChooseConfirm();
 							return false;
 						}, false);
 					}
@@ -1507,6 +1517,9 @@ module.exports = (() => {
 							if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
 								evt.preventDefault();
 								this.hideMessage("");
+							} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+								evt.preventDefault();
+								this.displayPasswordChooseConfirm();
 							}
 							else if (evt.key === "Enter" && evt.ctrlKey) {
 								evt.preventDefault();
