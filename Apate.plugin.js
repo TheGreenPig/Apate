@@ -161,6 +161,13 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
+			let apateLeftKeyCSS = [
+				`.apateKeyButtonContainer {`,
+				`	margin-left: -0.6rem;`,
+				`	margin-right: 0.1rem;`,
+				`}`,
+			].join("\n");
+
 			let apateNoLoadingCSS = [
 				`.apateHiddenMessage.loading {`,
 				`	display: none;`,
@@ -418,6 +425,7 @@ module.exports = (() => {
 					hiddenAboutMe: false,
 					hiddenAboutMeText: "",
 					showKeyButton: true,
+					leftKeyButton: false,
 					devMode: false
 				};
 				settings = null;
@@ -544,8 +552,8 @@ module.exports = (() => {
 				}
 
 				refreshCSS() {
-					let compact, animate, noLoading, simpleBackground, aboutMe;
-					animate = noLoading = simpleBackground = aboutMe = "";
+					let compact, animate, noLoading, simpleBackground, leftKey, aboutMe;
+					animate = noLoading = simpleBackground = leftKey = aboutMe = "";
 
 					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
 					compact = `.${compactClass} .apateHiddenMessage {
@@ -560,6 +568,9 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
+					if (this.settings.leftKeyButton) {
+						leftKey = apateLeftKeyCSS;
+					}
 					if (!this.settings.hiddenAboutMe) {
 						aboutMe = `.apateAboutMeSettings { display: none;}`;
 					}
@@ -567,7 +578,7 @@ module.exports = (() => {
 						aboutMe = `.apateEncrpytionSettings { display: none;}`;
 					}
 					BdApi.clearCSS("apateCSS")
-					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + aboutMe);
+					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe);
 				}
 
 				/**
@@ -857,6 +868,10 @@ module.exports = (() => {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
 								console.log(`Set "showKeyButton" to ${this.settings.showKeyButton}`);
+							}),
+							new Switch('Left Key button', 'Moves the Key Button on the left of the text box instead of the right. You will have to switch channels for the changes to take effect.', this.settings.leftKeyButton, (i) => {
+								this.settings.leftKeyButton = i;
+								this.refreshCSS();
 							}),
 						),
 					);
@@ -1393,8 +1408,12 @@ module.exports = (() => {
 						return;
 					}
 					if (this.settings.showKeyButton) {
+						if (this.settings.leftKeyButton) {
+							form.querySelector(DiscordSelectors.Textarea.inner).insertBefore(button, form.querySelector(DiscordSelectors.Textarea.textArea));
+						} else {
+							form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
+						}
 
-						form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
 						button.outerHTML = buttonHTML;
 						button = form.querySelector(".keyButton");
 
