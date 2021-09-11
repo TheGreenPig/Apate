@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.10
+ * @version 1.2.11
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.10",
+			version: "1.2.11",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,7 +52,16 @@ module.exports = (() => {
 				title: "Added features:",
 				type: "added",
 				items: [
-					"You can remove they Key button in the Settings now.",
+					"Shift Click for no encryption.",
+					"Added Key position option.",
+					"Added Alt+Control+Enter shortcut to choose the password.",
+				]
+			},
+			{
+				title: "Fixed:",
+				type: "fixed",
+				items: [
+					"Key doesn't get displayed in channels where you cant write.",
 				]
 			},
 		],
@@ -161,6 +170,13 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
+			let apateLeftKeyCSS = [
+				`.apateKeyButtonContainer {`,
+				`	margin-left: -0.6rem;`,
+				`	margin-right: 0.1rem;`,
+				`}`,
+			].join("\n");
+
 			let apateNoLoadingCSS = [
 				`.apateHiddenMessage.loading {`,
 				`	display: none;`,
@@ -265,13 +281,13 @@ module.exports = (() => {
 			].join("\n");
 
 			const buttonHTML = [
-				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">`,
+				`<div class="apateKeyButtonContainer buttonContainer-28fw2U keyButton">`,
 				`	<button aria-label="Send Message" tabindex="0" type="button"`,
-				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button `,
-				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"`,
+				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA button-38aScr`,
+				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN noFocus-2C7BQj"`,
 				`	>`,
-				`		<div class="apateEncryptionKeyContainer contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">`,
-				`			<svg xmlns="http://www.w3.org/2000/svg" class="apateEncryptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" fill="currentColor">`,
+				`		<div class="apateEncryptionKeyContainer contents-18-Yxp button-3AYNKb button-318s1X">`,
+				`			<svg class="apateEncryptionKey" viewBox="0 0 24 24" fill="currentColor">`,
 				`				<path d="M0 0h24v24H0z" fill="none" />`,
 				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,`,
 				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" `,
@@ -319,7 +335,8 @@ module.exports = (() => {
 			const {
 				DiscordSelectors,
 				Settings,
-				Tooltip
+				Tooltip,
+				Logger
 			} = { ...Api, ...BdApi };
 			const { SettingPanel, SettingGroup, RadioGroup, Switch, Textbox } = Settings;
 
@@ -334,6 +351,23 @@ module.exports = (() => {
 					name: 'Encryption Off',
 					desc: 'Your messages will NOT be encrypted.',
 					value: 1
+				}
+			];
+			const keyPositions = [
+				{
+					name: 'Right',
+					desc: 'The key will be on the right.',
+					value: 0
+				},
+				{
+					name: 'Left',
+					desc: 'The key will be on the left.',
+					value: 1
+				},
+				{
+					name: 'No Key',
+					desc: 'The key will be not be displayed',
+					value: 2
 				}
 			];
 
@@ -417,7 +451,9 @@ module.exports = (() => {
 					showChoosePasswordConfirm: true,
 					hiddenAboutMe: false,
 					hiddenAboutMeText: "",
-					showKeyButton: true,
+					keyPosition: 0,
+					shiftNoEncryption: true,
+					altChoosePassword: true,
 					devMode: false
 				};
 				settings = null;
@@ -544,8 +580,8 @@ module.exports = (() => {
 				}
 
 				refreshCSS() {
-					let compact, animate, noLoading, simpleBackground, aboutMe;
-					animate = noLoading = simpleBackground = aboutMe = "";
+					let compact, animate, noLoading, simpleBackground, leftKey, aboutMe;
+					animate = noLoading = simpleBackground = leftKey = aboutMe = "";
 
 					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
 					compact = `.${compactClass} .apateHiddenMessage {
@@ -560,6 +596,9 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
+					if (this.settings.keyPosition === 1) {
+						leftKey = apateLeftKeyCSS;
+					}
 					if (!this.settings.hiddenAboutMe) {
 						aboutMe = `.apateAboutMeSettings { display: none;}`;
 					}
@@ -567,7 +606,7 @@ module.exports = (() => {
 						aboutMe = `.apateEncrpytionSettings { display: none;}`;
 					}
 					BdApi.clearCSS("apateCSS")
-					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + aboutMe);
+					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe);
 				}
 
 				/**
@@ -803,25 +842,18 @@ module.exports = (() => {
 					return SettingPanel.build(() => this.saveSettings(this.settings),
 						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
 							this.settings.deleteInvalid = i;
-							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
-						}),
-						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
-							this.settings.ctrlToSend = i;
-							if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
-								BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
-							}
-							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
+							Logger.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
 						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
 							this.settings.hiddenAboutMe = i;
-							console.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
+							Logger.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
 							this.refreshCSS();
 						}),
 						aboutMeDiv,
 						new SettingGroup('Encryption').append(
 							new RadioGroup('', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
 								this.settings.encryption = i;
-								console.log(`Set "encryption" to ${this.settings.encryption}`);
+								Logger.log(`Set "encryption" to ${this.settings.encryption}`);
 								this.updatePasswords();
 								this.refreshCSS();
 							}),
@@ -829,14 +861,22 @@ module.exports = (() => {
 						),
 						passwordsGroup,
 						new SettingGroup('Display').append(
+							new RadioGroup('Key position', `Choose where and if the key should be displayed. `, this.settings.keyPosition || 0, keyPositions, (i) => {
+								this.settings.keyPosition = i;
+								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
+									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
+								}
+								Logger.log(`Set "keyPosition" to ${this.settings.keyPosition}`);
+								this.refreshCSS();
+							}),
 							new Switch('Animate', 'Choose whether or not Apate animations are displayed. (Key animation, emoji gif animation etc.)', this.settings.animate, (i) => {
 								this.settings.animate = i;
-								console.log(`Set "animate" to ${this.settings.animate}`);
+								Logger.log(`Set "animate" to ${this.settings.animate}`);
 								this.refreshCSS();
 							}),
 							new Switch('Simple Background', 'Removes the black background of encrypted messages.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
-								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
+								Logger.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
 								this.refreshCSS();
 							}),
 							new Switch('Display loading message', 'Show [loading hidden message...] whilst Apate checks if the password is correct', this.settings.showLoading, (i) => {
@@ -849,14 +889,24 @@ module.exports = (() => {
 							}),
 							new Switch('Display Images', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
-								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
+								Logger.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
-							new Switch('Show Key button', 'Chooses if the Key Button should be displayed or not. You will have to switch channels for the changes to take effect.', this.settings.showKeyButton, (i) => {
-								this.settings.showKeyButton = i;
-								if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+						),
+						new SettingGroup('Shortcuts').append(
+							new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
+								this.settings.ctrlToSend = i;
+								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
-								console.log(`Set "showKeyButton" to ${this.settings.showKeyButton}`);
+								Logger.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
+							}),
+							new Switch('Shift for no encryption', 'If turned on, shift-clicking the Key or sending a message with Ctrl+Shift+Enter will send the message without encryption. You will have to switch channels for the changes to take effect.', this.settings.shiftNoEncryption, (i) => {
+								this.settings.shiftNoEncryption = i;
+								Logger.log(`Set "shiftNoEncryption" to ${this.settings.shiftNoEncryption}`);
+							}),
+							new Switch('Alt for choose Password', 'If turned on, you can choose the password you want to use with Ctrl+Alt+Enter. You will have to switch channels for the changes to take effect.', this.settings.altChoosePassword, (i) => {
+								this.settings.altChoosePassword = i;
+								Logger.log(`Set "altChoosePassword" to ${this.settings.altChoosePassword}`);
 							}),
 						),
 					);
@@ -1197,7 +1247,7 @@ module.exports = (() => {
 							if (newBio.length > BIO_MAX_LENGTH) {
 								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
 							} else {
-								console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
+								Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
 								patch.bio = newBio;
 							}
 						});
@@ -1383,22 +1433,71 @@ module.exports = (() => {
 					});
 				}
 
+				displayPasswordChooseConfirm() {
+					if (this.settings.showChoosePasswordConfirm) {
+						let checkbox = document.createElement("input");
+						checkbox.setAttribute("type", "checkbox");
+						checkbox.setAttribute("id", "apateDontShowAgain");
+						checkbox.setAttribute("title", "Don't show again.");
+
+						let info = document.createElement("div");
+						info.textContent = "The password you choose will only be used on this message."
+						info.className = "markdown-11q6EU paragraph-3Ejjt0";
+
+						let infoCheckBox = document.createElement("div");
+						infoCheckBox.textContent = "Don't show this message again:"
+						infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+						infoCheckBox.appendChild(checkbox)
+
+						let htmlText = document.createElement("div")
+						htmlText.appendChild(info);
+						htmlText.appendChild(document.createElement("br"))
+						htmlText.appendChild(infoCheckBox)
+
+						BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+							confirmText: "Choose password",
+							cancelText: "Cancel",
+							onConfirm: () => {
+								if (document.getElementById("apateDontShowAgain").checked === true) {
+									this.settings.showChoosePasswordConfirm = false;
+									this.saveSettings(this.settings);
+								}
+								this.displayPasswordChoose();
+							},
+
+						});
+					} else {
+						this.displayPasswordChoose();
+					}
+				}
+
 				addKeyButton() {
 
 					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(".innerDisabled-1YTFPN")) return;
+					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(DiscordSelectors.Textarea.innerDisabled)) return;
 
 					let button = document.createElement("div");
 					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
 						return;
 					}
-					if (this.settings.showKeyButton) {
+					if (this.settings.keyPosition !== 2) {
+						if (this.settings.keyPosition === 1) {
+							form.querySelector(DiscordSelectors.Textarea.inner).insertBefore(button, form.querySelector(DiscordSelectors.Textarea.textArea));
+						} else {
+							form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
+						}
 
-						form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
 						button.outerHTML = buttonHTML;
 						button = form.querySelector(".keyButton");
 
-						button.addEventListener("click", () => this.hideMessage());
+						button.addEventListener("click", (e) => {
+							if(this.settings.shiftNoEncryption && e.shiftKey) {
+								this.hideMessage("");
+							}
+							else {
+								this.hideMessage();
+							}
+						});
 
 						let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
 
@@ -1406,41 +1505,7 @@ module.exports = (() => {
 
 						button.addEventListener('contextmenu', (ev) => {
 							ev.preventDefault();
-							if (this.settings.showChoosePasswordConfirm) {
-								let checkbox = document.createElement("input");
-								checkbox.setAttribute("type", "checkbox");
-								checkbox.setAttribute("id", "apateDontShowAgain");
-								checkbox.setAttribute("title", "Don't show again.");
-
-								let info = document.createElement("div");
-								info.textContent = "The password you choose will only be used on this message."
-								info.className = "markdown-11q6EU paragraph-3Ejjt0";
-
-								let infoCheckBox = document.createElement("div");
-								infoCheckBox.textContent = "Don't show this message again:"
-								infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
-								infoCheckBox.appendChild(checkbox)
-
-								let htmlText = document.createElement("div")
-								htmlText.appendChild(info);
-								htmlText.appendChild(document.createElement("br"))
-								htmlText.appendChild(infoCheckBox)
-
-								BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
-									confirmText: "Choose password",
-									cancelText: "Cancel",
-									onConfirm: () => {
-										if (document.getElementById("apateDontShowAgain").checked === true) {
-											this.settings.showChoosePasswordConfirm = false;
-											this.saveSettings(this.settings);
-										}
-										this.displayPasswordChoose();
-									},
-
-								});
-							} else {
-								this.displayPasswordChoose();
-							}
+							this.displayPasswordChooseConfirm();
 							return false;
 						}, false);
 					}
@@ -1449,7 +1514,14 @@ module.exports = (() => {
 					if (this.settings.ctrlToSend) {
 						form.setAttribute("hasApateListener", "true")
 						form.addEventListener("keyup", (evt) => {
-							if (evt.key === "Enter" && evt.ctrlKey) {
+							if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+								evt.preventDefault();
+								this.hideMessage("");
+							} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+								evt.preventDefault();
+								this.displayPasswordChooseConfirm();
+							}
+							else if (evt.key === "Enter" && evt.ctrlKey) {
 								evt.preventDefault();
 								this.hideMessage();
 							}
