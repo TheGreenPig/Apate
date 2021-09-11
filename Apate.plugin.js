@@ -334,7 +334,8 @@ module.exports = (() => {
 			const {
 				DiscordSelectors,
 				Settings,
-				Tooltip
+				Tooltip,
+				Logger
 			} = { ...Api, ...BdApi };
 			const { SettingPanel, SettingGroup, RadioGroup, Switch, Textbox } = Settings;
 
@@ -839,18 +840,18 @@ module.exports = (() => {
 					return SettingPanel.build(() => this.saveSettings(this.settings),
 						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
 							this.settings.deleteInvalid = i;
-							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
+							Logger.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
 						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
 							this.settings.hiddenAboutMe = i;
-							console.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
+							Logger.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
 							this.refreshCSS();
 						}),
 						aboutMeDiv,
 						new SettingGroup('Encryption').append(
 							new RadioGroup('', `If encryption is turned on, all messages will be encrypted with the password defined below.`, this.settings.encryption || 0, options, (i) => {
 								this.settings.encryption = i;
-								console.log(`Set "encryption" to ${this.settings.encryption}`);
+								Logger.log(`Set "encryption" to ${this.settings.encryption}`);
 								this.updatePasswords();
 								this.refreshCSS();
 							}),
@@ -859,22 +860,21 @@ module.exports = (() => {
 						passwordsGroup,
 						new SettingGroup('Display').append(
 							new RadioGroup('Key position', `Choose where and if the key should be displayed. `, this.settings.keyPosition || 0, keyPositions, (i) => {
-								console.log(i)
 								this.settings.keyPosition = i;
 								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
-								console.log(`Set "keyPosition" to ${this.settings.keyPosition}`);
+								Logger.log(`Set "keyPosition" to ${this.settings.keyPosition}`);
 								this.refreshCSS();
 							}),
 							new Switch('Animate', 'Choose whether or not Apate animations are displayed. (Key animation, emoji gif animation etc.)', this.settings.animate, (i) => {
 								this.settings.animate = i;
-								console.log(`Set "animate" to ${this.settings.animate}`);
+								Logger.log(`Set "animate" to ${this.settings.animate}`);
 								this.refreshCSS();
 							}),
 							new Switch('Simple Background', 'Removes the black background of encrypted messages.', this.settings.simpleBackground, (i) => {
 								this.settings.simpleBackground = i;
-								console.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
+								Logger.log(`Set "simpleBackground" to ${this.settings.simpleBackground}`);
 								this.refreshCSS();
 							}),
 							new Switch('Display loading message', 'Show [loading hidden message...] whilst Apate checks if the password is correct', this.settings.showLoading, (i) => {
@@ -887,7 +887,7 @@ module.exports = (() => {
 							}),
 							new Switch('Display Images', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
-								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
+								Logger.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
 						),
 						new SettingGroup('Shortcuts').append(
@@ -896,11 +896,11 @@ module.exports = (() => {
 								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
-								console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
+								Logger.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 							}),
 							new Switch('Shift for no encryption', 'If turned on, shift-clicking the Key or sending a message with Ctrl+Shift+Enter will send the message without encryption. You will have to switch channels for the changes to take effect.', this.settings.shiftNoEncryption, (i) => {
 								this.settings.shiftNoEncryption = i;
-								console.log(`Set "shiftNoEncryption" to ${this.settings.shiftNoEncryption}`);
+								Logger.log(`Set "shiftNoEncryption" to ${this.settings.shiftNoEncryption}`);
 							}),
 						),
 					);
@@ -1241,7 +1241,7 @@ module.exports = (() => {
 							if (newBio.length > BIO_MAX_LENGTH) {
 								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
 							} else {
-								console.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
+								Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
 								patch.bio = newBio;
 							}
 						});
