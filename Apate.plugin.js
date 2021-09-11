@@ -52,7 +52,15 @@ module.exports = (() => {
 				title: "Added features:",
 				type: "added",
 				items: [
-					"You can remove they Key button in the Settings now.",
+					"Shift Click for no encryption.",
+					"Added Key position option.",
+				]
+			},
+			{
+				title: "Fixed:",
+				type: "fixed",
+				items: [
+					"Key doesn't get displayed in channels where you cant write.",
 				]
 			},
 		],
@@ -272,13 +280,13 @@ module.exports = (() => {
 			].join("\n");
 
 			const buttonHTML = [
-				`<div class="apateKeyButtonContainer buttonContainer-28fw2U da-buttonContainer keyButton">`,
+				`<div class="apateKeyButtonContainer buttonContainer-28fw2U keyButton">`,
 				`	<button aria-label="Send Message" tabindex="0" type="button"`,
-				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA da-buttonWrapper button-38aScr da-button `,
-				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN da-grow noFocus-2C7BQj da-noFocus"`,
+				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA button-38aScr`,
+				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN noFocus-2C7BQj"`,
 				`	>`,
-				`		<div class="apateEncryptionKeyContainer contents-18-Yxp da-contents button-3AYNKb da-button button-318s1X da-button">`,
-				`			<svg xmlns="http://www.w3.org/2000/svg" class="apateEncryptionKey icon-3D60ES da-icon" viewBox="0 0 24 24" fill="currentColor">`,
+				`		<div class="apateEncryptionKeyContainer contents-18-Yxp button-3AYNKb button-318s1X">`,
+				`			<svg class="apateEncryptionKey" viewBox="0 0 24 24" fill="currentColor">`,
 				`				<path d="M0 0h24v24H0z" fill="none" />`,
 				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,`,
 				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" `,
@@ -341,6 +349,23 @@ module.exports = (() => {
 					name: 'Encryption Off',
 					desc: 'Your messages will NOT be encrypted.',
 					value: 1
+				}
+			];
+			const keyPositions = [
+				{
+					name: 'Right',
+					desc: 'The key will be on the right.',
+					value: 0
+				},
+				{
+					name: 'Left',
+					desc: 'The key will be on the left.',
+					value: 1
+				},
+				{
+					name: 'No Key',
+					desc: 'The key will be not be displayed',
+					value: 2
 				}
 			];
 
@@ -424,8 +449,8 @@ module.exports = (() => {
 					showChoosePasswordConfirm: true,
 					hiddenAboutMe: false,
 					hiddenAboutMeText: "",
-					showKeyButton: true,
-					leftKeyButton: false,
+					keyPosition: 0,
+					shiftNoEncryption: true,
 					devMode: false
 				};
 				settings = null;
@@ -568,7 +593,7 @@ module.exports = (() => {
 					if (this.settings.simpleBackground) {
 						simpleBackground = apateSimpleCSS;
 					}
-					if (this.settings.leftKeyButton) {
+					if (this.settings.keyPosition === 1) {
 						leftKey = apateLeftKeyCSS;
 					}
 					if (!this.settings.hiddenAboutMe) {
@@ -816,13 +841,6 @@ module.exports = (() => {
 							this.settings.deleteInvalid = i;
 							console.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
 						}),
-						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
-							this.settings.ctrlToSend = i;
-							if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
-								BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
-							}
-							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
-						}),
 						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
 							this.settings.hiddenAboutMe = i;
 							console.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
@@ -840,6 +858,15 @@ module.exports = (() => {
 						),
 						passwordsGroup,
 						new SettingGroup('Display').append(
+							new RadioGroup('Key position', `Choose where and if the key should be displayed. `, this.settings.keyPosition || 0, keyPositions, (i) => {
+								console.log(i)
+								this.settings.keyPosition = i;
+								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
+									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
+								}
+								console.log(`Set "keyPosition" to ${this.settings.keyPosition}`);
+								this.refreshCSS();
+							}),
 							new Switch('Animate', 'Choose whether or not Apate animations are displayed. (Key animation, emoji gif animation etc.)', this.settings.animate, (i) => {
 								this.settings.animate = i;
 								console.log(`Set "animate" to ${this.settings.animate}`);
@@ -862,16 +889,18 @@ module.exports = (() => {
 								this.settings.displayImage = i;
 								console.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
-							new Switch('Show Key button', 'Chooses if the Key Button should be displayed or not. You will have to switch channels for the changes to take effect.', this.settings.showKeyButton, (i) => {
-								this.settings.showKeyButton = i;
-								if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+						),
+						new SettingGroup('Shortcuts').append(
+							new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
+								this.settings.ctrlToSend = i;
+								if (!this.settings.ctrlToSend && this.settings.keyPosition === 2) {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
-								console.log(`Set "showKeyButton" to ${this.settings.showKeyButton}`);
+								console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
 							}),
-							new Switch('Left Key button', 'Moves the Key Button on the left of the text box instead of the right. You will have to switch channels for the changes to take effect.', this.settings.leftKeyButton, (i) => {
-								this.settings.leftKeyButton = i;
-								this.refreshCSS();
+							new Switch('Shift for no encryption', 'If turned on, shift-clicking the Key or sending a message with Ctrl+Shift+Enter will send the message without encryption. You will have to switch channels for the changes to take effect.', this.settings.shiftNoEncryption, (i) => {
+								this.settings.shiftNoEncryption = i;
+								console.log(`Set "shiftNoEncryption" to ${this.settings.shiftNoEncryption}`);
 							}),
 						),
 					);
@@ -1401,14 +1430,14 @@ module.exports = (() => {
 				addKeyButton() {
 
 					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(".innerDisabled-1YTFPN")) return;
+					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(DiscordSelectors.Textarea.innerDisabled)) return;
 
 					let button = document.createElement("div");
 					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
 						return;
 					}
-					if (this.settings.showKeyButton) {
-						if (this.settings.leftKeyButton) {
+					if (this.settings.keyPosition !== 2) {
+						if (this.settings.keyPosition === 1) {
 							form.querySelector(DiscordSelectors.Textarea.inner).insertBefore(button, form.querySelector(DiscordSelectors.Textarea.textArea));
 						} else {
 							form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
@@ -1417,7 +1446,14 @@ module.exports = (() => {
 						button.outerHTML = buttonHTML;
 						button = form.querySelector(".keyButton");
 
-						button.addEventListener("click", () => this.hideMessage());
+						button.addEventListener("click", (e) => {
+							if(this.settings.shiftNoEncryption && e.shiftKey) {
+								this.hideMessage("");
+							}
+							else {
+								this.hideMessage();
+							}
+						});
 
 						let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
 
@@ -1468,7 +1504,11 @@ module.exports = (() => {
 					if (this.settings.ctrlToSend) {
 						form.setAttribute("hasApateListener", "true")
 						form.addEventListener("keyup", (evt) => {
-							if (evt.key === "Enter" && evt.ctrlKey) {
+							if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+								evt.preventDefault();
+								this.hideMessage("");
+							}
+							else if (evt.key === "Enter" && evt.ctrlKey) {
 								evt.preventDefault();
 								this.hideMessage();
 							}
