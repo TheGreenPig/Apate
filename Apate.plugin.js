@@ -807,7 +807,7 @@ module.exports = (() => {
 						}),
 						new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
 							this.settings.ctrlToSend = i;
-							if(!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+							if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
 								BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 							}
 							console.log(`Set "ctrlToSend" to ${this.settings.ctrlToSend}`);
@@ -853,7 +853,7 @@ module.exports = (() => {
 							}),
 							new Switch('Show Key button', 'Chooses if the Key Button should be displayed or not. You will have to switch channels for the changes to take effect.', this.settings.showKeyButton, (i) => {
 								this.settings.showKeyButton = i;
-								if(!this.settings.ctrlToSend && !this.settings.showKeyButton) {
+								if (!this.settings.ctrlToSend && !this.settings.showKeyButton) {
 									BdApi.alert("Can't send messages anymore!", "Since you disabled the key and do not want to use the shortcut either, you will have no way to send messages.");
 								}
 								console.log(`Set "showKeyButton" to ${this.settings.showKeyButton}`);
@@ -1333,7 +1333,7 @@ module.exports = (() => {
 				}
 				displayPasswordChoose() {
 					var ul = document.createElement("ul");
-					
+
 					var noEncrypt = document.createElement("li");
 					noEncrypt.setAttribute('id', "");
 					noEncrypt.classList.add("passwordLi");
@@ -1384,8 +1384,10 @@ module.exports = (() => {
 				}
 
 				addKeyButton() {
+
 					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true") return;
+					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(".innerDisabled-1YTFPN")) return;
+
 					let button = document.createElement("div");
 					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
 						return;
@@ -1514,8 +1516,10 @@ module.exports = (() => {
 				observer(mutationRecord) {
 					if (!mutationRecord.addedNodes) return;
 					this.addHiddenMessageBanners();
-					this.addKeyButton();
 				};
+				onSwitch() {
+					this.addKeyButton();
+				}
 				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
