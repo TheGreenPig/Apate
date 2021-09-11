@@ -906,7 +906,7 @@ module.exports = (() => {
 							}),
 							new Switch('Alt for choose Password', 'If turned on, you can choose the password you want to use with Ctrl+Alt+Enter. You will have to switch channels for the changes to take effect.', this.settings.altChoosePassword, (i) => {
 								this.settings.altChoosePassword = i;
-								console.log(`Set "altChoosePassword" to ${this.settings.altChoosePassword}`);
+								Logger.log(`Set "altChoosePassword" to ${this.settings.altChoosePassword}`);
 							}),
 						),
 					);
