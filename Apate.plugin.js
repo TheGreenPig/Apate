@@ -280,25 +280,6 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
-			const buttonHTML = [
-				`<div class="apateKeyButtonContainer buttonContainer-28fw2U keyButton">`,
-				`	<button aria-label="Send Message" tabindex="0" type="button"`,
-				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA button-38aScr`,
-				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN noFocus-2C7BQj"`,
-				`	>`,
-				`		<div class="apateEncryptionKeyContainer contents-18-Yxp button-3AYNKb button-318s1X">`,
-				`			<svg class="apateEncryptionKey" viewBox="0 0 24 24" fill="currentColor">`,
-				`				<path d="M0 0h24v24H0z" fill="none" />`,
-				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,`,
-				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" `,
-				`				/>`,
-				`			</svg>`,
-				`		</div>`,
-				`	</button>`,
-				`</div>`,
-			].join("\n");
-
-
 			const colors = [
 				"MediumVioletRed",
 				"PaleVioletRed",
@@ -952,7 +933,7 @@ module.exports = (() => {
 
 					{
 						// key button
-						this.addKeyButton();
+						this.patchTextArea();
 					}
 
 					{
@@ -1209,7 +1190,7 @@ module.exports = (() => {
 							if (hiddenMessage != null) {
 								ret.props.children = [
 									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-									ret.props.children
+									...ret.props.children
 								];
 							}
 						});
@@ -1222,7 +1203,7 @@ module.exports = (() => {
 
 							if (hiddenMessage != null) {
 								aboutMe.props.children = [
-									aboutMe.props.children,
+									...aboutMe.props.children,
 									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
 								];
 							}
@@ -1471,65 +1452,87 @@ module.exports = (() => {
 					}
 				}
 
-				addKeyButton() {
+				patchTextArea() {
+					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
 
-					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(DiscordSelectors.Textarea.innerDisabled)) return;
+					const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
+					const ButtonContainerClasses = BdApi.findModule(m => m.buttonContainer && m.buttons);
+					const ButtonWrapperClasses = BdApi.findModule(m => m.buttonWrapper && m.buttonContent);
+					const ButtonClasses = BdApi.findModule(m => m.button && m.contents);
 
-					let button = document.createElement("div");
-					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
-						return;
-					}
-					if (this.settings.keyPosition !== 2) {
-						if (this.settings.keyPosition === 1) {
-							form.querySelector(DiscordSelectors.Textarea.inner).insertBefore(button, form.querySelector(DiscordSelectors.Textarea.textArea));
-						} else {
-							form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
+					const ApateKeyButton = BdApi.React.createElement(Tooltip, { text: "Right click to send with different Encryption!",
+																			className: `apateKeyButtonContainer ${ButtonContainerClasses.buttonContainer} keyButton` },
+							BdApi.React.createElement("button", { "aria-label": "Send Message",
+																	tabindex: 0,
+																	type: "button",
+																	className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
+																	onClick: (e) => {
+																		if(this.settings.shiftNoEncryption && e.shiftKey) {
+																			this.hideMessage("");
+																		}
+																		else {
+																			this.hideMessage();
+																		}
+																	},
+																	onContextMenu: (e) => {
+																		e.preventDefault();
+																		this.displayPasswordChooseConfirm();
+																		return false;
+																	}
+																}, 
+								BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClasses.contents} ${ButtonWrapperClasses.button} ${ButtonContainerClasses.button}`},
+									BdApi.React.createElement("svg", { viewBox:"0 0 24 24", fill:"currentColor", className: `apateEncryptionKey ${ButtonWrapperClasses.icon}` }, [
+											BdApi.React.createElement("path", {d: "M0 0h24v24H0z", fill: "none"}),
+											BdApi.React.createElement("path", {d: "M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z"})
+										]
+									)
+								)
+							)
+						);
+
+					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
+						if (this.settings.keyPosition === 2 || props.type !== "normal") {
+							return
 						}
 
-						button.outerHTML = buttonHTML;
-						button = form.querySelector(".keyButton");
+						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
+						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
+						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 
-						button.addEventListener("click", (e) => {
-							if(this.settings.shiftNoEncryption && e.shiftKey) {
-								this.hideMessage("");
-							}
-							else {
-								this.hideMessage();
-							}
-						});
+						switch (this.settings.keyPosition) {
+							case 0: // RIGHT
+								buttons.props.children = [
+									...buttons.props.children,
+									ApateKeyButton
+								]
+								break;
+							case 1: // LEFT
+								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
+								break;
+						}
 
-						let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
+						let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
 
-						button.addEventListener('hover', () => { tooptip.showAbove(); });
+						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
+							form.classList.add("hasApateListener");
 
-						button.addEventListener('contextmenu', (ev) => {
-							ev.preventDefault();
-							this.displayPasswordChooseConfirm();
-							return false;
-						}, false);
-					}
-
-
-					if (this.settings.ctrlToSend) {
-						form.setAttribute("hasApateListener", "true")
-						form.addEventListener("keyup", (evt) => {
-							if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
-								evt.preventDefault();
-								this.hideMessage("");
-							} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
-								evt.preventDefault();
-								this.displayPasswordChooseConfirm();
-							}
-							else if (evt.key === "Enter" && evt.ctrlKey) {
-								evt.preventDefault();
-								this.hideMessage();
-							}
-						});
-					}
-
-
-				};
+							form.addEventListener("keyup", (evt) => {
+								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+									evt.preventDefault();
+									this.hideMessage("");
+								} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+									evt.preventDefault();
+									this.displayPasswordChooseConfirm();
+								}
+								else if (evt.key === "Enter" && evt.ctrlKey) {
+									evt.preventDefault();
+									this.hideMessage();
+								}
+							});
+						}
+					});
+				}
 
 				addHiddenMessageBanners() {
 					const messageContainers = document.querySelectorAll(
@@ -1589,9 +1592,6 @@ module.exports = (() => {
 					if (!mutationRecord.addedNodes) return;
 					this.addHiddenMessageBanners();
 				};
-				onSwitch() {
-					this.addKeyButton();
-				}
 				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
