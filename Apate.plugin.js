@@ -100,6 +100,259 @@ module.exports = (() => {
 		};
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+			const Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
+
+			class ApateMessage extends BdApi.React.Component {
+				state = { processing: true, message: undefined, usedPassword: undefined, images: [] }
+
+				componentDidMount() {
+					const handleUpdate = state => {
+						if (state.id !== this.props.message.id) {
+							return
+						}
+
+						this.props.message.apateHiddenMessage = state.message === undefined ? null : state.message;
+
+						this.setState({ processing: false, message: state.message, usedPassword: state.password });
+					};
+
+					Dispatcher.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
+
+					if (this.props.message.apateHiddenMessage !== undefined) {
+						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, });
+					}
+
+					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
+						channelId: this.props.message.channel_id,
+						id: this.props.message.id,
+						reveal: true,
+						stegCloakedMsg: this.props.message.content.replace(/^\u200b/, ""),
+						passwords: this.props.apate.settings.passwords,
+					});
+
+					this.props.apate.lastWorkerId++;
+					this.props.apate.lastWorkerId %= this.props.apate.numOfWorkers;
+				}
+
+				handleOnClick() {
+					if (this.props.apate.settings.showInfo) {
+						let passwordIndex = this.props.apate.settings.passwords.indexOf(this.state.usedPassword);
+						let color = this.props.apate.settings.passwordColorTable[passwordIndex];
+
+						if (passwordIndex > 1) {
+							this.props.apate.settings.passwords.splice(passwordIndex, 1);
+							this.props.apate.settings.passwordColorTable.splice(passwordIndex, 1);
+
+							this.props.apate.settings.passwords.splice(1, 0, this.state.usedPassword);
+							this.props.apate.settings.passwordColorTable.splice(1, 0, color);
+							this.props.apate.saveSettings(this.props.apate.settings);
+						}
+
+						let style = "";
+
+						if (this.state.usedPassword === "") {
+							//data.usedPswd = "-No Encryption-"
+							passwordIndex = "-No Encryption-"
+							style = `style="font-style: italic; font-size:1em;"`;
+						} else {
+							style = `style="color:${color}; font-size:0.9em;"`;
+
+							var copyButton = document.createElement("button");
+							copyButton.innerHTML = `📋`
+							copyButton.classList.add("btn-passwords");
+							copyButton.setAttribute("title", "Copy Password")
+							copyButton.addEventListener("click", () => {
+								navigator.clipboard.writeText(this.state.usedPassword);
+								BdApi.showToast("Copied password!", { type: "success" });
+							});
+						}
+
+						let htmlText = document.createElement("div");
+						htmlText.innerHTML = `Password used: <b><div ${style}>${this.state.usedPassword || "-No Encryption-"}</div></b>`;
+						htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
+						if (copyButton) {
+							htmlText.querySelector("div").appendChild(copyButton);
+						}
+
+						BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
+					}
+				}
+
+				formatHiddenMessage() {
+					let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
+					let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
+
+					if (this.state.message == null) {
+						return "";
+					}
+
+					let children = [this.state.message];
+
+					for (let i = children.length - 1; i >= 0; i--) {
+						let child = children[i];
+						if (typeof(child) !== "string") continue;
+
+						while (child.lastIndexOf("\\n") >= 0) {
+							let before = child.slice(0, child.lastIndexOf("\\n"));
+							let after = child.slice(child.lastIndexOf("\\n") + "\\n".length);
+
+							children.splice(i, 1, ...[before, BdApi.React.createElement("br"), after].filter(x => typeof(x) !== "string" || x.trim().length));
+							child = before;
+						}
+					}
+
+					if (urlRegex.test(this.state.message)) {
+						const AnchorClasses = BdApi.findModule(m => m.anchorUnderlineOnHover);
+						let nbLinksScanned = 0;
+
+						for (let i = 0; i < children.length; i++) {
+							let child = children[i];
+							if (typeof(child) !== "string") continue;
+
+							let linkArray = child.match(urlRegex);
+
+							if (!linkArray) continue;
+
+							for (let j = 0; j < linkArray.length; j++) {
+								let link = BdApi.React.createElement("a", {
+									className: `${AnchorClasses.anchor} ${AnchorClasses.anchorUnderlineOnHover}`,
+									title: linkArray[j],
+									href: linkArray[j],
+									rel: "noreferrer noopener",
+									target: "_blank",
+									role: "button",
+									tabindex: 0 }, linkArray[j]);
+
+								let before = child.slice(0, child.indexOf(linkArray[j]));
+								let after = child.slice(child.indexOf(linkArray[j]) + linkArray[j].length);
+
+								children.splice(children.indexOf(child), 1, ...[before, link, after].filter(x => typeof(x) !== "string" || x.trim().length));
+								child = after || "";
+							}
+						}
+
+						for (let i = children.length - 1; i >= 0; i--) {
+							let child = children[i];
+							if (child?.type !== "a") continue;
+
+							if (this.props.apate.settings.displayImage && nbLinksScanned < 3) { //only scan the first 3 links
+								nbLinksScanned++;
+								//Message has image link
+								let imageLink = new URL(child.props.href);
+
+								let url;
+								if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
+									url = imageLink.href;
+								} else {
+									url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+								}
+
+								if (this.state.images[imageLink.href] !== undefined) {
+									if (this.state.images[imageLink.href]) {
+										let linkIdx = children.indexOf(child);
+
+										let isBrBefore = children[linkIdx - 1]?.type === "br";
+										let isBrAfter = children[linkIdx + 1]?.type === "br";
+
+										// If there is a new line before and after the link, then we remove one of them to avoid having an empty line
+										// we also remove on if there is a new line after the link which is the first child OR a new line before the link which is the last child
+										if ((isBrBefore && isBrAfter) || (isBrAfter && linkIdx === 0)) {
+											children.splice(linkIdx, 2);
+										} else if (isBrBefore && linkIdx === children.length - 1) {
+											children.splice(linkIdx - 1, 2);
+										} else {
+											children.splice(linkIdx, 1);
+										}
+
+										let img = BdApi.React.createElement("img", { className: "apateHiddenImg", src: url })
+										children.push(img);
+									}
+								} else {
+									this.props.apate.testImage(url).then(() => {
+										let newImages = {...this.state.images};
+										newImages[imageLink.href] = true;
+
+										this.setState({ images: newImages });
+									}).catch(() => {
+										let newImages = {...this.state.images};
+										newImages[imageLink.href] = false;
+
+										this.setState({ images: newImages });
+									});
+								}
+							}
+						}
+					}
+
+					// Stitches together all pieces of texts
+					children = children.reduce((array, curr) => {
+						if (typeof(array[array.length -1]) === "string" && typeof(curr) === "string") {
+							array[array.length - 1] += curr;
+						} else {
+							array.push(curr);
+						}
+
+						return array;
+					}, []);
+
+					if (emojiRegex.test(this.state.message)) {
+						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
+						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
+
+						for (let i = 0; i < children.length; i++) {
+							let child = children[i];
+							if (typeof(child) !== "string") continue;
+
+							let emojiArray = child.match(emojiRegex);
+
+							if (!emojiArray) continue;
+
+							let bigEmoji = null;
+
+							let rest = child.replace(emojiRegex, "").trim().replace("\u200B", "");
+							if (rest.length === 0) {
+								bigEmoji = "jumboable"
+							}
+
+							for (let j = 0; j < emojiArray.length; ++j) {
+								let [emojiName, emojiId] = emojiArray[j].slice(1, emojiArray[j].length - 1).split(":");
+
+								let src;
+								if (emojiId === "default") {
+									src = discordEmojiModule.getByName(emojiName).url;
+								} else {
+									if (!this.props.apate.settings.animate) {
+										emojiId = emojiId.replace(".gif", ".png")
+									}
+
+									src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
+								}
+
+								let img = BdApi.React.createElement("img", { className: `emoji ${bigEmoji}`, "aria-label": emojiName, alt: emojiName, src });
+								let emojiContainer = BdApi.React.createElement("span", { className: emojiContainerClass, tabindex: 0 }, img);
+
+								let before = child.slice(0, child.indexOf(emojiArray[j]));
+								let after = child.slice(child.indexOf(emojiArray[j]) + emojiArray[j].length);
+
+								children.splice(children.indexOf(child), 1, ...[before, emojiContainer, after].filter(x => typeof(x) !== "string" || x.length));
+								child = after || "";
+							}
+						}
+					}
+
+					return children;
+				}
+
+				render() {
+					return this.state.message === null ?
+						null :
+						BdApi.React.createElement("div",
+							{ className: `apateHiddenMessage ${ this.state.processing ? "loading" : "" }`, onClick: this.handleOnClick.bind(this) },
+							this.formatHiddenMessage()
+						);
+				}
+			}
+
 			let apateCSS = [
 				`.apateKeyButtonContainer {`,
 				`	display: flex;`,
@@ -133,6 +386,7 @@ module.exports = (() => {
 				`	border-radius: 0.3em;`,
 				`	max-width: 500px;`,
 				`	max-height: 400px;`,
+				`	display: block;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -147,6 +401,7 @@ module.exports = (() => {
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
 				`	max-width: 100%;`,
+				`	box-sizing: border-box;`,
 				`	background-image: `,
 				`		repeating-linear-gradient(-45deg, `,
 				`		var(--background-tertiary) 0em, `,
@@ -400,10 +655,12 @@ module.exports = (() => {
 								return;
 							}
 						})();
+
 						self.postMessage({
+							channelId: data.channelId,
 							id: data.id,
 							reveal: true,
-							usedPswd: usedPassword,
+							password: usedPassword,
 							hiddenMsg,
 						});
 					}
@@ -616,29 +873,6 @@ module.exports = (() => {
 						}, timeout);
 						img.src = url;
 					});
-				}
-
-				/**
-				 * Properly replaces a piece of text in a Text Node with a Node (like replacing the string "\n" with a <br> tag) without using .innerHTML
-				 * @param  {Text}	 haystack	The Text Node to scan
-				 * @param  {String}  needle		The text to look for in the haystack
-				 * @param  {Node}	 node		The node that replaces the needle
-				 * @return {Text}				Returns the Text Node after the newly inserted node
-				 */
-				replaceTextWithNode(haystack, needle, node) {
-					let parentNode = haystack.parentNode;
-
-					let partBefore = haystack.nodeValue.substring(0, haystack.nodeValue.indexOf(needle));
-					let partAfter = haystack.nodeValue.substring(haystack.nodeValue.indexOf(needle) + needle.length);
-
-					let beforeNode = document.createTextNode(partBefore);
-					parentNode.replaceChild(beforeNode, haystack);
-
-					node = parentNode.insertBefore(node, beforeNode.nextSibling);
-
-					let afterNode = document.createTextNode(partAfter);
-
-					return parentNode.insertBefore(afterNode, node.nextSibling);
 				}
 
 				generatePassword(input) {
@@ -934,6 +1168,7 @@ module.exports = (() => {
 					{
 						// key button
 						this.patchTextArea();
+						this.patchMessages();
 					}
 
 					{
@@ -954,173 +1189,9 @@ module.exports = (() => {
 
 							worker.addEventListener("message", (evt) => {
 								const data = evt.data;
-								const messageContainer = document.querySelector(`[data-apate-id="${data.id}"]`);
 
-								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
-									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
-
-									if (data.hiddenMsg === "" || typeof data.hiddenMsg === 'undefined') {
-										hiddenMessageDiv.remove();
-									}
-
-									let textNode = document.createTextNode(data.hiddenMsg)
-									hiddenMessageDiv.appendChild(textNode);
-
-									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
-									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
-
-									if (urlRegex.test(data.hiddenMsg)) {
-										let linkArray = data.hiddenMsg.match(urlRegex);
-
-
-										for (let i = 0; i < linkArray.length; i++) {
-											let link = document.createElement("a");
-											link.classList.add("anchor-3Z-8Bb", "anchorUnderlineOnHover-2ESHQB", `loop-${i}`);
-											link.title = linkArray[i];
-											link.href = linkArray[i];
-											link.rel = "noreferrer noopener";
-											link.target = "_blank";
-											link.role = "button";
-											link.tabindex = 0;
-											link.text = linkArray[i];
-
-											textNode = this.replaceTextWithNode(textNode, link.href, link);
-
-											if (textNode === null) {
-												textNode = hiddenMessageDiv.appendChild(document.createTextNode(""));
-											}
-
-											if (this.settings.displayImage && i < 3) { //only scan the first 3 links
-												//Message has image link
-												let imageLink = new URL(linkArray[i]);
-
-												let url;
-												if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
-													url = imageLink.href;
-												} else {
-													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
-												}
-
-												this.testImage(url).then(() => {
-													hiddenMessageDiv.removeChild(link);
-
-													let img = document.createElement("img");
-													img.classList.add("apateHiddenImg");
-													img.src = url;
-
-													hiddenMessageDiv.appendChild(img);
-
-													hiddenMessageDiv.insertBefore(document.createElement("div"), img)
-
-													if (hiddenMessageDiv.textContent.trim() === "") {
-														hiddenMessageDiv.querySelectorAll('br').forEach(e => e.remove());
-													}
-												}).catch(() => { });
-
-											}
-
-										}
-									}
-
-									for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
-										let child = hiddenMessageDiv.childNodes[i]
-										if (child.nodeName !== "#text") continue;
-
-										while (child.nodeValue.indexOf("\\n") >= 0) {
-											child = this.replaceTextWithNode(child, "\\n", document.createElement("br"));
-										}
-									}
-
-									if (emojiRegex.test(data.hiddenMsg)) {
-										for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
-											let child = hiddenMessageDiv.childNodes[i];
-											if (child.nodeName !== "#text") continue;
-
-											let emojiArray = child.nodeValue.match(emojiRegex);
-
-											if (emojiArray) {
-												let bigEmoji = null;
-
-												let rest = child.nodeValue.replace(emojiRegex, "").trim().replace("\u200B", "");
-												if (rest.length === 0) {
-													bigEmoji = "jumboable"
-												}
-
-												for (let i = 0; i < emojiArray.length; ++i) {
-													let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
-
-													let emojiContainer = document.createElement("span");
-													emojiContainer.classList.add(emojiContainerClass);
-													emojiContainer.tabindex = 0;
-
-													let img = document.createElement("img");
-													img.setAttribute("aria-label", emojiName);
-													img.alt = emojiName;
-													img.classList.add("emoji", bigEmoji);
-
-													emojiContainer.appendChild(img);
-
-													if (emojiId === "default") {
-														img.src = discordEmojiModule.getByName(emojiName).url;
-													} else {
-														if (!this.settings.animate) {
-															emojiId = emojiId.replace(".gif", ".png")
-														}
-
-														img.src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
-													}
-
-													child = this.replaceTextWithNode(child, emojiArray[i], emojiContainer);
-												}
-											}
-										}
-									}
-
-									hiddenMessageDiv.classList.remove("loading");
-									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
-
-
-									if (this.settings.showInfo) {
-										hiddenMessageDiv.addEventListener("click", () => {
-											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
-											let color = this.settings.passwordColorTable[passwordIndex];
-											if (passwordIndex > 1) {
-												this.settings.passwords.splice(passwordIndex, 1);
-												this.settings.passwordColorTable.splice(passwordIndex, 1);
-
-												this.settings.passwords.splice(1, 0, data.usedPswd);
-												this.settings.passwordColorTable.splice(1, 0, color);
-												this.saveSettings(this.settings);
-											}
-											let style = ""
-
-
-											if (data.usedPswd === "") {
-												data.usedPswd = "-No Encryption-"
-												passwordIndex = "-No Encryption-"
-												style = `style="font-style: italic; font-size:1em;"`;
-											} else {
-												style = `style="color:${color}; font-size:0.9em;"`;
-
-												var copyButton = document.createElement("button");
-												copyButton.innerHTML = `📋`
-												copyButton.classList.add("btn-passwords");
-												copyButton.setAttribute("title", "Copy Password")
-												copyButton.addEventListener("click", () => {
-													navigator.clipboard.writeText(data.usedPswd);
-													BdApi.showToast("Copied password!", { type: "success" });
-												});
-											}
-											let htmlText = document.createElement("div");
-											htmlText.innerHTML = `Password used: <b><div ${style}>${data.usedPswd}</div></b>`;
-											htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
-											if (copyButton) {
-												htmlText.querySelector("div").appendChild(copyButton);
-											}
-
-											BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
-										})
-									}
+								if (data.reveal) {
+									Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMsg === undefined ? null : data.hiddenMsg, password: data.password, id: data.id });
 								}
 							});
 
@@ -1491,107 +1562,75 @@ module.exports = (() => {
 						);
 
 					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
-						if (this.settings.keyPosition === 2 || props.type !== "normal") {
+						if (this.settings.keyPosition === 2) {
 							return
 						}
 
-						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
-						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
-						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
-						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
+						if (props.type === "edit") {
+							if (!props.textValue.length || props.textValue[0] !== "\u200b") {
+								return
+							}
 
-						switch (this.settings.keyPosition) {
-							case 0: // RIGHT
-								buttons.props.children = [
-									...buttons.props.children,
-									ApateKeyButton
-								]
-								break;
-							case 1: // LEFT
-								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
-								break;
-						}
+							// TODO
+							return
+						} else {
+							const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+							const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
+							const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
+							const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 
-						let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
+							switch (this.settings.keyPosition) {
+								case 0: // RIGHT
+									buttons.props.children = [
+										...buttons.props.children,
+										ApateKeyButton
+									]
+									break;
+								case 1: // LEFT
+									textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
+									break;
+							}
 
-						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
-							form.classList.add("hasApateListener");
+							let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
 
-							form.addEventListener("keyup", (evt) => {
-								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
-									evt.preventDefault();
-									this.hideMessage("");
-								} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
-									evt.preventDefault();
-									this.displayPasswordChooseConfirm();
-								}
-								else if (evt.key === "Enter" && evt.ctrlKey) {
-									evt.preventDefault();
-									this.hideMessage();
-								}
-							});
+							if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
+								form.classList.add("hasApateListener");
+
+								form.addEventListener("keyup", (evt) => {
+									if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+										evt.preventDefault();
+										this.hideMessage("");
+									} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+										evt.preventDefault();
+										this.displayPasswordChooseConfirm();
+									}
+									else if (evt.key === "Enter" && evt.ctrlKey) {
+										evt.preventDefault();
+										this.hideMessage();
+									}
+								});
+							}
 						}
 					});
 				}
 
-				addHiddenMessageBanners() {
-					const messageContainers = document.querySelectorAll(
-						`${DiscordSelectors.TitleWrap.chatContent.value
-						} div[data-list-id="chat-messages"] > div[class*="message-"]:not([data-apate-seen])`
-					);
+				patchMessages() {
+					const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
 
-					if (!messageContainers || !this.revealWorkers.length) return;
-
-					const randomStr = Math.floor(Math.random() * 1e16).toString(36);
-					const timeStr = Date.now().toString(36);
-
-					for (const [i, messageContainer] of [...messageContainers].reverse().entries()) {
-						messageContainer.setAttribute("data-apate-seen", "");
-
-						const domMessage = messageContainer.querySelector(
-							`div[class*="contents-"][role="document"] > div[class*="markup-"][class*="messageContent-"]`
-						).cloneNode(true);
-
-						const messageEmojis = domMessage.querySelectorAll(`span[class*="emojiContainer-"]`);
-
-						for (let emoji of messageEmojis) {
-							emoji.innerHTML = emoji.children[0].alt;
+					BdApi.Patcher.after("Apate", MessageContent, "type", (_, [props], ret) => {
+						if (props.className && (props.className.includes("repliedTextContent-") || props.className.includes("threadMessageAccessoryContent-"))) {
+							return
 						}
 
-						const textContent = domMessage.textContent;
-
-						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-apate-contains-hidden-message")) {
-							const id = `apate-${timeStr}-${randomStr}-${i}`;
-
-							messageContainer.setAttribute("data-apate-contains-hidden-message", "");
-							messageContainer.setAttribute("data-apate-id", id);
-
-							let pswd = this.settings.passwords;
-							let hiddenCloak = textContent.replace(/^\u200b/, "")
-
-							this.revealWorkers[this.lastWorkerId]?.postMessage({
-								id,
-								reveal: true,
-								stegCloakedMsg: hiddenCloak,
-								passwords: pswd,
-							});
-							this.lastWorkerId++;
-							this.lastWorkerId %= this.numOfWorkers;
-							{
-								const messageWrapper = messageContainer.querySelector(`div[role="document"]`);
-
-								let hiddenMessageDiv = document.createElement("div");
-								hiddenMessageDiv.classList.add("apateHiddenMessage", "loading");
-								messageWrapper.append(hiddenMessageDiv);
-
-							}
+						if (props.message.content.length > 0 && props.message.content[0] === "\u200b") {
+							ret.props.children = [
+								...ret.props.children,
+								BdApi.React.createElement(ApateMessage, { message: props.message, apate: this })
+							]
 						}
-					}
-				};
-				observer(mutationRecord) {
-					if (!mutationRecord.addedNodes) return;
-					this.addHiddenMessageBanners();
-				};
+					});
+				}
+
 				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
