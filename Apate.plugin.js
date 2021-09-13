@@ -1486,51 +1486,45 @@ module.exports = (() => {
 						if (this.settings.keyPosition === 2) {
 							return
 						}
-
-						if (props.type === "edit") {
-							if (!props.textValue.length || props.textValue[0] !== "\u200b") {
-								return
-							}
-
-							// TODO
+						if (props.type !== "normal") { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
-						} else {
-							const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
-							const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
-							const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
-							const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
+						}
 
-							switch (this.settings.keyPosition) {
-								case 0: // RIGHT
-									buttons.props.children = [
-										...buttons.props.children,
-										ApateKeyButton
-									]
-									break;
-								case 1: // LEFT
-									textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
-									break;
-							}
+						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
+						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
+						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 
-							let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
+						switch (this.settings.keyPosition) {
+							case 0: // RIGHT
+								buttons.props.children = [
+									...buttons.props.children,
+									ApateKeyButton
+								]
+								break;
+							case 1: // LEFT
+								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
+								break;
+						}
 
-							if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
-								form.classList.add("hasApateListener");
+						let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
 
-								form.addEventListener("keyup", (evt) => {
-									if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
-										evt.preventDefault();
-										this.hideMessage("");
-									} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
-										evt.preventDefault();
-										this.displayPasswordChooseConfirm();
-									}
-									else if (evt.key === "Enter" && evt.ctrlKey) {
-										evt.preventDefault();
-										this.hideMessage();
-									}
-								});
-							}
+						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
+							form.classList.add("hasApateListener");
+
+							form.addEventListener("keyup", (evt) => {
+								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+									evt.preventDefault();
+									this.hideMessage("");
+								} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+									evt.preventDefault();
+									this.displayPasswordChooseConfirm();
+								}
+								else if (evt.key === "Enter" && evt.ctrlKey) {
+									evt.preventDefault();
+									this.hideMessage();
+								}
+							});
 						}
 					});
 				}
