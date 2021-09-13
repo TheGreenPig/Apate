@@ -429,6 +429,7 @@ module.exports = (() => {
 				`.apateKeyButtonContainer {`,
 				`	margin-left: -0.6rem;`,
 				`	margin-right: 0.1rem;`,
+				`	align-items: flex-start;`,
 				`}`,
 			].join("\n");
 
