@@ -1507,7 +1507,11 @@ module.exports = (() => {
 								break;
 						}
 
-						let form = textArea.ref.current?.parents().find(p => p.tagName === "FORM");
+						let form = textArea.ref.current?.parentElement;
+						
+						while (form != undefined && form.tagName !== "FORM") {
+							form = form.parentElement;
+						}
 
 						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
 							form.classList.add("hasApateListener");
