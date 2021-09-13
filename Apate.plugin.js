@@ -1166,9 +1166,10 @@ module.exports = (() => {
 					}
 
 					{
-						// key button
+						// patches (Aapte key, messages, about me)
 						this.patchTextArea();
 						this.patchMessages();
+						this.patchAboutMe();
 					}
 
 					{
@@ -1224,86 +1225,6 @@ module.exports = (() => {
 
 					}
 					URL.revokeObjectURL(this.hideWorker);
-
-					{
-						const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
-						const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
-						const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
-						const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
-						const aboutMeCache = {};
-
-						function hashCode(s) {
-							for (var i = 0, h = 0; i < s.length; i++)
-								h = Math.imul(31, h) + s.charCodeAt(i) | 0;
-							return h;
-						}
-
-						function getBioHiddenMessage(bio) {
-							if (bio.charAt(0) === "\u200B") {
-								let bioHash = hashCode(bio);
-
-								if (aboutMeCache[bioHash] == undefined) {
-									const stegCloak = new StegCloak();
-									let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
-
-									aboutMeCache[hashCode(bio)] = hiddenMessage;
-								}
-
-								return aboutMeCache[bioHash];
-							}
-
-							return null;
-						}
-
-						BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
-							let hiddenMessage = getBioHiddenMessage(props.user.bio);
-
-							if (hiddenMessage != null) {
-								ret.props.children = [
-									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-									...ret.props.children
-								];
-							}
-						});
-
-						BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
-							let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
-							let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
-
-							let hiddenMessage = getBioHiddenMessage(props.user.bio);
-
-							if (hiddenMessage != null) {
-								aboutMe.props.children = [
-									...aboutMe.props.children,
-									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-								];
-							}
-						});
-
-						BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
-							if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
-								return
-							}
-
-							const stegCloak = new StegCloak();
-
-							let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
-
-							if (!oldBio.trim().includes(" ")) {
-								BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
-								return
-							}
-
-							let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
-
-							if (newBio.length > BIO_MAX_LENGTH) {
-								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
-							} else {
-								Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
-								patch.bio = newBio;
-							}
-						});
-					}
 				};
 
 				async hideMessage(password) {
@@ -1627,6 +1548,86 @@ module.exports = (() => {
 								...ret.props.children,
 								BdApi.React.createElement(ApateMessage, { message: props.message, apate: this })
 							]
+						}
+					});
+				}
+
+				patchAboutMe() {
+					const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
+					const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+					const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+					const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
+					const aboutMeCache = {};
+
+					function hashCode(s) {
+						for (var i = 0, h = 0; i < s.length; i++)
+							h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+						return h;
+					}
+
+					function getBioHiddenMessage(bio) {
+						if (bio.charAt(0) === "\u200B") {
+							let bioHash = hashCode(bio);
+
+							if (aboutMeCache[bioHash] == undefined) {
+								const stegCloak = new StegCloak();
+								let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
+
+								aboutMeCache[hashCode(bio)] = hiddenMessage;
+							}
+
+							return aboutMeCache[bioHash];
+						}
+
+						return null;
+					}
+
+					BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
+						let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+						if (hiddenMessage != null) {
+							ret.props.children = [
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
+								...ret.props.children
+							];
+						}
+					});
+
+					BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
+						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+						let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+
+						let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+						if (hiddenMessage != null) {
+							aboutMe.props.children = [
+								...aboutMe.props.children,
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
+							];
+						}
+					});
+
+					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
+						if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
+							return
+						}
+
+						const stegCloak = new StegCloak();
+
+						let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
+
+						if (!oldBio.trim().includes(" ")) {
+							BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
+							return
+						}
+
+						let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
+
+						if (newBio.length > BIO_MAX_LENGTH) {
+							BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
+						} else {
+							Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
+							patch.bio = newBio;
 						}
 					});
 				}
