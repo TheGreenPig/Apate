@@ -196,14 +196,14 @@ module.exports = (() => {
 						let italicArray = child.match(/([^*]|^)\*[^*]+\*([^*]|$)/g);
 						if (italicArray) {
 							for (let i = 0; i < italicArray.length; i++) {
-								replaceTextWithElement(italicArray[i], "i");
+								replaceTextWithElement(italicArray[i], "em");
 							}
 						}
 
 						let boldArray = child.match(/\*\*[^*]+\*\*/g);
 						if (boldArray){
 							for (let i = 0; i < boldArray.length; i++) {
-								replaceTextWithElement(boldArray[i], "b");
+								replaceTextWithElement(boldArray[i], "strong");
 							}
 						}
 						function replaceTextWithElement(text, elementType){
