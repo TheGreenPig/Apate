@@ -59,7 +59,7 @@ module.exports = (() => {
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Compleatly reworked everything with react components. (Possible performance boost)",
+					"Completely reworked everything with react components. (Possible performance boost)",
 					"Support for bold and italic text.",
 					"One word messages should work now.",
 				]
