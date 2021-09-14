@@ -194,13 +194,8 @@ module.exports = (() => {
 						if (typeof (child) !== "string") continue;
 
 						let italicBoldArray = child.matchAll(/(?<!\*)\*{3}(?<strongem>[^*]+)\*{3}(?!\*)/g);
-						italicBoldArray = [...italicBoldArray];
-
 						let boldArray = child.matchAll(/(?<!\*)\*{2}(?<strong>[^*]+)\*{2}(?!\*)/g);
-						boldArray = [...boldArray];
-
 						let italicArray = child.matchAll(/(?<!\*)\*{1}(?<em>[^*]+)\*{1}(?!\*)/g);
-						italicArray = [...italicArray];
 
 						let arrays = [...boldArray, ...italicArray, ...italicBoldArray].sort((a, b) => a.index - b.index);
 
