@@ -193,27 +193,43 @@ module.exports = (() => {
 						let child = children[i];
 						if (typeof (child) !== "string") continue;
 
-						let italicArray = child.match(/([^*]|^)\*[^*]+\*([^*]|$)/g);
-						if (italicArray) {
-							for (let i = 0; i < italicArray.length; i++) {
-								replaceTextWithElement(italicArray[i], "em");
+						let italicBoldArray = child.matchAll(/(?<!\*)\*{3}(?<strongem>[^*]+)\*{3}(?!\*)/g);
+						italicBoldArray = [...italicBoldArray];
+
+						let boldArray = child.matchAll(/(?<!\*)\*{2}(?<strong>[^*]+)\*{2}(?!\*)/g);
+						boldArray = [...boldArray];
+
+						let italicArray = child.matchAll(/(?<!\*)\*{1}(?<em>[^*]+)\*{1}(?!\*)/g);
+						italicArray = [...italicArray];
+
+						let arrays = [...boldArray, ...italicArray, ...italicBoldArray].sort((a, b) => a.index - b.index);
+
+						for (let i = 0; i < arrays.length; i++) {
+							if (arrays[i].groups.em) {
+								replaceTextWithElement(arrays[i][0], "em");
+							} else if (arrays[i].groups.strong) {
+								replaceTextWithElement(arrays[i][0], "strong");
+							} else if (arrays[i].groups.strongem) {
+								replaceTextWithElement(arrays[i][0], ["em", "strong"]);
 							}
 						}
 
-						let boldArray = child.match(/\*\*[^*]+\*\*/g);
-						if (boldArray){
-							for (let i = 0; i < boldArray.length; i++) {
-								replaceTextWithElement(boldArray[i], "strong");
-							}
-						}
 						function replaceTextWithElement(text, elementType){
-							let newElement = BdApi.React.createElement(elementType, {
-							}, text.replace(/\*/g, ""));
+							if (typeof(elementType) === "string") {
+								elementType = [elementType];
+							}
+
+							let newElement = BdApi.React.createElement(elementType[elementType.length - 1], {
+							}, text.replace(/^\*+|\*+$/g, ""));
+
+							for (let i = elementType.length - 2; i >= 0; i--) {
+								newElement = BdApi.React.createElement(elementType[i], {}, newElement);
+							}
 
 							let before = child.slice(0, child.indexOf(text));
 							let after = child.slice(child.indexOf(text) + text.length);
-							children.splice(children.indexOf(child), 1, ...[before, newElement, after].filter(x => typeof (x) !== "string" || x.trim().length));
-							child = after || "";
+							children.splice(children.indexOf(child), 1, ...[before, newElement, after]);
+							child = after;
 						}
 
 
