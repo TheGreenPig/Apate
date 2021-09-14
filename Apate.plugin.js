@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.11
+ * @version 1.3.0
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,26 +42,26 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.11",
+			version: "1.3.0",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Added features:",
+				title: "Added:",
 				type: "added",
 				items: [
-					"Shift Click for no encryption.",
-					"Added Key position option.",
-					"Added Alt+Control+Enter shortcut to choose the password.",
+					"Option to align key on the left.",
 				]
 			},
 			{
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Key doesn't get displayed in channels where you cant write.",
+					"Compleatly reworked everything with react components. (Possible performance boost)",
+					"Support for bold and italic text.",
+					"One word messages should work now.",
 				]
 			},
 		],
@@ -178,6 +178,7 @@ module.exports = (() => {
 					}
 				}
 
+				
 				formatHiddenMessage() {
 					let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
 					let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
@@ -190,13 +191,37 @@ module.exports = (() => {
 
 					for (let i = children.length - 1; i >= 0; i--) {
 						let child = children[i];
-						if (typeof(child) !== "string") continue;
+						if (typeof (child) !== "string") continue;
+
+						let italicArray = child.match(/([^*]|^)\*[^*]+\*([^*]|$)/g);
+						if (italicArray) {
+							for (let i = 0; i < italicArray.length; i++) {
+								replaceTextWithElement(italicArray[i], "i");
+							}
+						}
+
+						let boldArray = child.match(/\*\*[^*]+\*\*/g);
+						if (boldArray){
+							for (let i = 0; i < boldArray.length; i++) {
+								replaceTextWithElement(boldArray[i], "b");
+							}
+						}
+						function replaceTextWithElement(text, elementType){
+							let newElement = BdApi.React.createElement(elementType, {
+							}, text.replace(/\*/g, ""));
+
+							let before = child.slice(0, child.indexOf(text));
+							let after = child.slice(child.indexOf(text) + text.length);
+							children.splice(children.indexOf(child), 1, ...[before, newElement, after].filter(x => typeof (x) !== "string" || x.trim().length));
+							child = after || "";
+						}
+
 
 						while (child.lastIndexOf("\\n") >= 0) {
 							let before = child.slice(0, child.lastIndexOf("\\n"));
 							let after = child.slice(child.lastIndexOf("\\n") + "\\n".length);
 
-							children.splice(i, 1, ...[before, BdApi.React.createElement("br"), after].filter(x => typeof(x) !== "string" || x.trim().length));
+							children.splice(i, 1, ...[before, BdApi.React.createElement("br"), after].filter(x => typeof (x) !== "string" || x.trim().length));
 							child = before;
 						}
 					}
@@ -207,7 +232,7 @@ module.exports = (() => {
 
 						for (let i = 0; i < children.length; i++) {
 							let child = children[i];
-							if (typeof(child) !== "string") continue;
+							if (typeof (child) !== "string") continue;
 
 							let linkArray = child.match(urlRegex);
 
@@ -221,12 +246,13 @@ module.exports = (() => {
 									rel: "noreferrer noopener",
 									target: "_blank",
 									role: "button",
-									tabindex: 0 }, linkArray[j]);
+									tabindex: 0
+								}, linkArray[j]);
 
 								let before = child.slice(0, child.indexOf(linkArray[j]));
 								let after = child.slice(child.indexOf(linkArray[j]) + linkArray[j].length);
 
-								children.splice(children.indexOf(child), 1, ...[before, link, after].filter(x => typeof(x) !== "string" || x.trim().length));
+								children.splice(children.indexOf(child), 1, ...[before, link, after].filter(x => typeof (x) !== "string" || x.trim().length));
 								child = after || "";
 							}
 						}
@@ -269,12 +295,12 @@ module.exports = (() => {
 									}
 								} else {
 									this.props.apate.testImage(url).then(() => {
-										let newImages = {...this.state.images};
+										let newImages = { ...this.state.images };
 										newImages[imageLink.href] = true;
 
 										this.setState({ images: newImages });
 									}).catch(() => {
-										let newImages = {...this.state.images};
+										let newImages = { ...this.state.images };
 										newImages[imageLink.href] = false;
 
 										this.setState({ images: newImages });
@@ -286,7 +312,7 @@ module.exports = (() => {
 
 					// Stitches together all pieces of texts
 					children = children.reduce((array, curr) => {
-						if (typeof(array[array.length -1]) === "string" && typeof(curr) === "string") {
+						if (typeof (array[array.length - 1]) === "string" && typeof (curr) === "string") {
 							array[array.length - 1] += curr;
 						} else {
 							array.push(curr);
@@ -301,7 +327,7 @@ module.exports = (() => {
 
 						for (let i = 0; i < children.length; i++) {
 							let child = children[i];
-							if (typeof(child) !== "string") continue;
+							if (typeof (child) !== "string") continue;
 
 							let emojiArray = child.match(emojiRegex);
 
@@ -334,7 +360,7 @@ module.exports = (() => {
 								let before = child.slice(0, child.indexOf(emojiArray[j]));
 								let after = child.slice(child.indexOf(emojiArray[j]) + emojiArray[j].length);
 
-								children.splice(children.indexOf(child), 1, ...[before, emojiContainer, after].filter(x => typeof(x) !== "string" || x.length));
+								children.splice(children.indexOf(child), 1, ...[before, emojiContainer, after].filter(x => typeof (x) !== "string" || x.length));
 								child = after || "";
 							}
 						}
@@ -347,7 +373,7 @@ module.exports = (() => {
 					return this.state.message === null ?
 						null :
 						BdApi.React.createElement("div",
-							{ className: `apateHiddenMessage ${ this.state.processing ? "loading" : "" }`, onClick: this.handleOnClick.bind(this) },
+							{ className: `apateHiddenMessage ${this.state.processing ? "loading" : ""}`, onClick: this.handleOnClick.bind(this) },
 							this.formatHiddenMessage()
 						);
 				}
@@ -953,9 +979,9 @@ module.exports = (() => {
 
 					passwordsGroup.getElement().id = "passwordsGroupCollapsed";
 
-					let doc = document.createElement("div");
+					let passwordListDiv = document.createElement("div");
 
-					doc.innerHTML = ` <div class="input-group">
+					passwordListDiv.innerHTML = ` <div class="input-group">
 					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
 					 <div class="input-group-append">
 					   <button class="btn-add" type="button">Add Password</button>
@@ -970,8 +996,8 @@ module.exports = (() => {
 		   
 		   
 				   </ul>`;
-					let addButton = doc.querySelector(".btn-add");
-					let uploadButton = doc.querySelector(".uploadListButton");
+					let addButton = passwordListDiv.querySelector(".btn-add");
+					let uploadButton = passwordListDiv.querySelector(".uploadListButton");
 
 					addButton.addEventListener("click", () => this.addPasswordFromInput());
 					uploadButton.addEventListener("click", () => this.importPasswordList());
@@ -984,8 +1010,8 @@ module.exports = (() => {
 					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
 										 The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
 
-					doc.appendChild(text);
-					passwordsGroup.append(doc);
+					passwordListDiv.appendChild(text);
+					passwordsGroup.append(passwordListDiv);
 					passwordsGroup.getElement().addEventListener("click", () => this.updatePasswords());
 
 
@@ -1052,8 +1078,7 @@ module.exports = (() => {
 						accountUpdateModule.saveAccountChanges({ bio });
 					})
 
-					aboutMeDiv.appendChild(aboutMeSubTitle)
-
+					aboutMeDiv.appendChild(aboutMeSubTitle);
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
 						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
@@ -1181,9 +1206,6 @@ module.exports = (() => {
 							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
 						]));
 
-						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
-						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
-
 						for (let i in [...Array(this.numOfWorkers)]) {
 							const worker = new window.Worker(URL.createObjectURL(new Blob(
 								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
@@ -1281,14 +1303,20 @@ module.exports = (() => {
 					if (!input) return;
 
 
-					let RegExpGroups = (
-						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
-							.exec(input.trim())?.groups
-					);
+					let apateRegexResult = input.trim().replace(/\uFEFF/g, "").matchAll(/\*([^*]+|\*(?!\s)[^\*]*(?<!\s)\*)+\*/g);
 
-					let coverMessage = RegExpGroups?.coverMessage?.trim();
-					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
-					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
+					apateRegexResult = [...apateRegexResult];
+
+					if (!apateRegexResult.length) {
+						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
+						return;
+					}
+
+					let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
+
+					let coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
+					let hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
+					let invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
 
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
@@ -1298,7 +1326,7 @@ module.exports = (() => {
 					}
 
 					//in case the user sends a one word cover message
-					if (!/\S +\S/g.test.coverMessage) {
+					if (!/\S +\S/g.test(coverMessage)) {
 						coverMessage += " \u200b";
 					}
 					if (!hiddenMessage) {
@@ -1453,35 +1481,38 @@ module.exports = (() => {
 					const ButtonWrapperClasses = BdApi.findModule(m => m.buttonWrapper && m.buttonContent);
 					const ButtonClasses = BdApi.findModule(m => m.button && m.contents);
 
-					const ApateKeyButton = BdApi.React.createElement(Tooltip, { text: "Right click to send with different Encryption!",
-																			className: `apateKeyButtonContainer ${ButtonContainerClasses.buttonContainer} keyButton` },
-							BdApi.React.createElement("button", { "aria-label": "Send Message",
-																	tabindex: 0,
-																	type: "button",
-																	className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
-																	onClick: (e) => {
-																		if(this.settings.shiftNoEncryption && e.shiftKey) {
-																			this.hideMessage("");
-																		}
-																		else {
-																			this.hideMessage();
-																		}
-																	},
-																	onContextMenu: (e) => {
-																		e.preventDefault();
-																		this.displayPasswordChooseConfirm();
-																		return false;
-																	}
-																}, 
-								BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClasses.contents} ${ButtonWrapperClasses.button} ${ButtonContainerClasses.button}`},
-									BdApi.React.createElement("svg", { viewBox:"0 0 24 24", fill:"currentColor", className: `apateEncryptionKey ${ButtonWrapperClasses.icon}` }, [
-											BdApi.React.createElement("path", {d: "M0 0h24v24H0z", fill: "none"}),
-											BdApi.React.createElement("path", {d: "M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z"})
-										]
-									)
+					const ApateKeyButton = BdApi.React.createElement(Tooltip, {
+						text: "Right click to send with different Encryption!",
+						className: `apateKeyButtonContainer ${ButtonContainerClasses.buttonContainer} keyButton`
+					},
+						BdApi.React.createElement("button", {
+							"aria-label": "Send Message",
+							tabindex: 0,
+							type: "button",
+							className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
+							onClick: (e) => {
+								if (this.settings.shiftNoEncryption && e.shiftKey) {
+									this.hideMessage("");
+								}
+								else {
+									this.hideMessage();
+								}
+							},
+							onContextMenu: (e) => {
+								e.preventDefault();
+								this.displayPasswordChooseConfirm();
+								return false;
+							}
+						},
+							BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClasses.contents} ${ButtonWrapperClasses.button} ${ButtonContainerClasses.button}` },
+								BdApi.React.createElement("svg", { viewBox: "0 0 24 24", fill: "currentColor", className: `apateEncryptionKey ${ButtonWrapperClasses.icon}` }, [
+									BdApi.React.createElement("path", { d: "M0 0h24v24H0z", fill: "none" }),
+									BdApi.React.createElement("path", { d: "M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" })
+								]
 								)
 							)
-						);
+						)
+					);
 
 					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
 						if (this.settings.keyPosition === 2) {
@@ -1509,7 +1540,7 @@ module.exports = (() => {
 						}
 
 						let form = textArea.ref.current?.parentElement;
-						
+
 						while (form != undefined && form.tagName !== "FORM") {
 							form = form.parentElement;
 						}
@@ -1521,7 +1552,7 @@ module.exports = (() => {
 								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
 									evt.preventDefault();
 									this.hideMessage("");
-								} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+								} else if (this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
 									evt.preventDefault();
 									this.displayPasswordChooseConfirm();
 								}
