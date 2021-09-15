@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.2.11
+ * @version 1.3.0
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,26 +42,26 @@ module.exports = (() => {
 
 
 			],
-			version: "1.2.11",
+			version: "1.3.0",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Added features:",
+				title: "Added:",
 				type: "added",
 				items: [
-					"Shift Click for no encryption.",
-					"Added Key position option.",
-					"Added Alt+Control+Enter shortcut to choose the password.",
+					"Option to align key on the left.",
 				]
 			},
 			{
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Key doesn't get displayed in channels where you cant write.",
+					"Completely reworked everything with react components. (Possible performance boost)",
+					"Support for bold and italic text.",
+					"One word messages should work now.",
 				]
 			},
 		],
@@ -100,6 +100,296 @@ module.exports = (() => {
 		};
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+			const Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
+
+			class ApateMessage extends BdApi.React.Component {
+				state = { processing: true, message: undefined, usedPassword: undefined, images: [] }
+
+				componentDidMount() {
+					const handleUpdate = state => {
+						if (state.id !== this.props.message.id) {
+							return
+						}
+
+						this.props.message.apateHiddenMessage = state.message === undefined ? null : state.message;
+
+						this.setState({ processing: false, message: state.message, usedPassword: state.password });
+					};
+
+					Dispatcher.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
+
+					if (this.props.message.apateHiddenMessage !== undefined) {
+						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, });
+					}
+
+					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
+						channelId: this.props.message.channel_id,
+						id: this.props.message.id,
+						reveal: true,
+						stegCloakedMsg: this.props.message.content.replace(/^\u200b/, ""),
+						passwords: this.props.apate.settings.passwords,
+					});
+
+					this.props.apate.lastWorkerId++;
+					this.props.apate.lastWorkerId %= this.props.apate.numOfWorkers;
+				}
+
+				handleOnClick() {
+					if (this.props.apate.settings.showInfo) {
+						let passwordIndex = this.props.apate.settings.passwords.indexOf(this.state.usedPassword);
+						let color = this.props.apate.settings.passwordColorTable[passwordIndex];
+
+						if (passwordIndex > 1) {
+							this.props.apate.settings.passwords.splice(passwordIndex, 1);
+							this.props.apate.settings.passwordColorTable.splice(passwordIndex, 1);
+
+							this.props.apate.settings.passwords.splice(1, 0, this.state.usedPassword);
+							this.props.apate.settings.passwordColorTable.splice(1, 0, color);
+							this.props.apate.saveSettings(this.props.apate.settings);
+						}
+
+						let style = "";
+
+						if (this.state.usedPassword === "") {
+							//data.usedPswd = "-No Encryption-"
+							passwordIndex = "-No Encryption-"
+							style = `style="font-style: italic; font-size:1em;"`;
+						} else {
+							style = `style="color:${color}; font-size:0.9em;"`;
+
+							var copyButton = document.createElement("button");
+							copyButton.innerHTML = `📋`
+							copyButton.classList.add("btn-passwords");
+							copyButton.setAttribute("title", "Copy Password")
+							copyButton.addEventListener("click", () => {
+								navigator.clipboard.writeText(this.state.usedPassword);
+								BdApi.showToast("Copied password!", { type: "success" });
+							});
+						}
+
+						let htmlText = document.createElement("div");
+						htmlText.innerHTML = `Password used: <b><div ${style}>${this.state.usedPassword || "-No Encryption-"}</div></b>`;
+						htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
+						if (copyButton) {
+							htmlText.querySelector("div").appendChild(copyButton);
+						}
+
+						BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
+					}
+				}
+
+				
+				formatHiddenMessage() {
+					let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
+					let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
+
+					if (this.state.message == null) {
+						return "";
+					}
+
+					let children = [this.state.message];
+
+					for (let i = children.length - 1; i >= 0; i--) {
+						let child = children[i];
+						if (typeof (child) !== "string") continue;
+
+						let italicBoldArray = child.matchAll(/(?<!\*)\*{3}(?<strongem>[^*]+)\*{3}(?!\*)/g);
+						let boldArray = child.matchAll(/(?<!\*)\*{2}(?<strong>[^*]+)\*{2}(?!\*)/g);
+						let italicArray = child.matchAll(/(?<!\*)\*{1}(?<em>[^*]+)\*{1}(?!\*)/g);
+
+						let arrays = [...boldArray, ...italicArray, ...italicBoldArray].sort((a, b) => a.index - b.index);
+
+						for (let i = 0; i < arrays.length; i++) {
+							if (arrays[i].groups.em) {
+								replaceTextWithElement(arrays[i][0], "em");
+							} else if (arrays[i].groups.strong) {
+								replaceTextWithElement(arrays[i][0], "strong");
+							} else if (arrays[i].groups.strongem) {
+								replaceTextWithElement(arrays[i][0], ["em", "strong"]);
+							}
+						}
+
+						function replaceTextWithElement(text, elementType){
+							if (typeof(elementType) === "string") {
+								elementType = [elementType];
+							}
+
+							let newElement = BdApi.React.createElement(elementType[elementType.length - 1], {
+							}, text.replace(/^\*+|\*+$/g, ""));
+
+							for (let i = elementType.length - 2; i >= 0; i--) {
+								newElement = BdApi.React.createElement(elementType[i], {}, newElement);
+							}
+
+							let before = child.slice(0, child.indexOf(text));
+							let after = child.slice(child.indexOf(text) + text.length);
+							children.splice(children.indexOf(child), 1, ...[before, newElement, after]);
+							child = after;
+						}
+
+
+						while (child.lastIndexOf("\\n") >= 0) {
+							let before = child.slice(0, child.lastIndexOf("\\n"));
+							let after = child.slice(child.lastIndexOf("\\n") + "\\n".length);
+
+							children.splice(i, 1, ...[before, BdApi.React.createElement("br"), after].filter(x => typeof (x) !== "string" || x.trim().length));
+							child = before;
+						}
+					}
+
+					if (urlRegex.test(this.state.message)) {
+						const AnchorClasses = BdApi.findModule(m => m.anchorUnderlineOnHover);
+						let nbLinksScanned = 0;
+
+						for (let i = 0; i < children.length; i++) {
+							let child = children[i];
+							if (typeof (child) !== "string") continue;
+
+							let linkArray = child.match(urlRegex);
+
+							if (!linkArray) continue;
+
+							for (let j = 0; j < linkArray.length; j++) {
+								let link = BdApi.React.createElement("a", {
+									className: `${AnchorClasses.anchor} ${AnchorClasses.anchorUnderlineOnHover}`,
+									title: linkArray[j],
+									href: linkArray[j],
+									rel: "noreferrer noopener",
+									target: "_blank",
+									role: "button",
+									tabindex: 0
+								}, linkArray[j]);
+
+								let before = child.slice(0, child.indexOf(linkArray[j]));
+								let after = child.slice(child.indexOf(linkArray[j]) + linkArray[j].length);
+
+								children.splice(children.indexOf(child), 1, ...[before, link, after].filter(x => typeof (x) !== "string" || x.trim().length));
+								child = after || "";
+							}
+						}
+
+						for (let i = children.length - 1; i >= 0; i--) {
+							let child = children[i];
+							if (child?.type !== "a") continue;
+
+							if (this.props.apate.settings.displayImage && nbLinksScanned < 3) { //only scan the first 3 links
+								nbLinksScanned++;
+								//Message has image link
+								let imageLink = new URL(child.props.href);
+
+								let url;
+								if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
+									url = imageLink.href;
+								} else {
+									url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+								}
+
+								if (this.state.images[imageLink.href] !== undefined) {
+									if (this.state.images[imageLink.href]) {
+										let linkIdx = children.indexOf(child);
+
+										let isBrBefore = children[linkIdx - 1]?.type === "br";
+										let isBrAfter = children[linkIdx + 1]?.type === "br";
+
+										// If there is a new line before and after the link, then we remove one of them to avoid having an empty line
+										// we also remove on if there is a new line after the link which is the first child OR a new line before the link which is the last child
+										if ((isBrBefore && isBrAfter) || (isBrAfter && linkIdx === 0)) {
+											children.splice(linkIdx, 2);
+										} else if (isBrBefore && linkIdx === children.length - 1) {
+											children.splice(linkIdx - 1, 2);
+										} else {
+											children.splice(linkIdx, 1);
+										}
+
+										let img = BdApi.React.createElement("img", { className: "apateHiddenImg", src: url })
+										children.push(img);
+									}
+								} else {
+									this.props.apate.testImage(url).then(() => {
+										let newImages = { ...this.state.images };
+										newImages[imageLink.href] = true;
+
+										this.setState({ images: newImages });
+									}).catch(() => {
+										let newImages = { ...this.state.images };
+										newImages[imageLink.href] = false;
+
+										this.setState({ images: newImages });
+									});
+								}
+							}
+						}
+					}
+
+					// Stitches together all pieces of texts
+					children = children.reduce((array, curr) => {
+						if (typeof (array[array.length - 1]) === "string" && typeof (curr) === "string") {
+							array[array.length - 1] += curr;
+						} else {
+							array.push(curr);
+						}
+
+						return array;
+					}, []);
+
+					if (emojiRegex.test(this.state.message)) {
+						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
+						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
+
+						for (let i = 0; i < children.length; i++) {
+							let child = children[i];
+							if (typeof (child) !== "string") continue;
+
+							let emojiArray = child.match(emojiRegex);
+
+							if (!emojiArray) continue;
+
+							let bigEmoji = null;
+
+							let rest = child.replace(emojiRegex, "").trim().replace("\u200B", "");
+							if (rest.length === 0) {
+								bigEmoji = "jumboable"
+							}
+
+							for (let j = 0; j < emojiArray.length; ++j) {
+								let [emojiName, emojiId] = emojiArray[j].slice(1, emojiArray[j].length - 1).split(":");
+
+								let src;
+								if (emojiId === "default") {
+									src = discordEmojiModule.getByName(emojiName).url;
+								} else {
+									if (!this.props.apate.settings.animate) {
+										emojiId = emojiId.replace(".gif", ".png")
+									}
+
+									src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
+								}
+
+								let img = BdApi.React.createElement("img", { className: `emoji ${bigEmoji}`, "aria-label": emojiName, alt: emojiName, src });
+								let emojiContainer = BdApi.React.createElement("span", { className: emojiContainerClass, tabindex: 0 }, img);
+
+								let before = child.slice(0, child.indexOf(emojiArray[j]));
+								let after = child.slice(child.indexOf(emojiArray[j]) + emojiArray[j].length);
+
+								children.splice(children.indexOf(child), 1, ...[before, emojiContainer, after].filter(x => typeof (x) !== "string" || x.length));
+								child = after || "";
+							}
+						}
+					}
+
+					return children;
+				}
+
+				render() {
+					return this.state.message === null ?
+						null :
+						BdApi.React.createElement("div",
+							{ className: `apateHiddenMessage ${this.state.processing ? "loading" : ""}`, onClick: this.handleOnClick.bind(this) },
+							this.formatHiddenMessage()
+						);
+				}
+			}
+
 			let apateCSS = [
 				`.apateKeyButtonContainer {`,
 				`	display: flex;`,
@@ -133,6 +423,7 @@ module.exports = (() => {
 				`	border-radius: 0.3em;`,
 				`	max-width: 500px;`,
 				`	max-height: 400px;`,
+				`	display: block;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
@@ -147,6 +438,7 @@ module.exports = (() => {
 				`	width: fit-content;`,
 				`	border-radius: 0 .8em .8em .8em;`,
 				`	max-width: 100%;`,
+				`	box-sizing: border-box;`,
 				`	background-image: `,
 				`		repeating-linear-gradient(-45deg, `,
 				`		var(--background-tertiary) 0em, `,
@@ -174,6 +466,7 @@ module.exports = (() => {
 				`.apateKeyButtonContainer {`,
 				`	margin-left: -0.6rem;`,
 				`	margin-right: 0.1rem;`,
+				`	align-items: flex-start;`,
 				`}`,
 			].join("\n");
 
@@ -279,25 +572,6 @@ module.exports = (() => {
 				`	100% { content: "[loading hidden message...]";}`,
 				`}`,
 			].join("\n");
-
-			const buttonHTML = [
-				`<div class="apateKeyButtonContainer buttonContainer-28fw2U keyButton">`,
-				`	<button aria-label="Send Message" tabindex="0" type="button"`,
-				`			class="apateEncryptionKeyButton buttonWrapper-1ZmCpA button-38aScr`,
-				`				lookBlank-3eh9lL colorBrand-3pXr91 grow-q77ONN noFocus-2C7BQj"`,
-				`	>`,
-				`		<div class="apateEncryptionKeyContainer contents-18-Yxp button-3AYNKb button-318s1X">`,
-				`			<svg class="apateEncryptionKey" viewBox="0 0 24 24" fill="currentColor">`,
-				`				<path d="M0 0h24v24H0z" fill="none" />`,
-				`				<path d="M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,`,
-				`					1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" `,
-				`				/>`,
-				`			</svg>`,
-				`		</div>`,
-				`	</button>`,
-				`</div>`,
-			].join("\n");
-
 
 			const colors = [
 				"MediumVioletRed",
@@ -419,10 +693,12 @@ module.exports = (() => {
 								return;
 							}
 						})();
+
 						self.postMessage({
+							channelId: data.channelId,
 							id: data.id,
 							reveal: true,
-							usedPswd: usedPassword,
+							password: usedPassword,
 							hiddenMsg,
 						});
 					}
@@ -637,29 +913,6 @@ module.exports = (() => {
 					});
 				}
 
-				/**
-				 * Properly replaces a piece of text in a Text Node with a Node (like replacing the string "\n" with a <br> tag) without using .innerHTML
-				 * @param  {Text}	 haystack	The Text Node to scan
-				 * @param  {String}  needle		The text to look for in the haystack
-				 * @param  {Node}	 node		The node that replaces the needle
-				 * @return {Text}				Returns the Text Node after the newly inserted node
-				 */
-				replaceTextWithNode(haystack, needle, node) {
-					let parentNode = haystack.parentNode;
-
-					let partBefore = haystack.nodeValue.substring(0, haystack.nodeValue.indexOf(needle));
-					let partAfter = haystack.nodeValue.substring(haystack.nodeValue.indexOf(needle) + needle.length);
-
-					let beforeNode = document.createTextNode(partBefore);
-					parentNode.replaceChild(beforeNode, haystack);
-
-					node = parentNode.insertBefore(node, beforeNode.nextSibling);
-
-					let afterNode = document.createTextNode(partAfter);
-
-					return parentNode.insertBefore(afterNode, node.nextSibling);
-				}
-
 				generatePassword(input) {
 					const url = 'https://random-word-api.herokuapp.com/word?number=3';
 					fetch(url)
@@ -737,9 +990,9 @@ module.exports = (() => {
 
 					passwordsGroup.getElement().id = "passwordsGroupCollapsed";
 
-					let doc = document.createElement("div");
+					let passwordListDiv = document.createElement("div");
 
-					doc.innerHTML = ` <div class="input-group">
+					passwordListDiv.innerHTML = ` <div class="input-group">
 					 <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
 					 <div class="input-group-append">
 					   <button class="btn-add" type="button">Add Password</button>
@@ -754,8 +1007,8 @@ module.exports = (() => {
 		   
 		   
 				   </ul>`;
-					let addButton = doc.querySelector(".btn-add");
-					let uploadButton = doc.querySelector(".uploadListButton");
+					let addButton = passwordListDiv.querySelector(".btn-add");
+					let uploadButton = passwordListDiv.querySelector(".uploadListButton");
 
 					addButton.addEventListener("click", () => this.addPasswordFromInput());
 					uploadButton.addEventListener("click", () => this.importPasswordList());
@@ -768,8 +1021,8 @@ module.exports = (() => {
 					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
 										 The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
 
-					doc.appendChild(text);
-					passwordsGroup.append(doc);
+					passwordListDiv.appendChild(text);
+					passwordsGroup.append(passwordListDiv);
 					passwordsGroup.getElement().addEventListener("click", () => this.updatePasswords());
 
 
@@ -836,8 +1089,7 @@ module.exports = (() => {
 						accountUpdateModule.saveAccountChanges({ bio });
 					})
 
-					aboutMeDiv.appendChild(aboutMeSubTitle)
-
+					aboutMeDiv.appendChild(aboutMeSubTitle);
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
 						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
@@ -951,8 +1203,10 @@ module.exports = (() => {
 					}
 
 					{
-						// key button
-						this.addKeyButton();
+						// patches (Aapte key, messages, about me)
+						this.patchTextArea();
+						this.patchMessages();
+						this.patchAboutMe();
 					}
 
 					{
@@ -963,9 +1217,6 @@ module.exports = (() => {
 							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
 						]));
 
-						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
-						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
-
 						for (let i in [...Array(this.numOfWorkers)]) {
 							const worker = new window.Worker(URL.createObjectURL(new Blob(
 								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
@@ -973,173 +1224,9 @@ module.exports = (() => {
 
 							worker.addEventListener("message", (evt) => {
 								const data = evt.data;
-								const messageContainer = document.querySelector(`[data-apate-id="${data.id}"]`);
 
-								if (data.reveal && messageContainer && !messageContainer.hasAttribute("data-apate-hidden-message-revealed")) {
-									const hiddenMessageDiv = messageContainer.querySelector(`.apateHiddenMessage`);
-
-									if (data.hiddenMsg === "" || typeof data.hiddenMsg === 'undefined') {
-										hiddenMessageDiv.remove();
-									}
-
-									let textNode = document.createTextNode(data.hiddenMsg)
-									hiddenMessageDiv.appendChild(textNode);
-
-									let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
-									let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
-
-									if (urlRegex.test(data.hiddenMsg)) {
-										let linkArray = data.hiddenMsg.match(urlRegex);
-
-
-										for (let i = 0; i < linkArray.length; i++) {
-											let link = document.createElement("a");
-											link.classList.add("anchor-3Z-8Bb", "anchorUnderlineOnHover-2ESHQB", `loop-${i}`);
-											link.title = linkArray[i];
-											link.href = linkArray[i];
-											link.rel = "noreferrer noopener";
-											link.target = "_blank";
-											link.role = "button";
-											link.tabindex = 0;
-											link.text = linkArray[i];
-
-											textNode = this.replaceTextWithNode(textNode, link.href, link);
-
-											if (textNode === null) {
-												textNode = hiddenMessageDiv.appendChild(document.createTextNode(""));
-											}
-
-											if (this.settings.displayImage && i < 3) { //only scan the first 3 links
-												//Message has image link
-												let imageLink = new URL(linkArray[i]);
-
-												let url;
-												if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
-													url = imageLink.href;
-												} else {
-													url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
-												}
-
-												this.testImage(url).then(() => {
-													hiddenMessageDiv.removeChild(link);
-
-													let img = document.createElement("img");
-													img.classList.add("apateHiddenImg");
-													img.src = url;
-
-													hiddenMessageDiv.appendChild(img);
-
-													hiddenMessageDiv.insertBefore(document.createElement("div"), img)
-
-													if (hiddenMessageDiv.textContent.trim() === "") {
-														hiddenMessageDiv.querySelectorAll('br').forEach(e => e.remove());
-													}
-												}).catch(() => { });
-
-											}
-
-										}
-									}
-
-									for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
-										let child = hiddenMessageDiv.childNodes[i]
-										if (child.nodeName !== "#text") continue;
-
-										while (child.nodeValue.indexOf("\\n") >= 0) {
-											child = this.replaceTextWithNode(child, "\\n", document.createElement("br"));
-										}
-									}
-
-									if (emojiRegex.test(data.hiddenMsg)) {
-										for (var i = hiddenMessageDiv.childNodes.length - 1; i >= 0; i--) {
-											let child = hiddenMessageDiv.childNodes[i];
-											if (child.nodeName !== "#text") continue;
-
-											let emojiArray = child.nodeValue.match(emojiRegex);
-
-											if (emojiArray) {
-												let bigEmoji = null;
-
-												let rest = child.nodeValue.replace(emojiRegex, "").trim().replace("\u200B", "");
-												if (rest.length === 0) {
-													bigEmoji = "jumboable"
-												}
-
-												for (let i = 0; i < emojiArray.length; ++i) {
-													let [emojiName, emojiId] = emojiArray[i].slice(1, emojiArray[i].length - 1).split(":");
-
-													let emojiContainer = document.createElement("span");
-													emojiContainer.classList.add(emojiContainerClass);
-													emojiContainer.tabindex = 0;
-
-													let img = document.createElement("img");
-													img.setAttribute("aria-label", emojiName);
-													img.alt = emojiName;
-													img.classList.add("emoji", bigEmoji);
-
-													emojiContainer.appendChild(img);
-
-													if (emojiId === "default") {
-														img.src = discordEmojiModule.getByName(emojiName).url;
-													} else {
-														if (!this.settings.animate) {
-															emojiId = emojiId.replace(".gif", ".png")
-														}
-
-														img.src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
-													}
-
-													child = this.replaceTextWithNode(child, emojiArray[i], emojiContainer);
-												}
-											}
-										}
-									}
-
-									hiddenMessageDiv.classList.remove("loading");
-									messageContainer.setAttribute("data-apate-hidden-message-revealed", "");
-
-
-									if (this.settings.showInfo) {
-										hiddenMessageDiv.addEventListener("click", () => {
-											let passwordIndex = this.settings.passwords.indexOf(data.usedPswd);
-											let color = this.settings.passwordColorTable[passwordIndex];
-											if (passwordIndex > 1) {
-												this.settings.passwords.splice(passwordIndex, 1);
-												this.settings.passwordColorTable.splice(passwordIndex, 1);
-
-												this.settings.passwords.splice(1, 0, data.usedPswd);
-												this.settings.passwordColorTable.splice(1, 0, color);
-												this.saveSettings(this.settings);
-											}
-											let style = ""
-
-
-											if (data.usedPswd === "") {
-												data.usedPswd = "-No Encryption-"
-												passwordIndex = "-No Encryption-"
-												style = `style="font-style: italic; font-size:1em;"`;
-											} else {
-												style = `style="color:${color}; font-size:0.9em;"`;
-
-												var copyButton = document.createElement("button");
-												copyButton.innerHTML = `📋`
-												copyButton.classList.add("btn-passwords");
-												copyButton.setAttribute("title", "Copy Password")
-												copyButton.addEventListener("click", () => {
-													navigator.clipboard.writeText(data.usedPswd);
-													BdApi.showToast("Copied password!", { type: "success" });
-												});
-											}
-											let htmlText = document.createElement("div");
-											htmlText.innerHTML = `Password used: <b><div ${style}>${data.usedPswd}</div></b>`;
-											htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
-											if (copyButton) {
-												htmlText.querySelector("div").appendChild(copyButton);
-											}
-
-											BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
-										})
-									}
+								if (data.reveal) {
+									Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMsg === undefined ? null : data.hiddenMsg, password: data.password, id: data.id });
 								}
 							});
 
@@ -1172,86 +1259,6 @@ module.exports = (() => {
 
 					}
 					URL.revokeObjectURL(this.hideWorker);
-
-					{
-						const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
-						const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
-						const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
-						const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
-						const aboutMeCache = {};
-
-						function hashCode(s) {
-							for (var i = 0, h = 0; i < s.length; i++)
-								h = Math.imul(31, h) + s.charCodeAt(i) | 0;
-							return h;
-						}
-
-						function getBioHiddenMessage(bio) {
-							if (bio.charAt(0) === "\u200B") {
-								let bioHash = hashCode(bio);
-
-								if (aboutMeCache[bioHash] == undefined) {
-									const stegCloak = new StegCloak();
-									let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
-
-									aboutMeCache[hashCode(bio)] = hiddenMessage;
-								}
-
-								return aboutMeCache[bioHash];
-							}
-
-							return null;
-						}
-
-						BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
-							let hiddenMessage = getBioHiddenMessage(props.user.bio);
-
-							if (hiddenMessage != null) {
-								ret.props.children = [
-									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-									ret.props.children
-								];
-							}
-						});
-
-						BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
-							let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
-							let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
-
-							let hiddenMessage = getBioHiddenMessage(props.user.bio);
-
-							if (hiddenMessage != null) {
-								aboutMe.props.children = [
-									aboutMe.props.children,
-									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-								];
-							}
-						});
-
-						BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
-							if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
-								return
-							}
-
-							const stegCloak = new StegCloak();
-
-							let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
-
-							if (!oldBio.trim().includes(" ")) {
-								BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
-								return
-							}
-
-							let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
-
-							if (newBio.length > BIO_MAX_LENGTH) {
-								BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
-							} else {
-								Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
-								patch.bio = newBio;
-							}
-						});
-					}
 				};
 
 				async hideMessage(password) {
@@ -1307,14 +1314,20 @@ module.exports = (() => {
 					if (!input) return;
 
 
-					let RegExpGroups = (
-						(/^(?<coverMessage>([^\*]*))\*(?<hiddenMessage>([^\*]+))\*(?<invalidEndString>(.*))$/)
-							.exec(input.trim())?.groups
-					);
+					let apateRegexResult = input.trim().replace(/\uFEFF/g, "").matchAll(/\*([^*]+|\*(?!\s)[^\*]*(?<!\s)\*)+\*/g);
 
-					let coverMessage = RegExpGroups?.coverMessage?.trim();
-					let hiddenMessage = RegExpGroups?.hiddenMessage?.trim();
-					let invalidEndString = RegExpGroups?.invalidEndString?.trim();
+					apateRegexResult = [...apateRegexResult];
+
+					if (!apateRegexResult.length) {
+						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
+						return;
+					}
+
+					let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
+
+					let coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
+					let hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
+					let invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
 
 					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
 
@@ -1324,7 +1337,7 @@ module.exports = (() => {
 					}
 
 					//in case the user sends a one word cover message
-					if (!/\S +\S/g.test.coverMessage) {
+					if (!/\S +\S/g.test(coverMessage)) {
 						coverMessage += " \u200b";
 					}
 					if (!hiddenMessage) {
@@ -1471,127 +1484,195 @@ module.exports = (() => {
 					}
 				}
 
-				addKeyButton() {
+				patchTextArea() {
+					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
 
-					let form = document.querySelector(DiscordSelectors.TitleWrap.form.value);
-					if (!form || form.querySelector(".keyButton") || form.getAttribute("hasApateListener") === "true" || form.querySelector(DiscordSelectors.Textarea.innerDisabled)) return;
+					const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
+					const ButtonContainerClasses = BdApi.findModule(m => m.buttonContainer && m.buttons);
+					const ButtonWrapperClasses = BdApi.findModule(m => m.buttonWrapper && m.buttonContent);
+					const ButtonClasses = BdApi.findModule(m => m.button && m.contents);
 
-					let button = document.createElement("div");
-					if (form.querySelector(DiscordSelectors.Textarea.buttons) == null) {
-						return;
-					}
-					if (this.settings.keyPosition !== 2) {
-						if (this.settings.keyPosition === 1) {
-							form.querySelector(DiscordSelectors.Textarea.inner).insertBefore(button, form.querySelector(DiscordSelectors.Textarea.textArea));
-						} else {
-							form.querySelector(DiscordSelectors.Textarea.buttons).append(button);
-						}
-
-						button.outerHTML = buttonHTML;
-						button = form.querySelector(".keyButton");
-
-						button.addEventListener("click", (e) => {
-							if(this.settings.shiftNoEncryption && e.shiftKey) {
-								this.hideMessage("");
-							}
-							else {
-								this.hideMessage();
-							}
-						});
-
-						let tooptip = new Tooltip(button, "Right click to send with different Encryption!");
-
-						button.addEventListener('hover', () => { tooptip.showAbove(); });
-
-						button.addEventListener('contextmenu', (ev) => {
-							ev.preventDefault();
-							this.displayPasswordChooseConfirm();
-							return false;
-						}, false);
-					}
-
-
-					if (this.settings.ctrlToSend) {
-						form.setAttribute("hasApateListener", "true")
-						form.addEventListener("keyup", (evt) => {
-							if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
-								evt.preventDefault();
-								this.hideMessage("");
-							} else if(this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
-								evt.preventDefault();
+					const ApateKeyButton = BdApi.React.createElement(Tooltip, {
+						text: "Right click to send with different Encryption!",
+						className: `apateKeyButtonContainer ${ButtonContainerClasses.buttonContainer} keyButton`
+					},
+						BdApi.React.createElement("button", {
+							"aria-label": "Send Message",
+							tabindex: 0,
+							type: "button",
+							className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
+							onClick: (e) => {
+								if (this.settings.shiftNoEncryption && e.shiftKey) {
+									this.hideMessage("");
+								}
+								else {
+									this.hideMessage();
+								}
+							},
+							onContextMenu: (e) => {
+								e.preventDefault();
 								this.displayPasswordChooseConfirm();
+								return false;
 							}
-							else if (evt.key === "Enter" && evt.ctrlKey) {
-								evt.preventDefault();
-								this.hideMessage();
-							}
-						});
-					}
-
-
-				};
-
-				addHiddenMessageBanners() {
-					const messageContainers = document.querySelectorAll(
-						`${DiscordSelectors.TitleWrap.chatContent.value
-						} div[data-list-id="chat-messages"] > div[class*="message-"]:not([data-apate-seen])`
+						},
+							BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClasses.contents} ${ButtonWrapperClasses.button} ${ButtonContainerClasses.button}` },
+								BdApi.React.createElement("svg", { viewBox: "0 0 24 24", fill: "currentColor", className: `apateEncryptionKey ${ButtonWrapperClasses.icon}` }, [
+									BdApi.React.createElement("path", { d: "M0 0h24v24H0z", fill: "none" }),
+									BdApi.React.createElement("path", { d: "M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" })
+								]
+								)
+							)
+						)
 					);
 
-					if (!messageContainers || !this.revealWorkers.length) return;
-
-					const randomStr = Math.floor(Math.random() * 1e16).toString(36);
-					const timeStr = Date.now().toString(36);
-
-					for (const [i, messageContainer] of [...messageContainers].reverse().entries()) {
-						messageContainer.setAttribute("data-apate-seen", "");
-
-						const domMessage = messageContainer.querySelector(
-							`div[class*="contents-"][role="document"] > div[class*="markup-"][class*="messageContent-"]`
-						).cloneNode(true);
-
-						const messageEmojis = domMessage.querySelectorAll(`span[class*="emojiContainer-"]`);
-
-						for (let emoji of messageEmojis) {
-							emoji.innerHTML = emoji.children[0].alt;
+					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
+						if (this.settings.keyPosition === 2) {
+							return
+						}
+						if (props.type !== "normal") { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
+							return
 						}
 
-						const textContent = domMessage.textContent;
+						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
+						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
+						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 
-						if (textContent?.startsWith("\u200b") && !messageContainer.hasAttribute("data-apate-contains-hidden-message")) {
-							const id = `apate-${timeStr}-${randomStr}-${i}`;
+						switch (this.settings.keyPosition) {
+							case 0: // RIGHT
+								buttons.props.children = [
+									...buttons.props.children,
+									ApateKeyButton
+								]
+								break;
+							case 1: // LEFT
+								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
+								break;
+						}
 
-							messageContainer.setAttribute("data-apate-contains-hidden-message", "");
-							messageContainer.setAttribute("data-apate-id", id);
+						let form = textArea.ref.current?.parentElement;
 
-							let pswd = this.settings.passwords;
-							let hiddenCloak = textContent.replace(/^\u200b/, "")
+						while (form != undefined && form.tagName !== "FORM") {
+							form = form.parentElement;
+						}
 
-							this.revealWorkers[this.lastWorkerId]?.postMessage({
-								id,
-								reveal: true,
-								stegCloakedMsg: hiddenCloak,
-								passwords: pswd,
+						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
+							form.classList.add("hasApateListener");
+
+							form.addEventListener("keyup", (evt) => {
+								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
+									evt.preventDefault();
+									this.hideMessage("");
+								} else if (this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
+									evt.preventDefault();
+									this.displayPasswordChooseConfirm();
+								}
+								else if (evt.key === "Enter" && evt.ctrlKey) {
+									evt.preventDefault();
+									this.hideMessage();
+								}
 							});
-							this.lastWorkerId++;
-							this.lastWorkerId %= this.numOfWorkers;
-							{
-								const messageWrapper = messageContainer.querySelector(`div[role="document"]`);
-
-								let hiddenMessageDiv = document.createElement("div");
-								hiddenMessageDiv.classList.add("apateHiddenMessage", "loading");
-								messageWrapper.append(hiddenMessageDiv);
-
-							}
 						}
-					}
-				};
-				observer(mutationRecord) {
-					if (!mutationRecord.addedNodes) return;
-					this.addHiddenMessageBanners();
-				};
-				onSwitch() {
-					this.addKeyButton();
+					});
 				}
+
+				patchMessages() {
+					const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
+
+					BdApi.Patcher.after("Apate", MessageContent, "type", (_, [props], ret) => {
+						if (props.className && (props.className.includes("repliedTextContent-") || props.className.includes("threadMessageAccessoryContent-"))) {
+							return
+						}
+
+						if (props.message.content.length > 0 && props.message.content[0] === "\u200b") {
+							ret.props.children = [
+								...ret.props.children,
+								BdApi.React.createElement(ApateMessage, { message: props.message, apate: this })
+							]
+						}
+					});
+				}
+
+				patchAboutMe() {
+					const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
+					const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+					const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+					const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
+					const aboutMeCache = {};
+
+					function hashCode(s) {
+						for (var i = 0, h = 0; i < s.length; i++)
+							h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+						return h;
+					}
+
+					function getBioHiddenMessage(bio) {
+						if (bio.charAt(0) === "\u200B") {
+							let bioHash = hashCode(bio);
+
+							if (aboutMeCache[bioHash] == undefined) {
+								const stegCloak = new StegCloak();
+								let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
+
+								aboutMeCache[hashCode(bio)] = hiddenMessage;
+							}
+
+							return aboutMeCache[bioHash];
+						}
+
+						return null;
+					}
+
+					BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
+						let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+						if (hiddenMessage != null) {
+							ret.props.children = [
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
+								...ret.props.children
+							];
+						}
+					});
+
+					BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
+						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+						let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+
+						let hiddenMessage = getBioHiddenMessage(props.user.bio);
+
+						if (hiddenMessage != null) {
+							aboutMe.props.children = [
+								...aboutMe.props.children,
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
+							];
+						}
+					});
+
+					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
+						if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
+							return
+						}
+
+						const stegCloak = new StegCloak();
+
+						let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
+
+						if (!oldBio.trim().includes(" ")) {
+							BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
+							return
+						}
+
+						let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
+
+						if (newBio.length > BIO_MAX_LENGTH) {
+							BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
+						} else {
+							Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
+							patch.bio = newBio;
+						}
+					});
+				}
+
 				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
