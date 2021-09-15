@@ -196,8 +196,9 @@ module.exports = (() => {
 						let italicBoldArray = child.matchAll(/(?<!\*)\*{3}(?<strongem>[^*]+)\*{3}(?!\*)/g);
 						let boldArray = child.matchAll(/(?<!\*)\*{2}(?<strong>[^*]+)\*{2}(?!\*)/g);
 						let italicArray = child.matchAll(/(?<!\*)\*{1}(?<em>[^*]+)\*{1}(?!\*)/g);
+						let codeBlockArray = child.matchAll(/(?<!`)`{1}(?<codeBlock>[^*]+)`{1}(?!`)/g);
 
-						let arrays = [...boldArray, ...italicArray, ...italicBoldArray].sort((a, b) => a.index - b.index);
+						let arrays = [...boldArray, ...italicArray, ...italicBoldArray, ...codeBlockArray].sort((a, b) => a.index - b.index);
 
 						for (let i = 0; i < arrays.length; i++) {
 							if (arrays[i].groups.em) {
@@ -206,6 +207,8 @@ module.exports = (() => {
 								replaceTextWithElement(arrays[i][0], "strong");
 							} else if (arrays[i].groups.strongem) {
 								replaceTextWithElement(arrays[i][0], ["em", "strong"]);
+							} else if (arrays[i].groups.codeBlock) {
+								replaceTextWithElement(arrays[i][0], "code");
 							}
 						}
 
@@ -215,8 +218,7 @@ module.exports = (() => {
 							}
 
 							let newElement = BdApi.React.createElement(elementType[elementType.length - 1], {
-							}, text.replace(/^\*+|\*+$/g, ""));
-
+							}, (elementType == "code" ? text.replace(/^`+|`+$/g, "") : text.replace(/^\*+|\*+$/g, "")));
 							for (let i = elementType.length - 2; i >= 0; i--) {
 								newElement = BdApi.React.createElement(elementType[i], {}, newElement);
 							}
