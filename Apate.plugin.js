@@ -890,9 +890,9 @@ module.exports = (() => {
 
 				/**
 				 * Tests if the given url is a valid image url
-				 * @param  {string}	The url
-				 * @param  {int}	Number of milliseconds before returning a timeout error (default 5 000)
-				 * @return {string}	Returns "success", "error" or "timeout"
+				 * @param  {string} url			The url
+				 * @param  {int}	timeoutT	Number of milliseconds before returning a timeout error (default 5 000)
+				 * @return {string}				Returns "success", "error" or "timeout"
 				 */
 				testImage(url, timeoutT) {
 					return new Promise(function (resolve, reject) {
@@ -1247,8 +1247,8 @@ module.exports = (() => {
 				/**
 				 * Takes an input and eturns null if the input doesn't match the apate regex and thus the message isn't correctly formed
 				 * otherwise returns an object with the cover message and hidden message
-				 * @param  {String}        input
-				 * @return {[Object|null]}       null if the input is invalid, otherwise {coverMessage: String, hiddenMessage: String}
+				 * @param  {string}		input
+				 * @return {?Object}			null if the input is invalid, otherwise {coverMessage: String, hiddenMessage: String}
 				 */
 				getCoverAndHiddenParts(input) {
 					let apateRegexResult = input.trim().matchAll(/\*([^*]+|\*(?!\s)[^\*]*(?<!\s)\*)+\*/g);
@@ -1286,9 +1286,9 @@ module.exports = (() => {
 				/**
 				 * Takes an input, converts the newlines to \n, picks a password depending on the user's settings or password argument
 				 * and returns a promise which resolves with the steg cloaked message or rejects with an error
-				 * @param  {String} input    
-				 * @param  {[String|undefined]} password The password is undefined when we want to use the user's default one from the settings
-				 * @return {Promise}                     Resolves with the steg cloaked message or rejects with an error
+				 * @param  {string}				input
+				 * @param  {(string|undefined)}	password 	The password is undefined when we want to use the user's default one from the settings
+				 * @return {Promise}						Resolves with the steg cloaked message or rejects with an error
 				 */
 				hideMessage(input, password) {
 					return new Promise((resolve, reject) => {
