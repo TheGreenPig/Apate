@@ -102,6 +102,9 @@ module.exports = (() => {
 		const plugin = (Plugin, Api) => {
 			const Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
 
+			/**
+			 * Apate banner which is displayed under some message which contains hidden text
+			 */
 			class ApateMessage extends BdApi.React.Component {
 				state = { processing: true, message: undefined, usedPassword: undefined, images: [] }
 
@@ -470,6 +473,10 @@ module.exports = (() => {
 				`	margin-right: 0.1rem;`,
 				`	align-items: flex-start;`,
 				`}`,
+				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer {`,
+				`	margin-left: 0.3rem;`,
+				`	margin-right: -0.8rem;`,
+				`}`,
 			].join("\n");
 
 			let apateNoLoadingCSS = [
@@ -650,27 +657,23 @@ module.exports = (() => {
 			const worker = (stegCloakBlobURL) => {
 				self.importScripts(stegCloakBlobURL);
 				const stegCloak = new StegCloak();
-				self.addEventListener("message", (evt) => {
-					const data = evt.data;
-
+				self.addEventListener("message", ({ data }) => {
 					if (data.hide) {
 						const stegCloakedMsg = (() => {
 							try {
-								return stegCloak.hide(data.hiddenMsg, data.password, data.coverMsg);
+								return stegCloak.hide(data.hiddenMessage, data.password, data.coverMessage);
 							} catch {
 								return;
 							}
 						})();
 						self.postMessage({
-							id: data.id,
 							hide: true,
 							stegCloakedMsg,
 						});
 					} else if (data.reveal) {
 						let usedPassword = "";
 
-
-						const hiddenMsg = (() => {
+						const hiddenMessage = (() => {
 							try {
 								//\uFFFD = � --> wrong password
 								let revealedMessage = "";
@@ -701,14 +704,13 @@ module.exports = (() => {
 							id: data.id,
 							reveal: true,
 							password: usedPassword,
-							hiddenMsg,
+							hiddenMessage,
 						});
 					}
 				});
 			};
 
 			return class Apate extends Plugin {
-
 				revealWorkers = [];
 				hideWorker;
 				lastWorkerId = 0;
@@ -716,7 +718,6 @@ module.exports = (() => {
 
 				default = {
 					encryption: 1,
-					deleteInvalid: true,
 					ctrlToSend: true,
 					animate: true,
 					displayImage: true,
@@ -1094,10 +1095,6 @@ module.exports = (() => {
 					aboutMeDiv.appendChild(aboutMeSubTitle);
 
 					return SettingPanel.build(() => this.saveSettings(this.settings),
-						new Switch('Delete Invalid String', 'All text after the encrypted message will be invalid. Enabling this option will delete all invalid text when attempting to send.', this.settings.deleteInvalid, (i) => {
-							this.settings.deleteInvalid = i;
-							Logger.log(`Set "deleteInvalid" to ${this.settings.deleteInvalid}`);
-						}),
 						new Switch('Hidden About Me message', 'Enables you to hide a message in your About Me page', this.settings.hiddenAboutMe, (i) => {
 							this.settings.hiddenAboutMe = i;
 							Logger.log(`Set "hiddenAboutMe" to ${this.settings.hiddenAboutMe}`);
@@ -1165,6 +1162,7 @@ module.exports = (() => {
 						),
 					);
 				}
+
 				async onStart() {
 					{
 						this.settings = this.loadSettings(this.default);
@@ -1205,6 +1203,11 @@ module.exports = (() => {
 					}
 
 					{
+						// hideNextMessage is used to differenciate when the user is just sending a message or clicked on the Apate key/used a keyboard shortcut
+						// passwordForNextMessage is undefined when we want to use the user's default password (default behavior)
+						this.hideNextMessage = false;
+						this.passwordForNextMessage = undefined;
+
 						// patches (Aapte key, messages, about me)
 						this.patchTextArea();
 						this.patchMessages();
@@ -1224,11 +1227,9 @@ module.exports = (() => {
 								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
 							)));
 
-							worker.addEventListener("message", (evt) => {
-								const data = evt.data;
-
+							worker.addEventListener("message", ({ data }) => {
 								if (data.reveal) {
-									Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMsg === undefined ? null : data.hiddenMsg, password: data.password, id: data.id });
+									Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMessage === undefined ? null : data.hiddenMessage, password: data.password, id: data.id });
 								}
 							});
 
@@ -1239,90 +1240,24 @@ module.exports = (() => {
 						this.hideWorker = new window.Worker(URL.createObjectURL(new Blob(
 							[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
 						)));
-
-						this.hideWorker.addEventListener("message", (evt) => {
-							const data = evt.data;
-							if (data.hide) {
-								let output = "\u200B" + data.stegCloakedMsg;
-								const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-								const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
-
-								editor.moveToRangeOfDocument();
-								editor.delete();
-								editor.insertText(output);
-
-								const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
-								Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
-								window.setTimeout(() => textArea.children[0].dispatchEvent(press), 100);
-
-								document.querySelector(".apateEncryptionKey")?.classList.remove("calculating");
-							}
-						});
-
 					}
 					URL.revokeObjectURL(this.hideWorker);
 				};
 
-				async hideMessage(password) {
-					const textArea = document.querySelector(DiscordSelectors.Textarea.textArea.value);
-					let input = await (async () => {
-						const textSegments = textArea?.querySelectorAll(`div > div > span[data-slate-object]`);
-						let input = "";
-						let newLine = false;
-
-						for (let textSegment of textSegments) {
-							switch (textSegment.getAttribute("data-slate-object")) {
-								case ("text"): {
-									if (newLine) {
-										input += "\n";
-									}
-									input += textSegment.textContent;
-									newLine = true;
-									break;
-								}
-								case ("inline"): {
-									newLine = false;
-
-									if (textSegment.querySelector("img.emoji")) {
-										const emojiName = textSegment.querySelector("img.emoji")?.alt?.replace(/:/g, "");
-
-										let emojiText = `:${emojiName}:`;
-
-										if (input.includes("*")) {
-											let emojiId = textSegment.querySelector("img").src.match(/emojis\/(?<id>\d+\.(png|gif))/)?.groups["id"];
-
-											if (emojiId === undefined) { // emojiId is undefined when it's a discord default emoji
-												emojiText = `[${emojiName}:default]`;
-											} else {
-												emojiText = `[${emojiName}:${emojiId}]`;
-											}
-										}
-
-
-										if (!emojiText) return;
-
-										input += emojiText;
-									} else if (textSegment.querySelector("span.mention")) {
-										input += textSegment.textContent;
-									}
-									break;
-								}
-							}
-						}
-
-						return input;
-					})();
-
-					if (!input) return;
-
-
-					let apateRegexResult = input.trim().replace(/\uFEFF/g, "").matchAll(/\*([^*]+|\*(?!\s)[^\*]*(?<!\s)\*)+\*/g);
+				/**
+				 * Takes an input and eturns null if the input doesn't match the apate regex and thus the message isn't correctly formed
+				 * otherwise returns an object with the cover message and hidden message
+				 * @param  {String}        input
+				 * @return {[Object|null]}       null if the input is invalid, otherwise {coverMessage: String, hiddenMessage: String}
+				 */
+				getCoverAndHiddenParts(input) {
+					let apateRegexResult = input.trim().matchAll(/\*([^*]+|\*(?!\s)[^\*]*(?<!\s)\*)+\*/g);
 
 					apateRegexResult = [...apateRegexResult];
 
 					if (!apateRegexResult.length) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
-						return;
+						return null;
 					}
 
 					let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
@@ -1331,63 +1266,74 @@ module.exports = (() => {
 					let hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
 					let invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
 
-					const editor = BdApi.getInternalInstance(textArea).return.stateNode.editorRef;
-
 					if (!coverMessage && !this.settings.devMode) {
 						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `cover message *hidden message*`");
-						return;
+						return null;
 					}
 
-					//in case the user sends a one word cover message
-					if (!/\S +\S/g.test(coverMessage)) {
-						coverMessage += " \u200b";
-					}
 					if (!hiddenMessage) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
-						return;
+						return null;
 					}
 					if (invalidEndString) {
 						BdApi.alert("Invalid input!", "There can't be a string after the hidden message! Syntax: `cover message *hidden message*`");
-						if (this.settings.deleteInvalid) {
-							editor.moveToRangeOfDocument();
-							editor.delete();
-							editor.insertText(`${coverMessage}*${hiddenMessage}*`);
-						}
-						return;
+						return null;
 					}
 
+					return {coverMessage, hiddenMessage};
+				}
 
-					editor.moveToRangeOfDocument();
-					editor.delete();
-					let pswd = ""
-					if (typeof password !== "undefined" || password === "") {
-						pswd = password;
-					}
-					else {
-						if (this.settings.encryption === 1) {
-							pswd = this.getPassword();
-							coverMessage = pswd + coverMessage;
+				/**
+				 * Takes an input, converts the newlines to \n, picks a password depending on the user's settings or password argument
+				 * and returns a promise which resolves with the steg cloaked message or rejects with an error
+				 * @param  {String} input    
+				 * @param  {[String|undefined]} password The password is undefined when we want to use the user's default one from the settings
+				 * @return {Promise}                     Resolves with the steg cloaked message or rejects with an error
+				 */
+				hideMessage(input, password) {
+					return new Promise((resolve, reject) => {
+						let result = this.getCoverAndHiddenParts(input);
+						if (result == null) return reject();
+
+						let {coverMessage, hiddenMessage} = result;
+
+						//in case the user sends a one word cover message
+						if (!/\S +\S/g.test(coverMessage)) {
+							coverMessage += " \u200b";
 						}
-						else {
-							pswd = this.settings.password;
+
+						if (password === undefined) {
+							if (this.settings.encryption === 1) {
+								password = this.generateTemporaryStegPassword();
+								coverMessage = password + coverMessage;
+							}
+							else {
+								password = this.settings.password;
+							}
+							this.settings.saveCurrentPassword = true;
+							this.saveSettings(this.settings);
 						}
-						this.settings.saveCurrentPassword = true;
-						this.saveSettings(this.settings);
-					}
-					hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
-					hiddenMessage += "\u200b"; //used as a verification if the password was correct 
 
-					document.querySelector(".apateEncryptionKey")?.classList.add("calculating");
+						hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
+						hiddenMessage += "\u200b"; //used as a verification if the password was correct 
 
-					this.hideWorker?.postMessage({
-						id: `apate-hide-${Date.now().toString(36)}`,
-						hide: true,
-						hiddenMsg: hiddenMessage,
-						coverMsg: coverMessage,
-						password: pswd
+						let timeout = setTimeout(() => {
+							this.hideWorker.removeEventListener("message", callback);
+							reject("timeout");
+						}, 4000);
+
+						let callback = ({ data }) => {
+							this.hideWorker.removeEventListener("message", callback);
+							clearTimeout(timeout);
+							resolve("\u200B" + data.stegCloakedMsg);
+						}
+
+						this.hideWorker.addEventListener("message", callback);
+
+						this.hideWorker.postMessage({ hide: true, coverMessage, hiddenMessage, password });
 					});
 				}
-				getPassword() {
+				generateTemporaryStegPassword() {
 					//makes a 4 character Long password that gets added to the start of the cover Text for some encryption
 					let password = "";
 					let invisibleCharacters = ["\u200C", "\u200D", "\u2061", "\u2062", "\u2063", "\u2064"];
@@ -1397,92 +1343,98 @@ module.exports = (() => {
 					return password;
 				}
 				displayPasswordChoose() {
-					var ul = document.createElement("ul");
+					return new Promise((resolve, reject) => {
+						var ul = document.createElement("ul");
 
-					var noEncrypt = document.createElement("li");
-					noEncrypt.setAttribute('id', "");
-					noEncrypt.classList.add("passwordLi");
-					noEncrypt.textContent = "-No Encryption-";
-					noEncrypt.setAttribute('style', `color:SlateGray;`);
+						var noEncrypt = document.createElement("li");
+						noEncrypt.setAttribute('id', "");
+						noEncrypt.classList.add("passwordLi");
+						noEncrypt.textContent = "-No Encryption-";
+						noEncrypt.setAttribute('style', `color:SlateGray;`);
 
-					if (this.settings.encryption === 1) {
-						noEncrypt.classList.add("selectedPassword");
-					}
-					noEncrypt.addEventListener("click", (e) => {
-						ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
-						e.target.classList.add("selectedPassword");
-					})
-
-					ul.appendChild(noEncrypt)
-					for (var i = 0; i < this.settings.passwords.length; i++) {
-						let item = this.settings.passwords[i]
-						var li = document.createElement("li");
-						li.setAttribute('id', item);
-
-						li.classList.add("passwordLi")
-						li.textContent = item;
-
-						let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
-						if (i === 0) {
-							li.setAttribute('style', `color:SlateGray;`);
-							if (this.settings.encryption === 0) {
-								li.classList.add("selectedPassword");
-							}
-						} else {
-							li.setAttribute('style', `color:${color}`);
+						if (this.settings.encryption === 1) {
+							noEncrypt.classList.add("selectedPassword");
 						}
-						li.addEventListener("click", (e) => {
+						noEncrypt.addEventListener("click", (e) => {
 							ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
 							e.target.classList.add("selectedPassword");
 						})
-						ul.appendChild(li);
-					}
 
-					BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
-						confirmText: "Send",
-						cancelText: "Cancel",
-						onConfirm: () => {
-							let password = ul.querySelector(".selectedPassword").id;
-							this.hideMessage(password)
+						ul.appendChild(noEncrypt)
+						for (var i = 0; i < this.settings.passwords.length; i++) {
+							let item = this.settings.passwords[i]
+							var li = document.createElement("li");
+							li.setAttribute('id', item);
+
+							li.classList.add("passwordLi")
+							li.textContent = item;
+
+							let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
+							if (i === 0) {
+								li.setAttribute('style', `color:SlateGray;`);
+								if (this.settings.encryption === 0) {
+									li.classList.add("selectedPassword");
+								}
+							} else {
+								li.setAttribute('style', `color:${color}`);
+							}
+							li.addEventListener("click", (e) => {
+								ul.querySelector(".selectedPassword").classList.remove("selectedPassword");
+								e.target.classList.add("selectedPassword");
+							})
+							ul.appendChild(li);
 						}
+
+						BdApi.showConfirmationModal("Choose password:", BdApi.React.createElement(HTMLWrapper, null, ul), {
+							confirmText: "Send",
+							cancelText: "Cancel",
+							onConfirm: () => {
+								resolve(ul.querySelector(".selectedPassword").id);
+							},
+							onCancel: () => {
+								reject();
+							}
+						});
 					});
 				}
 
 				displayPasswordChooseConfirm() {
 					if (this.settings.showChoosePasswordConfirm) {
-						let checkbox = document.createElement("input");
-						checkbox.setAttribute("type", "checkbox");
-						checkbox.setAttribute("id", "apateDontShowAgain");
-						checkbox.setAttribute("title", "Don't show again.");
+						return new Promise((resolve, reject) => {
+							let checkbox = document.createElement("input");
+							checkbox.setAttribute("type", "checkbox");
+							checkbox.setAttribute("id", "apateDontShowAgain");
+							checkbox.setAttribute("title", "Don't show again.");
 
-						let info = document.createElement("div");
-						info.textContent = "The password you choose will only be used on this message."
-						info.className = "markdown-11q6EU paragraph-3Ejjt0";
+							let info = document.createElement("div");
+							info.textContent = "The password you choose will only be used on this message."
+							info.className = "markdown-11q6EU paragraph-3Ejjt0";
 
-						let infoCheckBox = document.createElement("div");
-						infoCheckBox.textContent = "Don't show this message again:"
-						infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
-						infoCheckBox.appendChild(checkbox)
+							let infoCheckBox = document.createElement("div");
+							infoCheckBox.textContent = "Don't show this message again:"
+							infoCheckBox.className = "markdown-11q6EU paragraph-3Ejjt0";
+							infoCheckBox.appendChild(checkbox)
 
-						let htmlText = document.createElement("div")
-						htmlText.appendChild(info);
-						htmlText.appendChild(document.createElement("br"))
-						htmlText.appendChild(infoCheckBox)
+							let htmlText = document.createElement("div")
+							htmlText.appendChild(info);
+							htmlText.appendChild(document.createElement("br"))
+							htmlText.appendChild(infoCheckBox)
 
-						BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
-							confirmText: "Choose password",
-							cancelText: "Cancel",
-							onConfirm: () => {
-								if (document.getElementById("apateDontShowAgain").checked === true) {
-									this.settings.showChoosePasswordConfirm = false;
-									this.saveSettings(this.settings);
-								}
-								this.displayPasswordChoose();
-							},
+							BdApi.showConfirmationModal("Send message with different encryption?", BdApi.React.createElement(HTMLWrapper, null, htmlText), {
+								confirmText: "Choose password",
+								cancelText: "Cancel",
+								onConfirm: () => {
+									if (document.getElementById("apateDontShowAgain").checked === true) {
+										this.settings.showChoosePasswordConfirm = false;
+										this.saveSettings(this.settings);
+									}
+									this.displayPasswordChoose().then((password) => resolve(password)).catch((error) => reject(error));
+								},
 
-						});
+							});
+						})
 					} else {
-						this.displayPasswordChoose();
+						return this.displayPasswordChoose();
 					}
 				}
 
@@ -1490,9 +1442,13 @@ module.exports = (() => {
 					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
 
 					const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
-					const ButtonContainerClasses = BdApi.findModule(m => m.buttonContainer && m.buttons);
-					const ButtonWrapperClasses = BdApi.findModule(m => m.buttonWrapper && m.buttonContent);
-					const ButtonClasses = BdApi.findModule(m => m.button && m.contents);
+					const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
+					const ButtonWrapperClasses = BdApi.findModuleByProps('buttonWrapper', 'buttonContent');
+					const ButtonClasses = BdApi.findModuleByProps('button', 'contents');
+					const SlateTextAreaClass = BdApi.findModuleByProps('slateTextArea').slateTextArea;
+
+					const press = new KeyboardEvent("keydown", {key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true});
+					Object.defineProperties(press, {keyCode: {value: 13}, which: {value: 13}});
 
 					const ApateKeyButton = BdApi.React.createElement(Tooltip, {
 						text: "Right click to send with different Encryption!",
@@ -1504,16 +1460,45 @@ module.exports = (() => {
 							type: "button",
 							className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
 							onClick: (e) => {
-								if (this.settings.shiftNoEncryption && e.shiftKey) {
-									this.hideMessage("");
+								let textAreaInner = e.target.parentElement;
+
+								while (textAreaInner && !textAreaInner.matches(DiscordSelectors.Textarea.inner)) {
+									textAreaInner = textAreaInner.parentElement;
 								}
-								else {
-									this.hideMessage();
-								}
+
+								if (!textAreaInner) return;
+
+								let focusRing = BdApi.getInternalInstance(textAreaInner).pendingProps.children.find(c => c?.props?.ringClassName);
+								let text = focusRing.props.children.ref.current.props.textValue;
+								if (this.getCoverAndHiddenParts(text) == null) return;
+
+								textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
+
+								this.hideNextMessage = true;
+								textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
 							},
 							onContextMenu: (e) => {
 								e.preventDefault();
-								this.displayPasswordChooseConfirm();
+								let textAreaInner = e.target.parentElement;
+
+								while (textAreaInner && !textAreaInner.matches(DiscordSelectors.Textarea.inner)) {
+									textAreaInner = textAreaInner.parentElement;
+								}
+
+								if (!textAreaInner) return;
+
+								let focusRing = BdApi.getInternalInstance(textAreaInner).pendingProps.children.find(c => c?.props?.ringClassName);
+								let text = focusRing.props.children.ref.current.props.textValue;
+								if (this.getCoverAndHiddenParts(text) == null) return;
+
+								textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
+
+								this.displayPasswordChooseConfirm().then(password => {
+									this.hideNextMessage = password;
+									textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
+								}).catch(() => {
+									textAreaInner.querySelector(".apateEncryptionKey").classList.remove("calculating");
+								});
 								return false;
 							}
 						},
@@ -1531,7 +1516,7 @@ module.exports = (() => {
 						if (this.settings.keyPosition === 2) {
 							return
 						}
-						if (props.type !== "normal") { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
+						if (!["normal", "sidebar", "form"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
 						}
 
@@ -1552,30 +1537,72 @@ module.exports = (() => {
 								break;
 						}
 
-						let form = textArea.ref.current?.parentElement;
+						let parent = textArea.ref.current?.parentElement;
 
-						while (form != undefined && form.tagName !== "FORM") {
-							form = form.parentElement;
-						}
+						if (this.settings.ctrlToSend && parent && !parent.classList.contains("hasApateListener")) {
+							parent.classList.add("hasApateListener");
 
-						if (this.settings.ctrlToSend && form && !form.classList.contains("hasApateListener")) {
-							form.classList.add("hasApateListener");
+							parent.addEventListener("keyup", (evt) => {
+								if (evt.key === "Enter" && evt.ctrlKey) {
+									evt.preventDefault();
+									let slateTextArea = textArea.ref.current.querySelector(`.${SlateTextAreaClass}`);
 
-							form.addEventListener("keyup", (evt) => {
-								if (this.settings.shiftNoEncryption && evt.key === "Enter" && evt.ctrlKey && evt.shiftKey) {
-									evt.preventDefault();
-									this.hideMessage("");
-								} else if (this.settings.altChoosePassword && evt.key === "Enter" && evt.ctrlKey && evt.altKey) {
-									evt.preventDefault();
-									this.displayPasswordChooseConfirm();
-								}
-								else if (evt.key === "Enter" && evt.ctrlKey) {
-									evt.preventDefault();
-									this.hideMessage();
+									let focusRing = textAreaInner.props.children.find(c => c?.props?.ringClassName);
+									let text = focusRing.props.children.ref.current.props.textValue;
+
+									if (this.getCoverAndHiddenParts(text) == null) return;
+
+									this.hideNextMessage = true;
+
+									if (this.settings.shiftNoEncryption && evt.shiftKey) {
+										this.passwordForNextMessage = "";
+									}
+
+									let keyButton = textArea.ref.current.querySelector(".apateEncryptionKey");
+									keyButton?.classList.add("calculating");
+
+									if (this.settings.altChoosePassword && evt.altKey) {
+										this.displayPasswordChooseConfirm().then(password => {
+											this.passwordForNextMessage = password;
+											slateTextArea.dispatchEvent(press);
+										});
+									} else {
+										slateTextArea.dispatchEvent(press);
+									}
 								}
 							});
 						}
 					});
+
+					let patchedSendMessage = (argsMessageIdx) => {
+						return async (_, args, originalFunction) => {
+							if (this.hideNextMessage) {
+								this.hideNextMessage = false;
+
+								let password;
+								if (this.passwordForNextMessage !== undefined) {
+									password = this.passwordForNextMessage;
+									this.passwordForNextMessage = undefined;
+								}
+
+								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
+									args[argsMessageIdx].content = stegCloakedMsg;
+									originalFunction(...args);
+								}).catch((e) => {
+									if (e !== undefined) Logger.error(e);
+								}).finally(() => {
+									document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+										el.classList.remove("calculating");
+									});
+								});
+							} else {
+								originalFunction(...args);
+							}
+						}
+					}
+
+					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("sendMessage"), "sendMessage", patchedSendMessage(1).bind(this));
+					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("instantBatchUpload"), "upload", patchedSendMessage(3).bind(this));
 				}
 
 				patchMessages() {
