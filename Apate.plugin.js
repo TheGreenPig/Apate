@@ -204,6 +204,74 @@ module.exports = (() => {
 
 					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, {renderMediaEmbeds: true, formatInline: false, isInteracting: true});
 
+					if (this.props.apate.settings.displayImage) {
+						let nbLinksScanned = 0;
+
+						let analyseChildren = (children) => {
+							for (var i = 0; i < children.length; i++) {
+								let child = children[i];
+								if (child?.type !== "a" && !child?.type?.displayName?.endsWith("Link")) {
+									// If the current element has children, recursively look for images
+									if (child?.props?.children) {
+										child.props.children = analyseChildren(child.props.children);
+									}
+
+									continue;
+								}
+
+								if (nbLinksScanned < 3) { //only scan the first 3 links
+									nbLinksScanned++;
+									//Message has image link
+									let imageLink = new URL(child.props.href);
+
+									let url;
+									if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
+										url = imageLink.href;
+									} else {
+										url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+									}
+
+									if (this.state.images[imageLink.href] !== undefined) {
+										if (this.state.images[imageLink.href]) {
+											let linkIdx = children.indexOf(child);
+
+											let isBrBefore = children[linkIdx - 1]?.type === "br";
+											let isBrAfter = children[linkIdx + 1]?.type === "br";
+
+											// If there is a new line before and after the link, then we remove one of them to avoid having an empty line
+											// we also remove on if there is a new line after the link which is the first child OR a new line before the link which is the last child
+											let img = BdApi.React.createElement("div", { className: "apateHiddenImgWrapper" }, BdApi.React.createElement("img", { className: "apateHiddenImg", src: url }));
+
+											if ((isBrBefore && isBrAfter) || (isBrAfter && linkIdx === 0)) {
+												children.splice(linkIdx, 2, img);
+											} else if (isBrBefore && linkIdx === children.length - 1) {
+												children.splice(linkIdx - 1, 2, img);
+											} else {
+												children.splice(linkIdx, 1, img);
+											}
+										}
+									} else {
+										this.props.apate.testImage(url).then(() => {
+											let newImages = { ...this.state.images };
+											newImages[imageLink.href] = true;
+
+											this.setState({ images: newImages });
+										}).catch(() => {
+											let newImages = { ...this.state.images };
+											newImages[imageLink.href] = false;
+
+											this.setState({ images: newImages });
+										});
+									}
+								}
+							}
+
+							return children
+						}
+
+						content = analyseChildren(content);
+					}
+
 					return content;
 				}
 
@@ -245,12 +313,13 @@ module.exports = (() => {
 				`	width: 2em;`,
 				`	height: 2em;`,
 				`}`,
-				`.apateHiddenImg {`,
+				`.apateHiddenImgWrapper {`,
 				`	margin: 10px;`,
+				`}`,
+				`.apateHiddenImg {`,
 				`	border-radius: 0.3em;`,
 				`	max-width: 500px;`,
 				`	max-height: 400px;`,
-				`	display: block;`,
 				`}`,
 				`@keyframes apateRotate {`,
 				`	0%   { transform: rotate(0deg);   }`,
