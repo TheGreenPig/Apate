@@ -1388,7 +1388,8 @@ module.exports = (() => {
 								textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
 
 								this.displayPasswordChooseConfirm().then(password => {
-									this.hideNextMessage = password;
+									this.hideNextMessage = true;
+									this.passwordForNextMessage = password;
 									textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
 								}).catch(() => {
 									textAreaInner.querySelector(".apateEncryptionKey").classList.remove("calculating");
