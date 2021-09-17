@@ -181,208 +181,30 @@ module.exports = (() => {
 					}
 				}
 
-				
 				formatHiddenMessage() {
-					let urlRegex = /(https?:\/\/)[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_+.~#?&/=\[\]]*)/g;
-					let emojiRegex = /\[[a-zA-Z_~\d+-ñ]+?:(\d+\.(png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
-
 					if (this.state.message == null) {
 						return "";
 					}
 
-					let children = [this.state.message];
+					let emojiRegex = /\[(?<name>[a-zA-Z_~\d+-ñ]+):(?:(?<id>\d+)\.(?<ext>png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
+					let emojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
 
-					for (let i = children.length - 1; i >= 0; i--) {
-						let child = children[i];
-						if (typeof (child) !== "string") continue;
+					let m = Object.assign({}, this.props.message);
 
-						let italicBoldArray = child.matchAll(/(?<!\*)\*{3}(?<strongem>[^*]+)\*{3}(?!\*)/g);
-						let boldArray = child.matchAll(/(?<!\*)\*{2}(?<strong>[^*]+)\*{2}(?!\*)/g);
-						let italicArray = child.matchAll(/(?<!\*)\*{1}(?<em>[^*]+)\*{1}(?!\*)/g);
-						let codeBlockArray = child.matchAll(/(?<!`)`{1}(?<codeBlock>[^*]+)`{1}(?!`)/g);
+					m.content = this.state.message.replace(/\\n/g, "\n");
 
-						let arrays = [...boldArray, ...italicArray, ...italicBoldArray, ...codeBlockArray].sort((a, b) => a.index - b.index);
-
-						for (let i = 0; i < arrays.length; i++) {
-							if (arrays[i].groups.em) {
-								replaceTextWithElement(arrays[i][0], "em");
-							} else if (arrays[i].groups.strong) {
-								replaceTextWithElement(arrays[i][0], "strong");
-							} else if (arrays[i].groups.strongem) {
-								replaceTextWithElement(arrays[i][0], ["em", "strong"]);
-							} else if (arrays[i].groups.codeBlock) {
-								replaceTextWithElement(arrays[i][0], "code");
-							}
-						}
-
-						function replaceTextWithElement(text, elementType){
-							if (typeof(elementType) === "string") {
-								elementType = [elementType];
-							}
-
-							let newElement = BdApi.React.createElement(elementType[elementType.length - 1], {
-							}, (elementType == "code" ? text.replace(/^`+|`+$/g, "") : text.replace(/^\*+|\*+$/g, "")));
-							for (let i = elementType.length - 2; i >= 0; i--) {
-								newElement = BdApi.React.createElement(elementType[i], {}, newElement);
-							}
-
-							let before = child.slice(0, child.indexOf(text));
-							let after = child.slice(child.indexOf(text) + text.length);
-							children.splice(children.indexOf(child), 1, ...[before, newElement, after]);
-							child = after;
-						}
-
-
-						while (child.lastIndexOf("\\n") >= 0) {
-							let before = child.slice(0, child.lastIndexOf("\\n"));
-							let after = child.slice(child.lastIndexOf("\\n") + "\\n".length);
-
-							children.splice(i, 1, ...[before, BdApi.React.createElement("br"), after].filter(x => typeof (x) !== "string" || x.trim().length));
-							child = before;
-						}
-					}
-
-					if (urlRegex.test(this.state.message)) {
-						const AnchorClasses = BdApi.findModule(m => m.anchorUnderlineOnHover);
-						let nbLinksScanned = 0;
-
-						for (let i = 0; i < children.length; i++) {
-							let child = children[i];
-							if (typeof (child) !== "string") continue;
-
-							let linkArray = child.match(urlRegex);
-
-							if (!linkArray) continue;
-
-							for (let j = 0; j < linkArray.length; j++) {
-								let link = BdApi.React.createElement("a", {
-									className: `${AnchorClasses.anchor} ${AnchorClasses.anchorUnderlineOnHover}`,
-									title: linkArray[j],
-									href: linkArray[j],
-									rel: "noreferrer noopener",
-									target: "_blank",
-									role: "button",
-									tabindex: 0
-								}, linkArray[j]);
-
-								let before = child.slice(0, child.indexOf(linkArray[j]));
-								let after = child.slice(child.indexOf(linkArray[j]) + linkArray[j].length);
-
-								children.splice(children.indexOf(child), 1, ...[before, link, after].filter(x => typeof (x) !== "string" || x.trim().length));
-								child = after || "";
-							}
-						}
-
-						for (let i = children.length - 1; i >= 0; i--) {
-							let child = children[i];
-							if (child?.type !== "a") continue;
-
-							if (this.props.apate.settings.displayImage && nbLinksScanned < 3) { //only scan the first 3 links
-								nbLinksScanned++;
-								//Message has image link
-								let imageLink = new URL(child.props.href);
-
-								let url;
-								if (imageLink.hostname.endsWith("discordapp.net") || imageLink.hostname.endsWith("discordapp.com")) {
-									url = imageLink.href;
-								} else {
-									url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
-								}
-
-								if (this.state.images[imageLink.href] !== undefined) {
-									if (this.state.images[imageLink.href]) {
-										let linkIdx = children.indexOf(child);
-
-										let isBrBefore = children[linkIdx - 1]?.type === "br";
-										let isBrAfter = children[linkIdx + 1]?.type === "br";
-
-										// If there is a new line before and after the link, then we remove one of them to avoid having an empty line
-										// we also remove on if there is a new line after the link which is the first child OR a new line before the link which is the last child
-										if ((isBrBefore && isBrAfter) || (isBrAfter && linkIdx === 0)) {
-											children.splice(linkIdx, 2);
-										} else if (isBrBefore && linkIdx === children.length - 1) {
-											children.splice(linkIdx - 1, 2);
-										} else {
-											children.splice(linkIdx, 1);
-										}
-
-										let img = BdApi.React.createElement("img", { className: "apateHiddenImg", src: url })
-										children.push(img);
-									}
-								} else {
-									this.props.apate.testImage(url).then(() => {
-										let newImages = { ...this.state.images };
-										newImages[imageLink.href] = true;
-
-										this.setState({ images: newImages });
-									}).catch(() => {
-										let newImages = { ...this.state.images };
-										newImages[imageLink.href] = false;
-
-										this.setState({ images: newImages });
-									});
-								}
-							}
-						}
-					}
-
-					// Stitches together all pieces of texts
-					children = children.reduce((array, curr) => {
-						if (typeof (array[array.length - 1]) === "string" && typeof (curr) === "string") {
-							array[array.length - 1] += curr;
+					// Convert emojis in Apate's old format for backward compatibility
+					m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
+						if (ext) {
+							return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
 						} else {
-							array.push(curr);
+							return emojiModule.convertNameToSurrogate(name);
 						}
+					});
 
-						return array;
-					}, []);
+					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, {renderMediaEmbeds: true, formatInline: false, isInteracting: true});
 
-					if (emojiRegex.test(this.state.message)) {
-						const discordEmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
-						const emojiContainerClass = BdApi.findModule(m => Object.keys(m).length === 1 && m.emojiContainer).emojiContainer;
-
-						for (let i = 0; i < children.length; i++) {
-							let child = children[i];
-							if (typeof (child) !== "string") continue;
-
-							let emojiArray = child.match(emojiRegex);
-
-							if (!emojiArray) continue;
-
-							let bigEmoji = null;
-
-							let rest = child.replace(emojiRegex, "").trim().replace("\u200B", "");
-							if (rest.length === 0) {
-								bigEmoji = "jumboable"
-							}
-
-							for (let j = 0; j < emojiArray.length; ++j) {
-								let [emojiName, emojiId] = emojiArray[j].slice(1, emojiArray[j].length - 1).split(":");
-
-								let src;
-								if (emojiId === "default") {
-									src = discordEmojiModule.getByName(emojiName).url;
-								} else {
-									if (!this.props.apate.settings.animate) {
-										emojiId = emojiId.replace(".gif", ".png")
-									}
-
-									src = `https://cdn.discordapp.com/emojis/${emojiId}?v=1`;
-								}
-
-								let img = BdApi.React.createElement("img", { className: `emoji ${bigEmoji}`, "aria-label": emojiName, alt: emojiName, src });
-								let emojiContainer = BdApi.React.createElement("span", { className: emojiContainerClass, tabindex: 0 }, img);
-
-								let before = child.slice(0, child.indexOf(emojiArray[j]));
-								let after = child.slice(child.indexOf(emojiArray[j]) + emojiArray[j].length);
-
-								children.splice(children.indexOf(child), 1, ...[before, emojiContainer, after].filter(x => typeof (x) !== "string" || x.length));
-								child = after || "";
-							}
-						}
-					}
-
-					return children;
+					return content;
 				}
 
 				render() {
@@ -458,6 +280,9 @@ module.exports = (() => {
 				`.apateHiddenMessage.loading::after {`,
 				`	content: "[loading hidden message...]";`,
 				`	animation: changeLetter 1s linear infinite;`,
+				`}`,
+				`.apateHiddenMessage pre {`,
+				`	margin-right: 4rem;`,
 				`}`,
 				`.apateAboutMeHidden {`,
 				`	max-width: 90%;`,
