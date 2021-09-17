@@ -115,6 +115,7 @@ module.exports = (() => {
 						}
 
 						this.props.message.apateHiddenMessage = state.message === undefined ? null : state.message;
+						this.props.message.apateUsedPassword = state.password;
 
 						this.setState({ processing: false, message: state.message, usedPassword: state.password });
 					};
@@ -122,7 +123,7 @@ module.exports = (() => {
 					Dispatcher.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
 
 					if (this.props.message.apateHiddenMessage !== undefined) {
-						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, });
+						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
 
 					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
