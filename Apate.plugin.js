@@ -109,6 +109,8 @@ module.exports = (() => {
 				state = { processing: true, message: undefined, usedPassword: undefined, images: [] }
 
 				componentDidMount() {
+					this.processMessage();
+
 					const handleUpdate = state => {
 						if (state.id !== this.props.message.id) {
 							return
@@ -122,6 +124,15 @@ module.exports = (() => {
 
 					Dispatcher.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
 
+					Dispatcher.subscribe("APATE_MESSAGE_FORCE_UPDATE", state => {
+						if (state.id === this.props.message.id) {
+							this.setState({ processing: true, message: undefined, usedPassword: undefined, images: [] });
+							this.processMessage();
+						}
+					});
+				}
+
+				processMessage() {
 					if (this.props.message.apateHiddenMessage !== undefined) {
 						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
@@ -370,7 +381,7 @@ module.exports = (() => {
 				`	margin-right: 0.1rem;`,
 				`	align-items: flex-start;`,
 				`}`,
-				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer {`,
+				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer, .apateKeyButtonContainer.edit {`,
 				`	margin-left: 0.3rem;`,
 				`	margin-right: -0.8rem;`,
 				`}`,
@@ -1412,7 +1423,7 @@ module.exports = (() => {
 						if (this.settings.keyPosition === 2) {
 							return
 						}
-						if (!["normal", "sidebar", "form"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
+						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
 						}
 
@@ -1421,15 +1432,22 @@ module.exports = (() => {
 						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
 						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 
+						let keyButton = ApateKeyButton;
+
+						if (props.type === "edit") {
+							keyButton = BdApi.React.cloneElement(ApateKeyButton);
+							keyButton.props.className += " edit";
+						}
+
 						switch (this.settings.keyPosition) {
 							case 0: // RIGHT
 								buttons.props.children = [
 									...buttons.props.children,
-									ApateKeyButton
+									keyButton
 								]
 								break;
 							case 1: // LEFT
-								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, ApateKeyButton);
+								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
 								break;
 						}
 
@@ -1468,6 +1486,54 @@ module.exports = (() => {
 									}
 								}
 							});
+						}
+					});
+
+					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("startEditMessage"), "startEditMessage", (_, [channelId, messageId, content], originalFunction) => {
+						if (content.startsWith("\u200B")) {
+							let message = BdApi.findModuleByProps("getMessage").getMessage(channelId, messageId);
+							if (!message.apateHiddenMessage) return;
+
+							content = content.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
+							content = `${content}*${message.apateHiddenMessage}*`;
+						}
+
+						originalFunction(channelId, messageId, content);
+					});
+
+					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("editMessage"), "editMessage", (_, [channelId, messageId, edit], originalFunction) => {
+						if (this.hideNextMessage) {
+							this.hideNextMessage = false;
+
+							let password;
+							if (this.passwordForNextMessage !== undefined) {
+								password = this.passwordForNextMessage;
+								this.passwordForNextMessage = undefined;
+							}
+
+							this.hideMessage(edit.content, password).then(stegCloakedMsg => {
+								edit.content = stegCloakedMsg;
+
+								originalFunction(channelId, messageId, edit);
+							}).catch((e) => {
+								if (e !== undefined) Logger.error(e);
+							}).finally(() => {
+								document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+									el.classList.remove("calculating");
+								});
+							});
+						} else {
+							originalFunction(channelId, messageId, edit);
+						}
+					});
+
+					BdApi.Patcher.after("Apate", BdApi.findModuleByProps("endEditMessage"), "endEditMessage", (_, [channelId, response]) => {
+						if (response?.body.content.startsWith("\u200B")) {
+							let message = BdApi.findModuleByProps("getMessage").getMessage(channelId, response.body.id);
+							delete message.apateHiddenMessage;
+							delete message.apateUsedPassword;
+
+							Dispatcher.dispatch({ type: "APATE_MESSAGE_FORCE_UPDATE", id: response.body.id });
 						}
 					});
 
@@ -1510,7 +1576,7 @@ module.exports = (() => {
 							return
 						}
 
-						if (props.message.content.length > 0 && props.message.content[0] === "\u200b") {
+						if (props.message.content.startsWith("\u200B")) {
 							ret.props.children = [
 								...ret.props.children,
 								BdApi.React.createElement(ApateMessage, { message: props.message, apate: this })
@@ -1533,7 +1599,7 @@ module.exports = (() => {
 					}
 
 					function getBioHiddenMessage(bio) {
-						if (bio.charAt(0) === "\u200B") {
+						if (bio.startsWith("\u200B")) {
 							let bioHash = hashCode(bio);
 
 							if (aboutMeCache[bioHash] == undefined) {
