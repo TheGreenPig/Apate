@@ -149,50 +149,6 @@ module.exports = (() => {
 					this.props.apate.lastWorkerId %= this.props.apate.numOfWorkers;
 				}
 
-				handleOnClick() {
-					if (this.props.apate.settings.showInfo) {
-						let passwordIndex = this.props.apate.settings.passwords.indexOf(this.state.usedPassword);
-						let color = this.props.apate.settings.passwordColorTable[passwordIndex];
-
-						if (passwordIndex > 1) {
-							this.props.apate.settings.passwords.splice(passwordIndex, 1);
-							this.props.apate.settings.passwordColorTable.splice(passwordIndex, 1);
-
-							this.props.apate.settings.passwords.splice(1, 0, this.state.usedPassword);
-							this.props.apate.settings.passwordColorTable.splice(1, 0, color);
-							this.props.apate.saveSettings(this.props.apate.settings);
-						}
-
-						let style = "";
-
-						if (this.state.usedPassword === "") {
-							//data.usedPswd = "-No Encryption-"
-							passwordIndex = "-No Encryption-"
-							style = `style="font-style: italic; font-size:1em;"`;
-						} else {
-							style = `style="color:${color}; font-size:0.9em;"`;
-
-							var copyButton = document.createElement("button");
-							copyButton.innerHTML = `📋`
-							copyButton.classList.add("btn-passwords");
-							copyButton.setAttribute("title", "Copy Password")
-							copyButton.addEventListener("click", () => {
-								navigator.clipboard.writeText(this.state.usedPassword);
-								BdApi.showToast("Copied password!", { type: "success" });
-							});
-						}
-
-						let htmlText = document.createElement("div");
-						htmlText.innerHTML = `Password used: <b><div ${style}>${this.state.usedPassword || "-No Encryption-"}</div></b>`;
-						htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
-						if (copyButton) {
-							htmlText.querySelector("div").appendChild(copyButton);
-						}
-
-						BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
-					}
-				}
-
 				formatHiddenMessage() {
 					if (this.state.message == null) {
 						return "";
@@ -214,7 +170,7 @@ module.exports = (() => {
 						}
 					});
 
-					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, {renderMediaEmbeds: true, formatInline: false, isInteracting: true});
+					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
 
 					if (this.props.apate.settings.displayImage) {
 						let nbLinksScanned = 0;
@@ -291,7 +247,7 @@ module.exports = (() => {
 					return this.state.message === null ?
 						null :
 						BdApi.React.createElement("div",
-							{ className: `apateHiddenMessage ${this.state.processing ? "loading" : ""}`, onClick: this.handleOnClick.bind(this) },
+							{ className: `apateHiddenMessage ${this.state.processing ? "loading" : ""}` },
 							this.formatHiddenMessage()
 						);
 				}
@@ -1042,9 +998,8 @@ module.exports = (() => {
 								this.settings.showLoading = i;
 								this.refreshCSS();
 							}),
-							new Switch('Show info on click', 'Lets you click on messages to see the password that was used to decrypt it.', this.settings.showInfo, (i) => {
+							new Switch('Show info button', 'Holding shift over a message will display an option to view the used password.', this.settings.showInfo, (i) => {
 								this.settings.showInfo = i;
-								this.refreshCSS();
 							}),
 							new Switch('Display Images', 'Links to images will be displayed. All images get displayed by the images.weserv.nl image proxy. Only the first three links will be scanned for an image.', this.settings.displayImage, (i) => {
 								this.settings.displayImage = i;
@@ -1080,6 +1035,19 @@ module.exports = (() => {
 							stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
 							document.head.append(stegCloakScript);
 						}
+
+						/*	try to automatically set the about me message, in case the user installed 
+							the plugin on a new PC or changed the about me message on a different PC	*/
+						try {
+							let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
+							let stegCloak = new StegCloak();
+							this.settings.hiddenAboutMeText = stegCloak.reveal(bio, "");
+							this.settings.hiddenAboutMe = true;
+							this.saveSettings(this.settings);
+						} catch {
+
+						}
+
 
 						for (const author of config.info.authors) {
 							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
@@ -1119,6 +1087,7 @@ module.exports = (() => {
 						// patches (Aapte key, messages, about me)
 						this.patchTextArea();
 						this.patchMessages();
+						this.patchMiniPopover();
 						this.patchAboutMe();
 					}
 
@@ -1188,7 +1157,7 @@ module.exports = (() => {
 						return null;
 					}
 
-					return {coverMessage, hiddenMessage};
+					return { coverMessage, hiddenMessage };
 				}
 
 				/**
@@ -1203,7 +1172,7 @@ module.exports = (() => {
 						let result = this.getCoverAndHiddenParts(input);
 						if (result == null) return reject();
 
-						let {coverMessage, hiddenMessage} = result;
+						let { coverMessage, hiddenMessage } = result;
 
 						//in case the user sends a one word cover message
 						if (!/\S +\S/g.test(coverMessage)) {
@@ -1241,8 +1210,12 @@ module.exports = (() => {
 						this.hideWorker.postMessage({ hide: true, coverMessage, hiddenMessage, password });
 					});
 				}
+				/**
+				 *	Generate a 4 character Long password that gets added to the start of the cover Text for some encryption
+				 *	prevents people from simply copy-pasting messages with no encryption into the StegCloak website.
+				 */
 				generateTemporaryStegPassword() {
-					//makes a 4 character Long password that gets added to the start of the cover Text for some encryption
+
 					let password = "";
 					let invisibleCharacters = ["\u200C", "\u200D", "\u2061", "\u2062", "\u2063", "\u2064"];
 					for (var i = 0; i < 4; i++) {
@@ -1345,6 +1318,49 @@ module.exports = (() => {
 						return this.displayPasswordChoose();
 					}
 				}
+				displayInfo(message) {
+					if (this.settings.showInfo) {
+						let passwordIndex = this.settings.passwords.indexOf(message.apateUsedPassword);
+						let color = this.settings.passwordColorTable[passwordIndex];
+
+						if (passwordIndex > 1) {
+							this.settings.passwords.splice(passwordIndex, 1);
+							this.settings.passwordColorTable.splice(passwordIndex, 1);
+
+							this.settings.passwords.splice(1, 0, message.apateUsedPassword);
+							this.settings.passwordColorTable.splice(1, 0, color);
+							this.saveSettings(this.settings);
+						}
+
+						let style = "";
+
+						if (message.apateUsedPassword === "") {
+							passwordIndex = "-No Encryption-"
+							style = `style="font-style: italic; font-size:1em;"`;
+						} else {
+							style = `style="color:${color}; font-size:0.9em;"`;
+
+							var copyButton = document.createElement("button");
+							copyButton.innerHTML = `📋`
+							copyButton.classList.add("btn-passwords");
+							copyButton.setAttribute("title", "Copy Password")
+							copyButton.addEventListener("click", () => {
+								navigator.clipboard.writeText(message.apateUsedPassword);
+								BdApi.showToast("Copied password!", { type: "success" });
+							});
+						}
+
+						let htmlText = document.createElement("div");
+						htmlText.innerHTML = `Password used: <b><div ${style}>${message.apateUsedPassword || "-No Encryption-"}</div></b>`;
+
+						htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
+						if (copyButton) {
+							htmlText.querySelector("div").appendChild(copyButton);
+						}
+
+						BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
+					}
+				}
 
 				patchTextArea() {
 					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
@@ -1355,8 +1371,8 @@ module.exports = (() => {
 					const ButtonClasses = BdApi.findModuleByProps('button', 'contents');
 					const SlateTextAreaClass = BdApi.findModuleByProps('slateTextArea').slateTextArea;
 
-					const press = new KeyboardEvent("keydown", {key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true});
-					Object.defineProperties(press, {keyCode: {value: 13}, which: {value: 13}});
+					const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
+					Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
 
 					const ApateKeyButton = BdApi.React.createElement(Tooltip, {
 						text: "Right click to send with different Encryption!",
@@ -1404,7 +1420,7 @@ module.exports = (() => {
 									this.hideNextMessage = true;
 									this.passwordForNextMessage = password;
 									textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
-								}).catch(() => {});
+								}).catch(() => { });
 
 								return false;
 							}
@@ -1479,7 +1495,7 @@ module.exports = (() => {
 											keyButton?.classList.add("calculating");
 											this.passwordForNextMessage = password;
 											slateTextArea.dispatchEvent(press);
-										}).catch(() => {});
+										}).catch(() => { });
 									} else {
 										keyButton?.classList.add("calculating");
 										slateTextArea.dispatchEvent(press);
@@ -1584,6 +1600,48 @@ module.exports = (() => {
 						}
 					});
 				}
+				patchMiniPopover() {
+					const MiniPopover = BdApi.findModule((m) => m?.default?.displayName === "MiniPopover");
+					const TooltipWrapper = BdApi.findModuleByPrototypes("renderTooltip");
+
+					BdApi.Patcher.after("Apate", MiniPopover, "default", (_, [props], ret) => {
+						const args = props.children[1].props;
+
+						if (!this.settings.showInfo || !args.message.apateHiddenMessage || typeof (args.message.apateHiddenMessage) === 'undefined') {
+							return;
+						}
+						if (!args.expanded) return;
+
+						const InfoButton = BdApi.React.createElement(TooltipWrapper, {
+							position: TooltipWrapper.Positions.TOP,
+							color: TooltipWrapper.Colors.PRIMARY,
+							text: "Apate Info",
+							children: (tipProps) => {
+								return BdApi.React.createElement("div", Object.assign({
+									children: [
+										BdApi.React.createElement("button", {
+											className: "message-toggle",
+											style: {
+												padding: "4px",
+												marginLeft: "4px",
+												width: "50px",
+												height: "40px",
+												background: "url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat",
+												backgroundSize: "contain",
+											},
+											onClick: () => {
+												this.displayInfo(args.message)
+											}
+										})
+									]
+								}, tipProps))
+							}
+						});
+
+						ret.props.children.push(InfoButton);
+					});
+
+				}
 
 				patchAboutMe() {
 					const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
@@ -1664,7 +1722,6 @@ module.exports = (() => {
 						}
 					});
 				}
-
 				onStop() {
 					for (const worker of this.revealWorkers) {
 						worker.terminate();
