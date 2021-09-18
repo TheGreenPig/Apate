@@ -1388,15 +1388,13 @@ module.exports = (() => {
 								let text = focusRing.props.children.ref.current.props.textValue;
 								if (this.getCoverAndHiddenParts(text) == null) return;
 
-								textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
-
 								this.displayPasswordChooseConfirm().then(password => {
+									textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
 									this.hideNextMessage = true;
 									this.passwordForNextMessage = password;
 									textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
-								}).catch(() => {
-									textAreaInner.querySelector(".apateEncryptionKey").classList.remove("calculating");
-								});
+								}).catch(() => {});
+
 								return false;
 							}
 						},
@@ -1457,14 +1455,15 @@ module.exports = (() => {
 									}
 
 									let keyButton = textArea.ref.current.querySelector(".apateEncryptionKey");
-									keyButton?.classList.add("calculating");
 
 									if (this.settings.altChoosePassword && evt.altKey) {
 										this.displayPasswordChooseConfirm().then(password => {
+											keyButton?.classList.add("calculating");
 											this.passwordForNextMessage = password;
 											slateTextArea.dispatchEvent(press);
-										});
+										}).catch(() => {});
 									} else {
+										keyButton?.classList.add("calculating");
 										slateTextArea.dispatchEvent(press);
 									}
 								}
