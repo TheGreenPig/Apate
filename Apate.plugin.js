@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.0
+ * @version 1.3.1
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.0",
+			version: "1.3.1",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,16 +52,17 @@ module.exports = (() => {
 				title: "Added:",
 				type: "added",
 				items: [
-					"Option to align key on the left.",
+					"Sync About Me message when using multiple PCs.",
+					"Edit messages.",
 				]
 			},
 			{
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Completely reworked everything with react components. (Possible performance boost)",
-					"Support for bold and italic text.",
-					"One word messages should work now.",
+					"Patch all Text areas (when attaching a file for example).",
+					"Better info Message (Hover over message with shift).",
+					"Format all messages 'Discord Style' (Supports bold, italic, codeblocks, spoilers etc.).",
 				]
 			},
 		],
