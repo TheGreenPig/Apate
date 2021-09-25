@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.1
+ * @version 1.3.2
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,27 +42,18 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.1",
+			version: "1.3.2",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Added:",
-				type: "added",
-				items: [
-					"Sync About Me message when using multiple PCs.",
-					"Edit messages.",
-				]
-			},
-			{
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Patch all Text areas (when attaching a file for example).",
-					"Better info Message (Hover over message with shift).",
-					"Format all messages 'Discord Style' (Supports bold, italic, codeblocks, spoilers etc.).",
+					"Fix CSS so the scroll bar doesnt appear in the text box.",
+					"Dont display key in channels you cant send messages in.",
 				]
 			},
 		],
@@ -269,18 +260,18 @@ module.exports = (() => {
 				`	align-items: center;`,
 				`	clip-path: inset(0);`,
 				`	width: 3em;`,
-				`	height: 2.8em;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateEncryptionKeyContainer {`,
 				`	padding: 0;`,
-				`	width: 5rem;`,
-				`	height: 5rem;`,
+				`	width: 4rem;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateEncryptionKey {`,
 				`	transition: all 300ms ease;`,
-				`	font-size: 1.3rem;`,
-				`	width: 2em;`,
-				`	height: 2em;`,
+				`	font-size: 1rem;`,
+				`	width: 3em;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateHiddenImgWrapper {`,
 				`	margin: 10px;`,
@@ -336,6 +327,8 @@ module.exports = (() => {
 				`.apateKeyButtonContainer {`,
 				`	margin-left: -0.6rem;`,
 				`	margin-right: 0.1rem;`,
+				`	height: 2.8em;`,
+				`	width: 3em;`,
 				`	align-items: flex-start;`,
 				`}`,
 				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer, .apateKeyButtonContainer.edit {`,
@@ -361,8 +354,8 @@ module.exports = (() => {
 				`	background-color: rgb(12, 187, 50);`,
 				`	font-size: 1em;`,
 				`	color: white;`,
-				`	padding: 0.3em;`,
-				`	border-radius: .25rem;`,
+				`	padding: 0.2em;`,
+				`	border-radius: .15rem;`,
 				`}`,
 				`.downloadListButton{`,
 				`	background-color: Teal;`,
@@ -378,7 +371,7 @@ module.exports = (() => {
 				`	padding: 0.3em;`,
 				`	font-size: 1em;`,
 				`	margin-bottom: 10px;`,
-				`	border-radius: .25rem;`,
+				`	border-radius: .15rem;`,
 				`}`,
 				`.btn-passwords{`,
 				`	font-size: 1.3em;`,
@@ -425,7 +418,6 @@ module.exports = (() => {
 
 			let apateAnimateCSS = [
 				`.apateEncryptionKey:hover {`,
-				`	font-size: 2em;`,
 				`	fill: dodgerBlue;`,
 				`	animation: apateRotate 0.5s ease;`,
 				`	animation-iteration-count: 1; `,
@@ -437,7 +429,7 @@ module.exports = (() => {
 				`	animation-iteration-count: infinite;`,
 				`}`,
 				`.apateEncryptionKeyButton:hover {`,
-				`	width: 4em;`,
+				`	width: 3em;`,
 				`}`,
 				`@keyframes changeLetter {`,
 				`	0%   { content: "[loading hidden message]";   }`,
@@ -1442,6 +1434,15 @@ module.exports = (() => {
 						}
 						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
+						}
+
+						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
+						const UserStore = BdApi.findModuleByProps("getUsers");
+
+						const canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
+
+						if(!canSend) {
+							return;
 						}
 
 						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
