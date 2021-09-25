@@ -49,20 +49,10 @@ module.exports = (() => {
 		},
 		changelog: [
 			{
-				title: "Added:",
-				type: "added",
-				items: [
-					"Sync About Me message when using multiple PCs.",
-					"Edit messages.",
-				]
-			},
-			{
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Patch all Text areas (when attaching a file for example).",
-					"Better info Message (Hover over message with shift).",
-					"Format all messages 'Discord Style' (Supports bold, italic, codeblocks, spoilers etc.).",
+					"Fix CSS so the scroll bar doesnt appear in the text box.",
 				]
 			},
 		],
@@ -268,19 +258,19 @@ module.exports = (() => {
 				`	justify-content: center;`,
 				`	align-items: center;`,
 				`	clip-path: inset(0);`,
-				`	width: 2.5em;`,
-				`	height: 1.4em;`,
+				`	width: 3em;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateEncryptionKeyContainer {`,
 				`	padding: 0;`,
-				`	width: 2.5rem;`,
-				`	height: 2.5rem;`,
+				`	width: 4rem;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateEncryptionKey {`,
 				`	transition: all 300ms ease;`,
 				`	font-size: 1rem;`,
-				`	width: 2em;`,
-				`	height: 2em;`,
+				`	width: 3em;`,
+				`	height: 100%;`,
 				`}`,
 				`.apateHiddenImgWrapper {`,
 				`	margin: 10px;`,
@@ -336,6 +326,8 @@ module.exports = (() => {
 				`.apateKeyButtonContainer {`,
 				`	margin-left: -0.6rem;`,
 				`	margin-right: 0.1rem;`,
+				`	height: 2.8em;`,
+				`	width: 3em;`,
 				`	align-items: flex-start;`,
 				`}`,
 				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer, .apateKeyButtonContainer.edit {`,
@@ -425,7 +417,6 @@ module.exports = (() => {
 
 			let apateAnimateCSS = [
 				`.apateEncryptionKey:hover {`,
-				`	font-size: 1em;`,
 				`	fill: dodgerBlue;`,
 				`	animation: apateRotate 0.5s ease;`,
 				`	animation-iteration-count: 1; `,
