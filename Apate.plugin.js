@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.1
+ * @version 1.3.2
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.1",
+			version: "1.3.2",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -53,6 +53,7 @@ module.exports = (() => {
 				type: "fixed",
 				items: [
 					"Fix CSS so the scroll bar doesnt appear in the text box.",
+					"Dont display key in channels you cant send messages in.",
 				]
 			},
 		],
@@ -1433,6 +1434,15 @@ module.exports = (() => {
 						}
 						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
+						}
+
+						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
+						const UserStore = BdApi.findModuleByProps("getUsers");
+
+						const canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
+
+						if(!canSend) {
+							return;
 						}
 
 						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
