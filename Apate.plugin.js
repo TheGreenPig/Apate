@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.2
+ * @version 1.3.3
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.2",
+			version: "1.3.3",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,8 +52,7 @@ module.exports = (() => {
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Fix CSS so the scroll bar doesnt appear in the text box.",
-					"Dont display key in channels you cant send messages in.",
+					"Hotfix to show the key in DM messages.",
 				]
 			},
 		],
@@ -1439,8 +1438,12 @@ module.exports = (() => {
 						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 						const UserStore = BdApi.findModuleByProps("getUsers");
 
-						const canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
+						let canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
 
+						if(props.channel.type === DiscordConstants.ChannelTypes.DM) {
+							//can always send in DMs
+							canSend = true;
+						}
 						if(!canSend) {
 							return;
 						}
