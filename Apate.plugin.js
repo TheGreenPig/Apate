@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.3
+ * @version 1.3.4
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, Kehto, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.3",
+			version: "1.3.4",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,7 +52,7 @@ module.exports = (() => {
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Hotfix to show the key in DM messages.",
+					"Hotfix to display the Key in Group DMs as well.",
 				]
 			},
 		],
@@ -1033,7 +1033,8 @@ module.exports = (() => {
 						try {
 							let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
 							let stegCloak = new StegCloak();
-							this.settings.hiddenAboutMeText = stegCloak.reveal(bio, "");
+							let hiddenAboutMe = stegCloak.reveal(bio, "");
+							this.settings.hiddenAboutMeText = hiddenAboutMe;
 							this.settings.hiddenAboutMe = true;
 							this.saveSettings(this.settings);
 						} catch {
@@ -1440,7 +1441,7 @@ module.exports = (() => {
 
 						let canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
 
-						if(props.channel.type === DiscordConstants.ChannelTypes.DM) {
+						if(props.channel.type === DiscordConstants.ChannelTypes.DM || props.channel.type === DiscordConstants.ChannelTypes.GROUP_DM) {
 							//can always send in DMs
 							canSend = true;
 						}
