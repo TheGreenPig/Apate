@@ -2,7 +2,7 @@
  * @name Apate
  * @version 1.3.4
  * @description Hide your secret Discord messages in other messages!
- * @author TheGreenPig, Kehto, Aster
+ * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  * @authorLink https://github.com/TheGreenPig
@@ -29,7 +29,7 @@ module.exports = (() => {
 				github_username: "TheGreenPig"
 			},
 			{
-				name: "Kehto",
+				name: "fabJunior",
 				discord_id: "517142662231359488",
 				github_username: "fabJunior",
 			},
@@ -1049,7 +1049,7 @@ module.exports = (() => {
 						}
 						if (this.settings.devMode) {
 							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, Kehto, Aster`,
+								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
 								'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; background-size: contain;',
 								``,
 								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
@@ -1057,7 +1057,7 @@ module.exports = (() => {
 						}
 						else {
 							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, Kehto, Aster`,
+								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
 								'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; background-size: contain;',
 								``,
 								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
@@ -1338,7 +1338,7 @@ module.exports = (() => {
 							copyButton.classList.add("btn-passwords");
 							copyButton.setAttribute("title", "Copy Password")
 							copyButton.addEventListener("click", () => {
-								navigator.clipboard.writeText(message.apateUsedPassword);
+								DiscordNative.clipboard.copy(message.apateUsedPassword);
 								BdApi.showToast("Copied password!", { type: "success" });
 							});
 						}
