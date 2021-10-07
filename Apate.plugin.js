@@ -308,7 +308,7 @@ module.exports = (() => {
 				`	color: var(--text-muted);`,
 				`}`,
 				`.apateHiddenMessage.loading::after {`,
-				`	content: "[loading hidden message...]";`,
+				`	content: "[encrypting hidden message...]";`,
 				`	animation: changeLetter 1s linear infinite;`,
 				`}`,
 				`.apateHiddenMessage pre {`,
@@ -431,10 +431,10 @@ module.exports = (() => {
 				`	width: 3em;`,
 				`}`,
 				`@keyframes changeLetter {`,
-				`	0%   { content: "[loading hidden message]";   }`,
-				`	33%  { content: "[loading hidden message.]";  }`,
-				`	66%  { content: "[loading hidden message..]"; }`,
-				`	100% { content: "[loading hidden message...]";}`,
+				`	0%   { content: "[encrypting hidden message]";   }`,
+				`	33%  { content: "[encrypting hidden message.]";  }`,
+				`	66%  { content: "[encrypting hidden message..]"; }`,
+				`	100% { content: "[encrypting hidden message...]";}`,
 				`}`,
 			].join("\n");
 
@@ -615,6 +615,9 @@ module.exports = (() => {
 					if (candidate.value === "") {
 						BdApi.alert("Invalid input.", "Please enter a valid password in the Textbox!");
 						return;
+					}
+					if (!/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/.test(candidate.value)) {
+						BdApi.alert("Weak Password!", "Warning! This password is not very strong. Strong passwords have at least 8 characters, 1 uppercase letter, 1 lowercase letter, and 1 number.");
 					}
 
 					this.settings.passwords.push(candidate.value);
@@ -902,6 +905,9 @@ module.exports = (() => {
 					passwordInput.value = this.settings.password;
 					passwordInput.addEventListener("change", () => {
 						passwordInput.value = passwordInput.value.trim().replace(/[^a-zA-Z0-9\*\.!@#$%^&(){}\[\]:;<>.?/~_+\-=|\\: ]*/g, "");
+						if (!/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/.test(passwordInput.value)) {
+							BdApi.alert("Weak Password!", "Warning! This password is not very strong. Strong passwords have at least 8 characters, 1 uppercase letter, 1 lowercase letter, and 1 number.");
+						}
 						this.settings.saveCurrentPassword = false;
 						this.settings.password = passwordInput.value;
 						this.saveSettings(this.settings);
@@ -1024,7 +1030,7 @@ module.exports = (() => {
 
 						if (typeof StegCloak === "undefined") {
 							let stegCloakScript = document.createElement("script");
-							stegCloakScript.src = "https://stegcloak.surge.sh/bundle.js";
+							stegCloakScript.src = "https://raw.githubusercontent.com/TheGreenPig/Apate/main/stegCloak.js";
 							document.head.append(stegCloakScript);
 						}
 
