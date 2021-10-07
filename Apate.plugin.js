@@ -1030,9 +1030,16 @@ module.exports = (() => {
 
 						if (typeof StegCloak === "undefined") {
 							let stegCloakScript = document.createElement("script");
-							stegCloakScript.src = "https://raw.githubusercontent.com/TheGreenPig/Apate/main/stegCloak.js";
+							stegCloakScript.src = "https://raw.githack.com/TheGreenPig/Apate/main/stegCloak.js";
 							document.head.append(stegCloakScript);
 						}
+
+						//a preview? E2E will be added in the future
+						// if (typeof cryptico === "undefined") {
+						// 	let crypticoScript = document.createElement("script");
+						// 	crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
+						// 	document.head.append(crypticoScript);
+						// }
 
 						/*	try to automatically set the about me message, in case the user installed 
 							the plugin on a new PC or changed the about me message on a different PC	*/
