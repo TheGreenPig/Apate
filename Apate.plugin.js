@@ -150,7 +150,7 @@ module.exports = (() => {
 					}
 					const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 					//TODO check if message is in DM and starts with [pubKey], then display "User has invited you to turn on E2E message" instead,
-					//if pressed on "Yes" button, generate a strong (32 character random string) Password, save it in settings, encrypt strong password
+					//if pressed on "Yes" button, generate a strong (30 character random string) Password, save it in settings, encrypt strong password
 					//with public key you just got and send `[strongPass]${generatedStrongPassword}` message
 
 					//TODO check if message is in DM and starts with [strongPass], then display "User has accepted to turn on E2E", 
@@ -169,16 +169,22 @@ module.exports = (() => {
 					m.content = this.state.message.replace(/\\n/g, "\n");
 
 					// Convert emojis in Apate's old format for backward compatibility
-					m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
-						if (ext) {
-							return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
-						} else {
-							return emojiModule.convertNameToSurrogate(name);
-						}
-					});
+					//512 bit pub keys take up 88 characters
 					if (channel.type === DiscordConstants.ChannelTypes.DM && /\[pubKey\][a-zA-Z\d+=]{88}/g.test(this.state.message)) {
 						//Is e2e request, need better formatting here (button etc.)
 						m.content = "This is a request";
+					//512 encrypted 30 charater password takes up 153 characters
+					} else if(channel.type === DiscordConstants.ChannelTypes.DM && /\[strongPass\][a-zA-Z\d+=?/]{153}/g.test(this.state.message)) {
+						//Is e2e confirm, need better formatting here (button etc.)
+						m.content = "This is a confirmation";
+					} else {
+						m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
+							if (ext) {
+								return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
+							} else {
+								return emojiModule.convertNameToSurrogate(name);
+							}
+						});
 					}
 					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
 
