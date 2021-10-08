@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.4
+ * @version 1.3.5
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.4",
+			version: "1.3.5",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,7 +52,7 @@ module.exports = (() => {
 				title: "Fixed:",
 				type: "fixed",
 				items: [
-					"Hotfix to display the Key in Group DMs as well.",
+					"Moved the stegCloak link to my own repository to not overload the stegCloak website.",
 				]
 			},
 		],
