@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.3.4
+ * @version 1.4.0
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -45,7 +45,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.3.4",
+			version: "1.4.0",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -144,19 +144,40 @@ module.exports = (() => {
 					this.props.apate.lastWorkerId %= this.props.apate.numOfWorkers;
 				}
 
+				acceptE2E(userId, pubKey) {
+					if (userId === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+						BdApi.alert("You can't accept yourself!", "Please wait until the other user has accepted your request.");
+						return;
+					}
+					if (this.props.apate.usesE2E(userId)) {
+						BdApi.alert("E2E already on!", "You have already activated End to End encryption for this channel.");
+						return;
+					} else {
+						let strongPassword = this.props.apate.makePhrase(60);
+						this.props.apate.settings.strongChannelIndex.push({ id: userId, strong: strongPassword });
+						this.props.apate.saveSettings(this.props.apate.settings);
+
+						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey).cipher;
+
+						//TODO Somehow send this with no encryption and empty cover
+						console.log("[strongPass]" + strongPasswordEncrypted);
+						BdApi.showToast("Set up End to End encryption!", { type: "success" });
+					}
+				}
+				processStrongPass(userId, encryptedStrong) {
+					if (!this.props.apate.usesE2E(userId) && userId !== BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+						encryptedStrong = encryptedStrong.replace("[strongPass]","");
+						let strongPassword = cryptico.decrypt(encryptedStrong, this.props.apate.settings.privKey).plaintext;
+
+						this.props.apate.settings.strongChannelIndex.push({ id: userId, strong: strongPassword });
+						this.props.apate.saveSettings(this.props.apate.settings);
+					}
+				}
 				formatHiddenMessage() {
 					if (this.state.message == null) {
 						return "";
 					}
 					const DiscordConstants = BdApi.findModuleByProps("API_HOST");
-					//TODO check if message is in DM and starts with [pubKey], then display "User has invited you to turn on E2E message" instead,
-					//if pressed on "Yes" button, generate a strong (30 character random string) Password, save it in settings, encrypt strong password
-					//with public key you just got and send `[strongPass]${generatedStrongPassword}` message
-
-					//TODO check if message is in DM and starts with [strongPass], then display "User has accepted to turn on E2E", 
-					//decrypt with private key and save the strong password together with the User id in the settings.
-
-
 					let emojiRegex = /\[(?<name>[a-zA-Z_~\d+-ñ]+):(?:(?<id>\d+)\.(?<ext>png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 					let emojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
 
@@ -168,15 +189,28 @@ module.exports = (() => {
 
 					m.content = this.state.message.replace(/\\n/g, "\n");
 
+					let author = this.props.message.author;
+					const buttonModule = BdApi.findModuleByProps("ButtonLooks")
+
 					// Convert emojis in Apate's old format for backward compatibility
-					//512 bit pub keys take up 88 characters
-					if (channel.type === DiscordConstants.ChannelTypes.DM && /\[pubKey\][a-zA-Z\d+=]{88}/g.test(this.state.message)) {
+					if (channel.type === DiscordConstants.ChannelTypes.DM && /\[pubKey\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
 						//Is e2e request, need better formatting here (button etc.)
-						m.content = "This is a request";
-					//512 encrypted 30 charater password takes up 153 characters
-					} else if(channel.type === DiscordConstants.ChannelTypes.DM && /\[strongPass\][a-zA-Z\d+=?/]{153}/g.test(this.state.message)) {
+						let requestMessage = BdApi.React.createElement("div", {
+							class: "apateE2ERequestMessage",
+						}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
+							BdApi.React.createElement(buttonModule.default, {
+								color: buttonModule.ButtonColors.BRAND,
+								onClick: () => this.acceptE2E(author.id, this.state.message),
+							}, "Accept"),
+						)
+						return requestMessage;
+					} else if (channel.type === DiscordConstants.ChannelTypes.DM && /\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
 						//Is e2e confirm, need better formatting here (button etc.)
-						m.content = "This is a confirmation";
+						let acceptMessage = BdApi.React.createElement("div", {
+							class: "apateE2ERequestMessage",
+						}, BdApi.React.createElement("b", {}, author.username), ` accepted the End to End encryption!`);
+						this.processStrongPass(author.id, this.state.message);
+						return acceptMessage;
 					} else {
 						m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
 							if (ext) {
@@ -262,10 +296,11 @@ module.exports = (() => {
 				}
 
 				render() {
+					let useBorder = this.formatHiddenMessage()?.props?.class !== "apateE2ERequestMessage";
 					return this.state.message === null ?
 						null :
 						BdApi.React.createElement("div",
-							{ className: `apateHiddenMessage ${this.state.processing ? "loading" : ""}` },
+							{ className: `${useBorder ? "apateHiddenMessage border" : "apateE2ERequestMessageWrapper"} ${this.state.processing ? "loading" : ""}` },
 							this.formatHiddenMessage()
 						);
 				}
@@ -314,7 +349,6 @@ module.exports = (() => {
 				`	100% { transform: rotate(360deg); }`,
 				`}`,
 				`.apateHiddenMessage {`,
-				`	border: 2px solid var(--interactive-muted);`,
 				`	color: var(--text-normal);`,
 				`	padding: 0.4em 0.5em;`,
 				`	line-height: normal;`,
@@ -329,6 +363,9 @@ module.exports = (() => {
 				`		var(--background-tertiary) 1em, `,
 				`		var(--background-floating) 1em, `,
 				`		var(--background-floating) 2em);`,
+				`}`,
+				`.apateHiddenMessage.border {`,
+				`	border: 2px solid var(--interactive-muted);`,
 				`}`,
 				`.apateHiddenMessage.loading {`,
 				`	font-style: italic;`,
@@ -346,6 +383,22 @@ module.exports = (() => {
 				`	font-size: 14px;`,
 				`	margin-top: -0.6rem;`,
 				`	margin-bottom: 0.6rem;`,
+				`}`,
+				`.apateE2ERequestMessage {`,
+				`	font-size: 1em;`,
+				`	padding: 1em;`,
+				`	color: white;`,
+				`}`,
+				`.apateE2ERequestMessage > button {`,
+				`	float: right;`,
+				`	position: relative;`,
+				`	text-algin: right;`,
+				`	margin-top: -8px;`,
+				`}`,
+				`.apateE2ERequestMessageWrapper{`,
+				`	background-color: var(--background-secondary);`,
+				`	box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;`,
+				`	border-radius: 4px;`,
 				`}`,
 			].join("\n");
 
@@ -616,7 +669,7 @@ module.exports = (() => {
 					shiftNoEncryption: true,
 					altChoosePassword: true,
 					privKey: "",
-					strongChannelIndex: [{ id: 427179231164760066, strong: "thisIsForTesting" }],
+					strongChannelIndex: [{}],
 					devMode: false
 				};
 				settings = null;
@@ -1051,126 +1104,123 @@ module.exports = (() => {
 						),
 					);
 				}
+				makePhrase(size) {
+					var result = '';
+					var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+					var charactersLength = characters.length;
+					for (var i = 0; i < size; i++) {
+						result += characters.charAt(Math.floor(Math.random() * charactersLength));
+					}
+					return result;
+				}
 
 				async onStart() {
-					{
-						this.settings = this.loadSettings(this.default);
 
-						if (typeof StegCloak === "undefined") {
-							let stegCloakScript = document.createElement("script");
-							stegCloakScript.src = "https://raw.githack.com/TheGreenPig/Apate/main/stegCloak.js";
-							document.head.append(stegCloakScript);
-						}
+					this.settings = this.loadSettings(this.default);
 
-						if (typeof cryptico === "undefined") {
-							let crypticoScript = document.createElement("script");
-							crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
-							document.head.append(crypticoScript);
-						}
-
-						/*	try to automatically set the about me message, in case the user installed 
-							the plugin on a new PC or changed the about me message on a different PC	*/
-						try {
-							let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
-							let stegCloak = new StegCloak();
-							let hiddenAboutMe = stegCloak.reveal(bio, "");
-							this.settings.hiddenAboutMeText = hiddenAboutMe;
-							this.settings.hiddenAboutMe = true;
-							this.saveSettings(this.settings);
-						} catch {
-
-						}
-
-
-						for (const author of config.info.authors) {
-							if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
-								this.settings.devMode = true;
-							}
-						}
-						if (this.settings.devMode) {
-							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
-								'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; background-size: contain;',
-								``,
-								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-							);
-						}
-						else {
-							console.log(
-								`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
-								'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; background-size: contain;',
-								``,
-								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
-							);
-						}
+					if (typeof StegCloak === "undefined") {
+						let stegCloakScript = document.createElement("script");
+						stegCloakScript.src = "https://raw.githack.com/TheGreenPig/Apate/main/stegCloak.js";
+						document.head.append(stegCloakScript);
 					}
 
-					{
-						if (this.settings.privKey === "") {
-							function makePhrase() {
-								var result = '';
-								var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-								var charactersLength = characters.length;
-								for (var i = 0; i < 30; i++) {
-									result += characters.charAt(Math.floor(Math.random() * charactersLength));
-								}
-								return result;
-							}
-							var PassPhrase = makePhrase();
-
-							//Could be more, but 512 should be fine.
-							var Bits = 512;
-							this.settings.privKey = cryptico.generateRSAKey(PassPhrase, Bits);
-							this.saveSettings(this.settings);
-						}
-
-						// Apate CSS
-						this.refreshCSS();
+					if (typeof cryptico === "undefined") {
+						let crypticoScript = document.createElement("script");
+						crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
+						document.head.append(crypticoScript);
 					}
 
-					{
-						// hideNextMessage is used to differenciate when the user is just sending a message or clicked on the Apate key/used a keyboard shortcut
-						// passwordForNextMessage is undefined when we want to use the user's default password (default behavior)
-						this.hideNextMessage = false;
-						this.passwordForNextMessage = undefined;
+					/*	try to automatically set the about me message, in case the user installed 
+						the plugin on a new PC or changed the about me message on a different PC	*/
+					try {
+						let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
+						let stegCloak = new StegCloak();
+						let hiddenAboutMe = stegCloak.reveal(bio, "");
+						this.settings.hiddenAboutMeText = hiddenAboutMe;
+						this.settings.hiddenAboutMe = true;
+						this.saveSettings(this.settings);
+					} catch {
 
-						// patches (Aapte key, messages, about me)
-						this.patchTextArea();
-						this.patchMessages();
-						this.patchMiniPopover();
-						this.patchAboutMe();
-						this.patchHeaderBar();
 					}
 
-					{
-						// workers
-						const workerCode = worker.toString();
 
-						const stegCloakBlobURL = URL.createObjectURL(new Blob([
-							await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
-						]));
-
-						for (let i in [...Array(this.numOfWorkers)]) {
-							const worker = new window.Worker(URL.createObjectURL(new Blob(
-								[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
-							)));
-
-							worker.addEventListener("message", ({ data }) => {
-								if (data.reveal) {
-									Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMessage === undefined ? null : data.hiddenMessage, password: data.password, id: data.id });
-								}
-							});
-
-							this.revealWorkers.push(worker);
-							URL.revokeObjectURL(worker);
+					for (const author of config.info.authors) {
+						if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+							this.settings.devMode = true;
 						}
+					}
+					if (this.settings.devMode) {
+						console.log(
+							`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
+							'font-size: 130px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo_dev.svg) no-repeat; background-size: contain;',
+							``,
+							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+						);
+					}
+					else {
+						console.log(
+							`%c\u2004\u2004\u2004%c\n%cMade By AGreenPig, fabJunior, Aster`,
+							'font-size: 160px; background:url(https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg) no-repeat; background-size: contain;',
+							``,
+							`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
+						);
+					}
 
-						this.hideWorker = new window.Worker(URL.createObjectURL(new Blob(
+					if (this.settings.privKey === "") {
+						var PassPhrase = this.makePhrase(30);
+
+						var Bits = 1024;
+						this.settings.privKey = cryptico.generateRSAKey(PassPhrase, Bits);
+						this.saveSettings(this.settings);
+					}
+
+					// Apate CSS
+					this.refreshCSS();
+
+
+
+					// hideNextMessage is used to differenciate when the user is just sending a message or clicked on the Apate key/used a keyboard shortcut
+					// passwordForNextMessage is undefined when we want to use the user's default password (default behavior)
+					this.hideNextMessage = false;
+					this.passwordForNextMessage = undefined;
+
+					// patches (Aapte key, messages, about me)
+					this.patchTextArea();
+					this.patchMessages();
+					this.patchMiniPopover();
+					this.patchAboutMe();
+					this.patchHeaderBar();
+
+
+
+					// workers
+					const workerCode = worker.toString();
+
+					const stegCloakBlobURL = URL.createObjectURL(new Blob([
+						await (await window.fetch("https://raw.githubusercontent.com/KuroLabs/stegcloak/master/dist/stegcloak.min.js")).text()
+					]));
+
+					for (let i in [...Array(this.numOfWorkers)]) {
+						const worker = new window.Worker(URL.createObjectURL(new Blob(
 							[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
 						)));
+
+						worker.addEventListener("message", ({ data }) => {
+							if (data.reveal) {
+								Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMessage === undefined ? null : data.hiddenMessage, password: data.password, id: data.id });
+							}
+						});
+
+						this.revealWorkers.push(worker);
+						URL.revokeObjectURL(worker);
 					}
+
+					this.hideWorker = new window.Worker(URL.createObjectURL(new Blob(
+						[`(${workerCode})(${JSON.stringify(stegCloakBlobURL)});`]
+					)));
+
 					URL.revokeObjectURL(this.hideWorker);
-				};
+				}
 
 				/**
 				 * Takes an input and eturns null if the input doesn't match the apate regex and thus the message isn't correctly formed
@@ -1423,12 +1473,21 @@ module.exports = (() => {
 							confirmText: "Request E2E",
 							cancelText: "Cancel",
 							onConfirm: () => {
-								//TODO send the message `[pubKey]${cryptico.publicKeyString(this.settings.privKey)}` with no encryption
+								//TODO send this message with no encryption and no cover
+								console.log(`[pubKey]${cryptico.publicKeyString(this.settings.privKey)}`);
 								BdApi.showToast(`Sent an E2E request to ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "success" });
 							},
 						});
 					}
 
+				}
+				usesE2E(userId) {
+					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
+						if (this.settings.strongChannelIndex[k].id == userId) {
+							return true;
+						}
+					}
+					return false;
 				}
 
 				patchHeaderBar() {
@@ -1445,13 +1504,7 @@ module.exports = (() => {
 							return;
 						}
 
-						let e2eEncrypted = false;
-						for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
-							if (this.settings.strongChannelIndex[k].id == channel.recipients[0]) {
-								e2eEncrypted = true;
-								break;
-							}
-						}
+						let e2eEncrypted = this.usesE2E(channel.recipients[0]);
 						let svgPath = "";
 						let e2eButtonText = "";
 						if (e2eEncrypted) {
