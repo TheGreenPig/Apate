@@ -17,6 +17,9 @@
  *  
  * Zere's Plugin Library documentation:
  * 	 https://rauenzi.github.io/BDPluginLibrary/docs/
+ *  
+ * Cryptico documentation:
+ * 	 https://github.com/wwwtyro/cryptico#overview
  */
 
 module.exports = (() => {
@@ -128,6 +131,7 @@ module.exports = (() => {
 						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
 
+					//TODO before handing over the passwords, add the strong password to the start of the list
 					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
 						channelId: this.props.message.channel_id,
 						id: this.props.message.id,
@@ -144,6 +148,12 @@ module.exports = (() => {
 					if (this.state.message == null) {
 						return "";
 					}
+					//TODO check if message is in DM and starts with [pubKey], then display "User has invited you to turn on E2E message" instead,
+					//if pressed on "Yes" button, generate a strong (32 character random string) Password, save it in settings, encrypt strong password
+					//with public key you just got and send `[strongPass]${generatedStrongPassword}` message
+
+					//TODO check if message is in DM and starts with [strongPass], then display "User has accepted to turn on E2E", 
+					//decrypt with private key and save the strong password together with the User id in the settings.
 
 					let emojiRegex = /\[(?<name>[a-zA-Z_~\d+-ñ]+):(?:(?<id>\d+)\.(?<ext>png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 					let emojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
@@ -531,7 +541,6 @@ module.exports = (() => {
 
 						const hiddenMessage = (() => {
 							try {
-								//\uFFFD = � --> wrong password
 								let revealedMessage = "";
 								revealedMessage = stegCloak.reveal(data.stegCloakedMsg, data.stegCloakedMsg.replace(data.stegCloakedMsg.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064]*/, ""), ""));
 
@@ -589,6 +598,8 @@ module.exports = (() => {
 					keyPosition: 0,
 					shiftNoEncryption: true,
 					altChoosePassword: true,
+					privKey: "",
+					strongChannelIndex: [{}],
 					devMode: false
 				};
 				settings = null;
@@ -784,7 +795,7 @@ module.exports = (() => {
 							var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789*.!@#$%^&(){}[]:;<>.?/~_+-=|\\: ';
 							var charactersLength = characters.length;
 
-							var length = Math.random() * (40 - 15) + 15;
+							var length = Math.random() * 25 + 15;
 							for (var i = 0; i < length; i++) {
 								result += characters.charAt(Math.floor(Math.random() * charactersLength));
 							}
@@ -1034,12 +1045,11 @@ module.exports = (() => {
 							document.head.append(stegCloakScript);
 						}
 
-						//a preview? E2E will be added in the future
-						// if (typeof cryptico === "undefined") {
-						// 	let crypticoScript = document.createElement("script");
-						// 	crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
-						// 	document.head.append(crypticoScript);
-						// }
+						if (typeof cryptico === "undefined") {
+							let crypticoScript = document.createElement("script");
+							crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
+							document.head.append(crypticoScript);
+						}
 
 						/*	try to automatically set the about me message, in case the user installed 
 							the plugin on a new PC or changed the about me message on a different PC	*/
@@ -1076,10 +1086,27 @@ module.exports = (() => {
 								`color: Orange; font-size: 1em; background-color: black; border: .1em solid white; border-radius: 0.5em; padding: 1em; padding-left: 1.6em; padding-right: 1.6em`,
 							);
 						}
-
 					}
 
 					{
+						if (this.settings.privKey === "") {
+							function makePhrase() {
+								var result = '';
+								var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+								var charactersLength = characters.length;
+								for (var i = 0; i < 30; i++) {
+									result += characters.charAt(Math.floor(Math.random() * charactersLength));
+								}
+								return result;
+							}
+							var PassPhrase = makePhrase();
+
+							//Could be more, but 512 should be fine.
+							var Bits = 512;
+							this.settings.privKey = cryptico.generateRSAKey(PassPhrase, Bits);
+							this.saveSettings(this.settings);
+						}
+
 						// Apate CSS
 						this.refreshCSS();
 					}
@@ -1095,6 +1122,7 @@ module.exports = (() => {
 						this.patchMessages();
 						this.patchMiniPopover();
 						this.patchAboutMe();
+						this.patchHeaderBar();
 					}
 
 					{
@@ -1368,6 +1396,79 @@ module.exports = (() => {
 					}
 				}
 
+				displayE2EPopUp(id, encrypted) {
+					if (!encrypted) {
+						//TODO make this more readable. Possibly with better formatting
+						BdApi.showConfirmationModal("Apate End to End encryption",
+							`Here you can request to set up a secure End to End encrypted channel. After requesting, the other person will have to accept your request.
+							If you have set up E2E correctly, a strong password will be generated and then sent over a secure message. WARNING! 
+							If you reqest to set up a secure channel and the other person does not have Apate, they will see the request as an empty message.`, {
+							confirmText: "Request E2E",
+							cancelText: "Cancel",
+							onConfirm: () => {
+								//TODO send the message `[pubKey]${cryptico.publicKeyString(this.settings.privKey)}` with no encryption
+								BdApi.showToast(`Sent an E2E request to ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "success" });
+							},
+						});
+					}
+
+				}
+
+				patchHeaderBar() {
+					//The header bar above the "chat"; this is the same for the `Split View`.
+					const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
+
+					BdApi.Patcher.before("Apate", HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
+						let channel = ZLibrary.DiscordAPI.currentChannel.discordObject;
+						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
+						const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
+						const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
+
+						if (channel.type !== DiscordConstants.ChannelTypes.DM) {
+							return;
+						}
+
+						let e2eEncrypted = false;
+						for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
+							if (this.settings.strongChannelIndex[k].id == channel.recipients[0]) {
+								e2eEncrypted = true;
+								break;
+							}
+						}
+						let svgPath = "";
+						let e2eButtonText = "";
+						if (e2eEncrypted) {
+							e2eButtonText = "This chat is Apate End to End encrypted!";
+							svgPath = "M18 10v-4c0-3.313-2.687-6-6-6s-6 2.687-6 6v4h-3v14h18v-14h-3zm-10-4c0-2.206 1.794-4 4-4 2.205 0 4 1.794 4 4v4h-8v-4zm3.408 14l-2.842-2.756 1.172-1.173 1.67 1.583 3.564-3.654 1.174 1.173-4.738 4.827z"
+						} else {
+							e2eButtonText = "Click to turn on Apate End to End encryption for this chat!";
+							svgPath = "M8,10V6a4,4,0,0,1,8-.62h2A6,6,0,0,0,6,6v4H3V24H21V10Zm5.86,10L12,18.14,10.16,20,9,18.87,10.86,17,9,15.17,10.13,14,12,15.87,13.83,14,15,15.14,13.13,17,15,18.83S13.86,20,13.86,20Z"
+						}
+
+						const E2EButton = BdApi.React.createElement(Tooltip, {
+							text: e2eButtonText,
+							className: `${ButtonContainerClasses.buttonContainer}`
+						}, BdApi.React.createElement("div", {
+							onClick: () => this.displayE2EPopUp(channel.recipients[0], e2eEncrypted),
+						}, BdApi.React.createElement("svg", {
+							width: "30px",
+							height: "30px",
+							viewBox: "0 0 24 24"
+						}, BdApi.React.createElement("path", {
+							fill: "currentColor",
+							d: svgPath
+						}))));
+
+						//credits to Farcrada
+						if (methodArguments[0]?.children) {
+							if (Array.isArray(methodArguments[0].children)) {
+								methodArguments[0].children.unshift(
+									E2EButton
+								)
+							}
+						}
+					});
+				}
 				patchTextArea() {
 					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
 
@@ -1454,11 +1555,12 @@ module.exports = (() => {
 
 						let canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
 
-						if(props.channel.type === DiscordConstants.ChannelTypes.DM || props.channel.type === DiscordConstants.ChannelTypes.GROUP_DM) {
+						if (props.channel.type === DiscordConstants.ChannelTypes.GROUP_DM || props.channel.type === DiscordConstants.ChannelTypes.DM) {
 							//can always send in DMs
 							canSend = true;
 						}
-						if(!canSend) {
+
+						if (!canSend) {
 							return;
 						}
 
@@ -1582,7 +1684,7 @@ module.exports = (() => {
 									password = this.passwordForNextMessage;
 									this.passwordForNextMessage = undefined;
 								}
-
+								//TODO Check if is DM and id is in the strongChannelIndex, then take that password instead 
 								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
 									args[argsMessageIdx].content = stegCloakedMsg;
 									originalFunction(...args);
