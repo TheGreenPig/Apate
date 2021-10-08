@@ -148,6 +148,7 @@ module.exports = (() => {
 					if (this.state.message == null) {
 						return "";
 					}
+					const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 					//TODO check if message is in DM and starts with [pubKey], then display "User has invited you to turn on E2E message" instead,
 					//if pressed on "Yes" button, generate a strong (32 character random string) Password, save it in settings, encrypt strong password
 					//with public key you just got and send `[strongPass]${generatedStrongPassword}` message
@@ -155,10 +156,15 @@ module.exports = (() => {
 					//TODO check if message is in DM and starts with [strongPass], then display "User has accepted to turn on E2E", 
 					//decrypt with private key and save the strong password together with the User id in the settings.
 
+
 					let emojiRegex = /\[(?<name>[a-zA-Z_~\d+-ñ]+):(?:(?<id>\d+)\.(?<ext>png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
 					let emojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
 
 					let m = Object.assign({}, this.props.message);
+
+					let channel = BdApi.findModuleByProps("getChannel").getChannel(this.props.message.channel_id);
+
+
 
 					m.content = this.state.message.replace(/\\n/g, "\n");
 
@@ -170,8 +176,12 @@ module.exports = (() => {
 							return emojiModule.convertNameToSurrogate(name);
 						}
 					});
-
+					if (channel.type === DiscordConstants.ChannelTypes.DM && /\[pubKey\][a-zA-Z\d+=]{88}/g.test(this.state.message)) {
+						//Is e2e request, need better formatting here (button etc.)
+						m.content = "This is a request";
+					}
 					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
+
 
 					if (this.props.apate.settings.displayImage) {
 						let nbLinksScanned = 0;
@@ -240,8 +250,9 @@ module.exports = (() => {
 
 						content = analyseChildren(content);
 					}
-
 					return content;
+
+
 				}
 
 				render() {
@@ -599,7 +610,7 @@ module.exports = (() => {
 					shiftNoEncryption: true,
 					altChoosePassword: true,
 					privKey: "",
-					strongChannelIndex: [{}],
+					strongChannelIndex: [{ id: 427179231164760066, strong: "thisIsForTesting" }],
 					devMode: false
 				};
 				settings = null;
