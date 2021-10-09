@@ -154,22 +154,33 @@ module.exports = (() => {
 						return;
 					} else {
 						let strongPassword = this.props.apate.makePhrase(60);
-						this.props.apate.settings.strongChannelIndex.push({ id: userId, strong: strongPassword });
+						let strongChannelEntry = { id: userId, strong: strongPassword };
+
+						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
 
-						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey).cipher;
+						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
+						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
+							BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+						}).catch((e) => {
+							if (e !== undefined) Logger.error(e);
+						}).finally(() => {
+							document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+								el.classList.remove("calculating");
+							});
+						});
 
-						//TODO Somehow send this with no encryption and empty cover
-						console.log("[strongPass]" + strongPasswordEncrypted);
-						BdApi.showToast("Set up End to End encryption!", { type: "success" });
+						BdApi.showToast(`Set up End to End encryption with ${BdApi.findModuleByProps("getCurrentUser").getUser(userId).username}!`, { type: "success" });
 					}
 				}
 				processStrongPass(userId, encryptedStrong) {
 					if (!this.props.apate.usesE2E(userId) && userId !== BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
-						encryptedStrong = encryptedStrong.replace("[strongPass]","");
-						let strongPassword = cryptico.decrypt(encryptedStrong, this.props.apate.settings.privKey).plaintext;
+						let privateKey = cryptico.generateRSAKey(this.props.apate.settings.privKey, 1024);
+						let strongPassword = cryptico.decrypt(encryptedStrong.replace("[strongPass]", ""), privateKey).plaintext;
 
-						this.props.apate.settings.strongChannelIndex.push({ id: userId, strong: strongPassword });
+						let strongChannelEntry = { id: userId, strong: strongPassword };
+
+						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
 					}
 				}
@@ -193,33 +204,43 @@ module.exports = (() => {
 					const buttonModule = BdApi.findModuleByProps("ButtonLooks")
 
 					// Convert emojis in Apate's old format for backward compatibility
-					if (channel.type === DiscordConstants.ChannelTypes.DM && /\[pubKey\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
-						//Is e2e request, need better formatting here (button etc.)
-						let requestMessage = BdApi.React.createElement("div", {
-							class: "apateE2ERequestMessage",
-						}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
-							BdApi.React.createElement(buttonModule.default, {
-								color: buttonModule.ButtonColors.BRAND,
-								onClick: () => this.acceptE2E(author.id, this.state.message),
-							}, "Accept"),
-						)
-						return requestMessage;
-					} else if (channel.type === DiscordConstants.ChannelTypes.DM && /\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
-						//Is e2e confirm, need better formatting here (button etc.)
-						let acceptMessage = BdApi.React.createElement("div", {
-							class: "apateE2ERequestMessage",
-						}, BdApi.React.createElement("b", {}, author.username), ` accepted the End to End encryption!`);
-						this.processStrongPass(author.id, this.state.message);
-						return acceptMessage;
-					} else {
-						m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
-							if (ext) {
-								return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
-							} else {
-								return emojiModule.convertNameToSurrogate(name);
-							}
-						});
+					if (channel.type === DiscordConstants.ChannelTypes.DM) {
+						if (/\[pubKey\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
+							//Is e2e request, need better formatting here (button etc.)
+							let requestMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
+								BdApi.React.createElement(buttonModule.default, {
+									color: buttonModule.ButtonColors.BRAND,
+									onClick: () => this.acceptE2E(author.id, this.state.message),
+								}, "Accept"),
+							)
+							return requestMessage;
+						}
+						else if (/\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
+							//Is e2e confirm, need better formatting here (button etc.)
+							let acceptMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` accepted the End to End encryption!`);
+							this.processStrongPass(author.id, this.state.message);
+							return acceptMessage;
+						}
+						else if (this.state.message === "[deleteE2E]") {
+							//delete confirm
+							let deleteMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`);
+							return deleteMessage;
+						}
 					}
+					m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
+						if (ext) {
+							return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
+						} else {
+							return emojiModule.convertNameToSurrogate(name);
+						}
+					});
+
 					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
 
 
@@ -668,8 +689,9 @@ module.exports = (() => {
 					keyPosition: 0,
 					shiftNoEncryption: true,
 					altChoosePassword: true,
-					privKey: "",
-					strongChannelIndex: [{}],
+					privKey: undefined,
+					pubKey: undefined,
+					strongChannelIndex: [],
 					devMode: false
 				};
 				settings = null;
@@ -1120,13 +1142,13 @@ module.exports = (() => {
 
 					if (typeof StegCloak === "undefined") {
 						let stegCloakScript = document.createElement("script");
-						stegCloakScript.src = "https://raw.githack.com/TheGreenPig/Apate/main/stegCloak.js";
+						stegCloakScript.src = "https://rawcdn.githack.com/KuroLabs/stegcloak/4fd99560708b1cd4567587e84f5d390e08690a01/dist/stegcloak.min.js";
 						document.head.append(stegCloakScript);
 					}
 
 					if (typeof cryptico === "undefined") {
 						let crypticoScript = document.createElement("script");
-						crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
+						crypticoScript.src = "https://rawcdn.githack.com/wwwtyro/cryptico/9291ece634d37415e66396d749d38e612d66f935/cryptico.min.js";
 						document.head.append(crypticoScript);
 					}
 
@@ -1166,11 +1188,11 @@ module.exports = (() => {
 						);
 					}
 
-					if (this.settings.privKey === "") {
-						var PassPhrase = this.makePhrase(30);
+					if (this.settings.privKey === undefined || this.settings.pubKey === undefined) {
+						let PassPhrase = this.makePhrase(30);
 
-						var Bits = 1024;
-						this.settings.privKey = cryptico.generateRSAKey(PassPhrase, Bits);
+						this.settings.privKey = PassPhrase;
+						this.settings.pubKey = cryptico.publicKeyString(cryptico.generateRSAKey(PassPhrase, 1024));
 						this.saveSettings(this.settings);
 					}
 
@@ -1280,16 +1302,16 @@ module.exports = (() => {
 							coverMessage += " \u200b";
 						}
 
-						if (password === undefined) {
-							if (this.settings.encryption === 1) {
+						if (password === undefined || password === "") {
+							if (this.settings.encryption === 1 || password === "") {
 								password = this.generateTemporaryStegPassword();
 								coverMessage = password + coverMessage;
 							}
 							else {
 								password = this.settings.password;
+								this.settings.saveCurrentPassword = true;
+								this.saveSettings(this.settings);
 							}
-							this.settings.saveCurrentPassword = true;
-							this.saveSettings(this.settings);
 						}
 
 						hiddenMessage = hiddenMessage.replace(/\r?\n/g, "\\n") //replace new line with actual \n
@@ -1473,9 +1495,42 @@ module.exports = (() => {
 							confirmText: "Request E2E",
 							cancelText: "Cancel",
 							onConfirm: () => {
-								//TODO send this message with no encryption and no cover
-								console.log(`[pubKey]${cryptico.publicKeyString(this.settings.privKey)}`);
+								let publicKey = this.settings.pubKey;
+								this.hideMessage(`\u200b \u200b*[pubKey]${publicKey}*`, "").then(stegCloakedMsg => {
+									BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+								}).catch((e) => {
+									if (e !== undefined) Logger.error(e);
+								}).finally(() => {
+									document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+										el.classList.remove("calculating");
+									});
+								});
 								BdApi.showToast(`Sent an E2E request to ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "success" });
+							},
+						});
+					} else {
+						BdApi.showConfirmationModal("Turn off Apate End to End encryption?",
+							`Do you whish to delete your End to End encryption? WARNING: All your old messages will become unreadable exept for the other user.`, {
+							confirmText: "Turn off E2E",
+							cancelText: "Cancel",
+							danger: true,
+							onConfirm: () => {
+								let filtered = this.settings.strongChannelIndex.filter(function (value, index, arr) {
+									return value.id !== id;
+								});
+								this.settings.strongChannelIndex = filtered;
+								this.saveSettings(this.settings);
+								this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
+									console.log(stegCloakedMsg);
+									BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+								}).catch((e) => {
+									if (e !== undefined) Logger.error(e);
+								}).finally(() => {
+									document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+										el.classList.remove("calculating");
+									});
+								});
+								BdApi.showToast(`Turned off the E2E encryption with ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "error" });
 							},
 						});
 					}
