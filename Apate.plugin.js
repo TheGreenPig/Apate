@@ -229,7 +229,11 @@ module.exports = (() => {
 							//delete confirm
 							let deleteMessage = BdApi.React.createElement("div", {
 								class: "apateE2ERequestMessage",
-							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`);
+							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`,
+								BdApi.React.createElement(buttonModule.default, {
+									color: buttonModule.ButtonColors.RED,
+									onClick: () => this.props.apate.displayE2EPopUp(author.id, true, false),
+								}, "Turn off as well"))
 							return deleteMessage;
 						}
 					}
@@ -1485,7 +1489,7 @@ module.exports = (() => {
 					}
 				}
 
-				displayE2EPopUp(id, encrypted) {
+				displayE2EPopUp(id, encrypted, sendConfirm) {
 					if (!encrypted) {
 						//TODO make this more readable. Possibly with better formatting
 						BdApi.showConfirmationModal("Apate End to End encryption",
@@ -1509,27 +1513,31 @@ module.exports = (() => {
 							},
 						});
 					} else {
+						if(!this.usesE2E(id)) {
+							BdApi.alert("Already turned off E2E encryption!", "There is nothing to turn off.");
+							return;
+						}
 						BdApi.showConfirmationModal("Turn off Apate End to End encryption?",
 							`Do you whish to delete your End to End encryption? WARNING: All your old messages will become unreadable exept for the other user.`, {
 							confirmText: "Turn off E2E",
 							cancelText: "Cancel",
 							danger: true,
 							onConfirm: () => {
-								let filtered = this.settings.strongChannelIndex.filter(function (value, index, arr) {
+								BdApi.loadData("Apate", "settings").strongChannelIndex = BdApi.loadData("Apate", "settings").strongChannelIndex.filter(function (value, index, arr) {
 									return value.id !== id;
 								});
-								this.settings.strongChannelIndex = filtered;
-								this.saveSettings(this.settings);
-								this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
-									console.log(stegCloakedMsg);
-									BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
-								}).catch((e) => {
-									if (e !== undefined) Logger.error(e);
-								}).finally(() => {
-									document.querySelectorAll(".apateEncryptionKey").forEach(el => {
-										el.classList.remove("calculating");
+
+								if (sendConfirm) {
+									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
+										BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+									}).catch((e) => {
+										if (e !== undefined) Logger.error(e);
+									}).finally(() => {
+										document.querySelectorAll(".apateEncryptionKey").forEach(el => {
+											el.classList.remove("calculating");
+										});
 									});
-								});
+								}
 								BdApi.showToast(`Turned off the E2E encryption with ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "error" });
 							},
 						});
@@ -1574,7 +1582,7 @@ module.exports = (() => {
 							text: e2eButtonText,
 							className: `${ButtonContainerClasses.buttonContainer}`
 						}, BdApi.React.createElement("div", {
-							onClick: () => this.displayE2EPopUp(channel.recipients[0], e2eEncrypted),
+							onClick: () => this.displayE2EPopUp(channel.recipients[0], e2eEncrypted, true),
 						}, BdApi.React.createElement("svg", {
 							width: "30px",
 							height: "30px",
@@ -1924,7 +1932,7 @@ module.exports = (() => {
 
 						if (hiddenMessage != null) {
 							ret.props.children = [
-								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, hiddenMessage),
 								...ret.props.children
 							];
 						}
