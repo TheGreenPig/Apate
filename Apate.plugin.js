@@ -1030,14 +1030,14 @@ module.exports = (() => {
 
 						if (typeof StegCloak === "undefined") {
 							let stegCloakScript = document.createElement("script");
-							stegCloakScript.src = "https://raw.githack.com/TheGreenPig/Apate/main/stegCloak.js";
+							stegCloakScript.src = "https://rawcdn.githack.com/KuroLabs/stegcloak/4fd99560708b1cd4567587e84f5d390e08690a01/dist/stegcloak.min.js";
 							document.head.append(stegCloakScript);
 						}
 
 						//a preview? E2E will be added in the future
 						// if (typeof cryptico === "undefined") {
 						// 	let crypticoScript = document.createElement("script");
-						// 	crypticoScript.src = "https://raw.githack.com/wwwtyro/cryptico/master/cryptico.min.js";
+						// 	crypticoScript.src = "https://rawcdn.githack.com/wwwtyro/cryptico/9291ece634d37415e66396d749d38e612d66f935/cryptico.min.js";
 						// 	document.head.append(crypticoScript);
 						// }
 
