@@ -7,7 +7,9 @@
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  * @authorLink https://github.com/TheGreenPig
  */
-
+const request = require("request");
+const fs = require("fs");
+const path = require("path");
 /* 
  * BetterDiscord BdApi documentation:
  *   https://github.com/BetterDiscord/BetterDiscord/wiki/Creating-Plugins
@@ -76,20 +78,18 @@ module.exports = (() => {
 
 	return !global.ZeresPluginLibrary ? class {
 		load() {
-			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${config.info.name} is missing. Please click Download Now to install it.`, {
-				confirmText: "Download Now",
+			BdApi.showConfirmationModal("Library plugin is needed",
+				`The library plugin needed for AQWERT'sPluginBuilder is missing. Please click Download Now to install it.`, {
+				confirmText: "Download",
 				cancelText: "Cancel",
-				onConfirm: async () => {
-					const zeresPluginLib = await (await globalThis.fetch("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js")).text();
+				onConfirm: () => {
+					request.get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js", (error, response, body) => {
+						if (error)
+							return electron.shell.openExternal("https://betterdiscord.net/ghdl?url=https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
 
-					await new Promise(
-						resolve => require("fs").writeFile(
-							require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"),
-							zeresPluginLib,
-							resolve,
-						),
-					);
-				},
+						fs.writeFileSync(path.join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body);
+					});
+				}
 			});
 		};
 	} : (([Plugin, Api]) => {
@@ -130,14 +130,21 @@ module.exports = (() => {
 					if (this.props.message.apateHiddenMessage !== undefined) {
 						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
+					let recipientsId = BdApi.findModuleByProps("getChannel").getChannel(this.props.message.channel_id).recipients[0];;
+					let interceptedPasswordList = this.props.apate.settings.passwords;
 
-					//TODO before handing over the passwords, add the strong password to the start of the list
+					console.log("Recipient: "+recipientsId)
+					console.log("Uses e2e: "+this.props.apate.usesE2E(recipientsId))
+					// if(this.props.apate.usesE2E(recipientsId)) {
+					// 	interceptedPasswordList.unshift(this.props.apate.getStrong(recipientsId))
+					// }
+					console.log(interceptedPasswordList)
 					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
 						channelId: this.props.message.channel_id,
 						id: this.props.message.id,
 						reveal: true,
 						stegCloakedMsg: this.props.message.content.replace(/^\u200b/, ""),
-						passwords: this.props.apate.settings.passwords,
+						passwords: interceptedPasswordList,
 					});
 
 					this.props.apate.lastWorkerId++;
@@ -157,7 +164,7 @@ module.exports = (() => {
 						let strongChannelEntry = { id: userId, strong: strongPassword };
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
-						this.props.apate.saveSettings(this.props.apate.settings);
+						this.props.apate.saveSettings(this.props.apate.settings);;
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
@@ -681,6 +688,7 @@ module.exports = (() => {
 					ctrlToSend: true,
 					animate: true,
 					displayImage: true,
+					displayLock: true,
 					password: "",
 					passwords: [],
 					passwordColorTable: ['white'],
@@ -1110,6 +1118,13 @@ module.exports = (() => {
 								this.settings.displayImage = i;
 								Logger.log(`Set "displayImage" to ${this.settings.displayImage}`);
 							}),
+							new Switch('Display E2E Lock', 'Turn this off to not display the lock for End to End encryption in DMs.', this.settings.displayLock, (i) => {
+								this.settings.displayLock = i;
+								if (!this.settings.displayLock) {
+									BdApi.alert("Can't turn E2E off/on anymore!", "Since you disabled the E2E lock in DMs you will not be able to turn it on/off easily. All mesages will still be encrypted End to End for the DMs where you turned it on.");
+								}
+								Logger.log(`Set "displayLock" to ${this.settings.displayLock}`);
+							}),
 						),
 						new SettingGroup('Shortcuts').append(
 							new Switch('Control + Enter to send', 'Enables the key combination CTRL+Enter to send your message with encryption. You will have to switch channels for the changes to take effect.', this.settings.ctrlToSend, (i) => {
@@ -1513,7 +1528,7 @@ module.exports = (() => {
 							},
 						});
 					} else {
-						if(!this.usesE2E(id)) {
+						if (!this.usesE2E(id)) {
 							BdApi.alert("Already turned off E2E encryption!", "There is nothing to turn off.");
 							return;
 						}
@@ -1552,12 +1567,23 @@ module.exports = (() => {
 					}
 					return false;
 				}
+				getStrong(userId) {
+					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
+						if (this.settings.strongChannelIndex[k].id == userId) {
+							return this.settings.strongChannelIndex[k].strong;
+						}
+					}
+					return undefined;
+				}
 
 				patchHeaderBar() {
 					//The header bar above the "chat"; this is the same for the `Split View`.
 					const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 
 					BdApi.Patcher.before("Apate", HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
+						if (!this.settings.displayLock) {
+							return;
+						}
 						let channel = ZLibrary.DiscordAPI.currentChannel.discordObject;
 						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 						const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
@@ -1817,7 +1843,13 @@ module.exports = (() => {
 									password = this.passwordForNextMessage;
 									this.passwordForNextMessage = undefined;
 								}
-								//TODO Check if is DM and id is in the strongChannelIndex, then take that password instead 
+								let recipientId = BdApi.findModuleByProps("getChannel").getChannel(args[0]).recipients[0];
+								let usesE2E = this.usesE2E(recipientId)
+
+								if(usesE2E) {
+									password = this.getStrong(recipientId);
+									console.log("Intercepted passwod to "+password);
+								}
 								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
 									args[argsMessageIdx].content = stegCloakedMsg;
 									originalFunction(...args);
