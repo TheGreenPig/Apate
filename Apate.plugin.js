@@ -133,12 +133,13 @@ module.exports = (() => {
 					let recipientsId = BdApi.findModuleByProps("getChannel").getChannel(this.props.message.channel_id).recipients[0];;
 					let interceptedPasswordList = this.props.apate.settings.passwords;
 
-					console.log("Recipient: "+recipientsId)
-					console.log("Uses e2e: "+this.props.apate.usesE2E(recipientsId))
-					// if(this.props.apate.usesE2E(recipientsId)) {
-					// 	interceptedPasswordList.unshift(this.props.apate.getStrong(recipientsId))
-					// }
-					console.log(interceptedPasswordList)
+					let strong = this.props.apate.getStrong(recipientsId);
+					let useseE2E = this.props.apate.usesE2E(recipientsId)
+					//intercept passwordList
+					if (useseE2E) {
+						interceptedPasswordList.unshift(strong);
+					}
+
 					this.props.apate.revealWorkers[this.props.apate.lastWorkerId]?.postMessage({
 						channelId: this.props.message.channel_id,
 						id: this.props.message.id,
@@ -146,7 +147,9 @@ module.exports = (() => {
 						stegCloakedMsg: this.props.message.content.replace(/^\u200b/, ""),
 						passwords: interceptedPasswordList,
 					});
-
+					if (useseE2E) {
+						this.props.apate.settings.passwords.shift();
+					}
 					this.props.apate.lastWorkerId++;
 					this.props.apate.lastWorkerId %= this.props.apate.numOfWorkers;
 				}
@@ -1463,44 +1466,52 @@ module.exports = (() => {
 				displayInfo(message) {
 					if (this.settings.showInfo) {
 						let passwordIndex = this.settings.passwords.indexOf(message.apateUsedPassword);
-						let color = this.settings.passwordColorTable[passwordIndex];
+						let infoColor = this.settings.passwordColorTable[passwordIndex];
 
 						if (passwordIndex > 1) {
 							this.settings.passwords.splice(passwordIndex, 1);
 							this.settings.passwordColorTable.splice(passwordIndex, 1);
 
 							this.settings.passwords.splice(1, 0, message.apateUsedPassword);
-							this.settings.passwordColorTable.splice(1, 0, color);
+							this.settings.passwordColorTable.splice(1, 0, infoColor);
 							this.saveSettings(this.settings);
 						}
 
-						let style = "";
+						let infoStyle = "";
 
-						if (message.apateUsedPassword === "") {
+						let copyButton =""
+						let recipientId = BdApi.findModuleByProps("getChannel").getChannel(message.channel_id).recipients[0];
+
+						if (this.usesE2E(recipientId) && this.getStrong(recipientId) === message.apateUsedPassword) {
+							passwordIndex = "-End To End encryption-"
+							infoStyle = {fontStyle: "italic", fontSize:"1em", color: "#5865F2",}
+
+						}
+						else if (message.apateUsedPassword === "") {
 							passwordIndex = "-No Encryption-"
-							style = `style="font-style: italic; font-size:1em;"`;
+							infoStyle = {fontStyle: "italic", fontSize: "1em",}
 						} else {
-							style = `style="color:${color}; font-size:0.9em;"`;
+							infoStyle = {color:infoColor, fontSize:"0.9em"}
+							passwordIndex = message.apateUsedPassword;
 
-							var copyButton = document.createElement("button");
-							copyButton.innerHTML = `📋`
-							copyButton.classList.add("btn-passwords");
-							copyButton.setAttribute("title", "Copy Password")
-							copyButton.addEventListener("click", () => {
-								DiscordNative.clipboard.copy(message.apateUsedPassword);
-								BdApi.showToast("Copied password!", { type: "success" });
-							});
+							copyButton = BdApi.React.createElement("button", {
+								class: "btn-passwords",
+								title: "Copy Password",
+								onClick: () => {
+									DiscordNative.clipboard.copy(message.apateUsedPassword);
+									BdApi.showToast("Copied password!", { type: "success" });
+								}
+							}, `📋`,)
 						}
-
-						let htmlText = document.createElement("div");
-						htmlText.innerHTML = `Password used: <b><div ${style}>${message.apateUsedPassword || "-No Encryption-"}</div></b>`;
-
-						htmlText.className = "markup-2BOw-j messageContent-2qWWxC";
-						if (copyButton) {
-							htmlText.querySelector("div").appendChild(copyButton);
-						}
-
-						BdApi.alert("Info", BdApi.React.createElement(HTMLWrapper, null, htmlText));
+						
+						let infoMessage = BdApi.React.createElement("div", {
+							class: "markup-2BOw-j messageContent-2qWWxC",
+						}, "Password used: ",
+						BdApi.React.createElement("b", {}, 
+						BdApi.React.createElement("div", {
+							style: infoStyle
+						}, passwordIndex, )));
+						BdApi.alert("Info", infoMessage);
 					}
 				}
 
@@ -1846,9 +1857,8 @@ module.exports = (() => {
 								let recipientId = BdApi.findModuleByProps("getChannel").getChannel(args[0]).recipients[0];
 								let usesE2E = this.usesE2E(recipientId)
 
-								if(usesE2E) {
+								if (usesE2E) {
 									password = this.getStrong(recipientId);
-									console.log("Intercepted passwod to "+password);
 								}
 								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
 									args[argsMessageIdx].content = stegCloakedMsg;
