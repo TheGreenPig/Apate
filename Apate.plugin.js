@@ -130,11 +130,11 @@ module.exports = (() => {
 					if (this.props.message.apateHiddenMessage !== undefined) {
 						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
-					let recipientsId = BdApi.findModuleByProps("getChannel").getChannel(this.props.message.channel_id).recipients[0];;
+					
 					let interceptedPasswordList = this.props.apate.settings.passwords;
 
-					let strong = this.props.apate.getStrong(recipientsId);
-					let useseE2E = this.props.apate.usesE2E(recipientsId)
+					let strong = this.props.apate.getStrong();
+					let useseE2E = this.props.apate.usesE2E()
 					//intercept passwordList
 					if (useseE2E) {
 						interceptedPasswordList.unshift(strong);
@@ -1479,19 +1479,19 @@ module.exports = (() => {
 
 						let infoStyle = "";
 
-						let copyButton =""
-						let recipientId = BdApi.findModuleByProps("getChannel").getChannel(message.channel_id).recipients[0];
+						let copyButton = ""
+					
 
-						if (this.usesE2E(recipientId) && this.getStrong(recipientId) === message.apateUsedPassword) {
+						if (this.usesE2E() && this.getStrong() === message.apateUsedPassword) {
 							passwordIndex = "-End To End encryption-"
-							infoStyle = {fontStyle: "italic", fontSize:"1em", color: "#5865F2",}
+							infoStyle = { fontStyle: "italic", fontSize: "1em", color: "#5865F2", }
 
 						}
 						else if (message.apateUsedPassword === "") {
 							passwordIndex = "-No Encryption-"
-							infoStyle = {fontStyle: "italic", fontSize: "1em",}
+							infoStyle = { fontStyle: "italic", fontSize: "1em", }
 						} else {
-							infoStyle = {color:infoColor, fontSize:"0.9em"}
+							infoStyle = { color: infoColor, fontSize: "0.9em" }
 							passwordIndex = message.apateUsedPassword;
 
 							copyButton = BdApi.React.createElement("button", {
@@ -1501,16 +1501,16 @@ module.exports = (() => {
 									DiscordNative.clipboard.copy(message.apateUsedPassword);
 									BdApi.showToast("Copied password!", { type: "success" });
 								}
-							}, `📋`,)
+							}, `📋`)
 						}
-						
+
 						let infoMessage = BdApi.React.createElement("div", {
 							class: "markup-2BOw-j messageContent-2qWWxC",
 						}, "Password used: ",
-						BdApi.React.createElement("b", {}, 
-						BdApi.React.createElement("div", {
-							style: infoStyle
-						}, passwordIndex, )));
+							BdApi.React.createElement("b", {},
+								BdApi.React.createElement("div", {
+									style: infoStyle
+								}, passwordIndex, copyButton)));
 						BdApi.alert("Info", infoMessage);
 					}
 				}
@@ -1570,7 +1570,9 @@ module.exports = (() => {
 					}
 
 				}
-				usesE2E(userId) {
+				usesE2E() {
+					let channelId = BdApi.findModuleByProps("getChannelId").getChannelId();
+					let userId = BdApi.findModuleByProps("getChannel").getChannel(channelId).recipients[0];
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
 						if (this.settings.strongChannelIndex[k].id == userId) {
 							return true;
@@ -1578,7 +1580,12 @@ module.exports = (() => {
 					}
 					return false;
 				}
-				getStrong(userId) {
+				getStrong() {
+					let channelId = BdApi.findModuleByProps("getChannelId").getChannelId();
+					let userId = BdApi.findModuleByProps("getChannel").getChannel(channelId).recipients[0];
+					if(!this.usesE2E(userId)) {
+						return undefined;
+					}
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
 						if (this.settings.strongChannelIndex[k].id == userId) {
 							return this.settings.strongChannelIndex[k].strong;
@@ -1855,10 +1862,10 @@ module.exports = (() => {
 									this.passwordForNextMessage = undefined;
 								}
 								let recipientId = BdApi.findModuleByProps("getChannel").getChannel(args[0]).recipients[0];
-								let usesE2E = this.usesE2E(recipientId)
+								let usesE2E = this.usesE2E()
 
 								if (usesE2E) {
-									password = this.getStrong(recipientId);
+									password = this.getStrong();
 								}
 								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
 									args[argsMessageIdx].content = stegCloakedMsg;
