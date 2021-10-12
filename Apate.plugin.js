@@ -167,11 +167,12 @@ module.exports = (() => {
 						let strongChannelEntry = { id: userId, strong: strongPassword };
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
-						this.props.apate.saveSettings(this.props.apate.settings);;
+						this.props.apate.saveSettings(this.props.apate.settings);
+						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
-							BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+							BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
 						}).catch((e) => {
 							if (e !== undefined) Logger.error(e);
 						}).finally(() => {
@@ -192,6 +193,7 @@ module.exports = (() => {
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
+						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 					}
 				}
 				formatHiddenMessage() {
@@ -863,6 +865,9 @@ module.exports = (() => {
 					}
 					BdApi.clearCSS("apateCSS")
 					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe);
+
+					BdApi.findModuleByProps("ComponentDispatch").ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
+					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 				}
 
 				/**
@@ -1127,6 +1132,7 @@ module.exports = (() => {
 									BdApi.alert("Can't turn E2E off/on anymore!", "Since you disabled the E2E lock in DMs you will not be able to turn it on/off easily. All mesages will still be encrypted End to End for the DMs where you turned it on.");
 								}
 								Logger.log(`Set "displayLock" to ${this.settings.displayLock}`);
+								this.refreshCSS();
 							}),
 						),
 						new SettingGroup('Shortcuts').append(
@@ -1527,7 +1533,7 @@ module.exports = (() => {
 							onConfirm: () => {
 								let publicKey = this.settings.pubKey;
 								this.hideMessage(`\u200b \u200b*[pubKey]${publicKey}*`, "").then(stegCloakedMsg => {
-									BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+									BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
 								}).catch((e) => {
 									if (e !== undefined) Logger.error(e);
 								}).finally(() => {
@@ -1552,10 +1558,10 @@ module.exports = (() => {
 								BdApi.loadData("Apate", "settings").strongChannelIndex = BdApi.loadData("Apate", "settings").strongChannelIndex.filter(function (value, index, arr) {
 									return value.id !== id;
 								});
-
+								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
-										BdApi.findModuleByProps('sendMessage').sendMessage(BdApi.findModuleByProps("getChannelId").getChannelId(), { content: stegCloakedMsg })
+										BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
 									}).catch((e) => {
 										if (e !== undefined) Logger.error(e);
 									}).finally(() => {
@@ -1571,8 +1577,7 @@ module.exports = (() => {
 
 				}
 				usesE2E() {
-					let channelId = BdApi.findModuleByProps("getChannelId").getChannelId();
-					let userId = BdApi.findModuleByProps("getChannel").getChannel(channelId).recipients[0];
+					let userId = ZLibrary.DiscordAPI.currentChannel.discordObject.recipients[0];
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
 						if (this.settings.strongChannelIndex[k].id == userId) {
 							return true;
@@ -1581,8 +1586,7 @@ module.exports = (() => {
 					return false;
 				}
 				getStrong() {
-					let channelId = BdApi.findModuleByProps("getChannelId").getChannelId();
-					let userId = BdApi.findModuleByProps("getChannel").getChannel(channelId).recipients[0];
+					let userId = ZLibrary.DiscordAPI.currentChannel.discordObject.recipients[0];
 					if(!this.usesE2E(userId)) {
 						return undefined;
 					}
@@ -1624,7 +1628,7 @@ module.exports = (() => {
 
 						const E2EButton = BdApi.React.createElement(Tooltip, {
 							text: e2eButtonText,
-							className: `${ButtonContainerClasses.buttonContainer}`
+							className: `${ButtonContainerClasses.buttonContainer} apateE2EButton`
 						}, BdApi.React.createElement("div", {
 							onClick: () => this.displayE2EPopUp(channel.recipients[0], e2eEncrypted, true),
 						}, BdApi.React.createElement("svg", {
@@ -1639,9 +1643,17 @@ module.exports = (() => {
 						//credits to Farcrada
 						if (methodArguments[0]?.children) {
 							if (Array.isArray(methodArguments[0].children)) {
-								methodArguments[0].children.unshift(
-									E2EButton
-								)
+								//iterate through the Header children
+								for (var i = 0; i < methodArguments[0].children.length; i++) {
+									if(methodArguments[0].children[i].props?.className?.includes("apateE2EButton")) {
+										//is the E2E button --> refresh it
+										methodArguments[0].children.splice(i, 1);
+										methodArguments[0].children.splice(i, 0, E2EButton);
+										return;
+									}
+								}
+								//No apate E2E button yet? Put it at the front of the Header options
+								methodArguments[0].children.unshift(E2EButton);
 							}
 						}
 					});
