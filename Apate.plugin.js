@@ -194,6 +194,8 @@ module.exports = (() => {
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
 						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
+						
+						
 					}
 				}
 				formatHiddenMessage() {
@@ -866,8 +868,11 @@ module.exports = (() => {
 					BdApi.clearCSS("apateCSS")
 					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe);
 
+					//Thanks Strencher <3
 					BdApi.findModuleByProps("ComponentDispatch").ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
-					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
+					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
+					
+					
 				}
 
 				/**
