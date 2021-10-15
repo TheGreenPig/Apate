@@ -1,5 +1,6 @@
 
 
+
 <h1 align="center">
   <br>
   <img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg" alt="Apate" width="200" align="center">
@@ -62,5 +63,36 @@ By default, the message will be sent with your chosen password (if encrpytion is
 ><img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/logo.svg" alt="Apate Logo" width="80" align="right"></img>
 ><a href="https://github.com/gurrrrrrett3"><img width="60" height="60" src="https://github.com/gurrrrrrett3.png?size=60"><p>gurrrrrrett3</p></a>
 
+## Services used and people to thank:
 
+ - **StegCloak** 
+
+   This does all the hiding. Apate could not work without it! 
+	 >[Github link](https://github.com/KuroLabs/stegcloak)
+   
+ - **Cryptico** 
+ 
+   Is used for the End to End (asymmetric) Encryption! 
+	 >[Github link](https://github.com/wwwtyro/cryptico)
+   
+ - **Better Discord** 
+ 
+	 Without it, I couldn't even make plugins for Discord at all, so huge thanks! 
+	 >[Website](https://betterdiscord.app/)
+   
+  - **Zere's Plugin Library** 
+  
+  	An incredibly useful library used a lot in the plugin. Thanks Zerebos!
+	   >[Documentation](https://rauenzi.github.io/BDPluginLibrary/docs/)
+   
+  -  **images.weserv.nl** 
+  
+	  Is used a cool free proxy for all images to prevent people from using malicious links to grab IP addresses.
+	   >[Website](https://images.weserv.nl/)
+   
+ -  **All the helpful people of the BD community** 
+ 
+	 Thank you for showing me helpful tips and getting me into the world of BetterDiscord plugin
+   programming. 
+	   >[Discord Server](https://betterdiscord.app/invite)
 
