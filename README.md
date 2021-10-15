@@ -8,7 +8,7 @@
 
 <a href="https://github.com/KuroLabs/stegcloak" style="position: absolute; top: 100px; right: 20px; padding: 0 0 20px 20px;"><img src="https://raw.githubusercontent.com/KuroLabs/stegcloak/master/assets/stegCloakIcon.svg" alt="JavaScript Standard Style" width="80" align="right"></a>
 
-Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that allows you to send and read invisible hidden messages through [BetterDiscord](https://betterdiscord.app/). It hides the message using zero width unicode characters and a indicator character at the start of the string. It then goes through all the messages in chat and tries to insert a new `div` with the hidden message.
+Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that allows you to send and read invisible hidden messages through [BetterDiscord](https://betterdiscord.app/). It hides the message using zero width unicode characters and an indicator character at the start of the string. It then goes through all the messages in chat and tries to insert a new `div` with the hidden message.
 
 
 
@@ -17,16 +17,13 @@ Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that
 Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. If you see a `There is an update for Apate avalible!` Banner message, click it to fully update Apate. 
 
 ## Usage
-<img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/demo.gif" alt="Demo" width="500">
+<img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/Tutorials/sendMessage.gif" alt="Demo" width="500">
 </br>
 
 Syntax:
 >Cover text \*hidden message*
 
-Click the key button or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to send the message.
-
-**Note:**
-- There can't be a string after the hidden message. The second `*` should be the last character.
+For a more detailed explanation, click [here](https://github.com/TheGreenPig/Apate/blob/main/Assets/Tutorials/README.md)
 
 ## Passwords
 In Apate you can set your own password and then only people that have your password in their list can read your messages. 
