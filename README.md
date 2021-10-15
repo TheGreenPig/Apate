@@ -23,7 +23,10 @@ Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then j
 Syntax:
 >Cover text \*hidden message*
 
-For a more detailed explanation, click [here](https://github.com/TheGreenPig/Apate/blob/main/Assets/Tutorials/README.md)
+For a more detailed explanation, click [here](https://github.com/TheGreenPig/Apate/blob/main/Assets/Tutorials/README.md).
+
+## End to End Encryption
+For a detailed description on how to use e2e encryption in your messages, click [here](https://github.com/TheGreenPig/Apate/blob/main/Assets/Tutorials/README.md#end-to-end-encryption).
 
 ## Passwords
 In Apate you can set your own password and then only people that have your password in their list can read your messages. 
