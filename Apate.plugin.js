@@ -54,10 +54,11 @@ module.exports = (() => {
 		},
 		changelog: [
 			{
-				title: "Fixed:",
-				type: "fixed",
+				title: "End to End Encryption for DMs!",
+				type: "added",
 				items: [
-					"Hotfix to display the Key in Group DMs as well.",
+					"The update is here! I didn't have the chance to fully test it yet, so please tell me if you find any bugs (Either on Discord or Github).",
+					"A tutorial on how it works: https://github.com/TheGreenPig/Apate/tree/main/Assets/Tutorials#end-to-end-encryption",
 				]
 			},
 		],
