@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.4.0
+ * @version 1.4.1
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://raw.githubusercontent.com/TheGreenPig/Apate/e2e/Apate.plugin.js
@@ -47,18 +47,18 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.0",
+			version: "1.4.1",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/e2e/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "End to End Encryption for DMs!",
-				type: "added",
+				title: "Fixed",
+				type: "fixed",
 				items: [
-					"The update is here! I didn't have the chance to fully test it yet, so please tell me if you find any bugs (Either on Discord or Github).",
-					"A tutorial on how it works: https://github.com/TheGreenPig/Apate/tree/main/Assets/Tutorials#end-to-end-encryption",
+					"Some typos.",
+					"Can't turn off end to end encryption.",
 				]
 			},
 		],
@@ -131,7 +131,7 @@ module.exports = (() => {
 					if (this.props.message.apateHiddenMessage !== undefined) {
 						return this.setState({ processing: false, message: this.props.message.apateHiddenMessage, usedPassword: this.props.message.apateUsedPassword });
 					}
-					
+
 					let interceptedPasswordList = this.props.apate.settings.passwords;
 
 					let strong = this.props.apate.getStrong();
@@ -186,17 +186,19 @@ module.exports = (() => {
 					}
 				}
 				processStrongPass(userId, encryptedStrong) {
-					if (!this.props.apate.usesE2E(userId) && userId !== BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+					if (!this.props.apate.usesE2E(userId) && userId !== BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id && this.props.apate.settings.pendingList.includes(userId)) {
 						let privateKey = cryptico.generateRSAKey(this.props.apate.settings.privKey, 1024);
 						let strongPassword = cryptico.decrypt(encryptedStrong.replace("[strongPass]", ""), privateKey).plaintext;
 
 						let strongChannelEntry = { id: userId, strong: strongPassword };
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
+						var index = this.props.apate.settings.pendingList.indexOf(userId);
+						if (index !== -1) {
+							this.props.apate.settings.pendingList.splice(index, 1);
+						}
 						this.props.apate.saveSettings(this.props.apate.settings);
-						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
-						
-						
+						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
 					}
 				}
 				formatHiddenMessage() {
@@ -456,6 +458,7 @@ module.exports = (() => {
 				`}`,
 			].join("\n");
 
+
 			let apateNoLoadingCSS = [
 				`.apateHiddenMessage.loading {`,
 				`	display: none;`,
@@ -712,6 +715,7 @@ module.exports = (() => {
 					privKey: undefined,
 					pubKey: undefined,
 					strongChannelIndex: [],
+					pendingList: [],
 					devMode: false
 				};
 				settings = null;
@@ -841,8 +845,8 @@ module.exports = (() => {
 				}
 
 				refreshCSS() {
-					let compact, animate, noLoading, simpleBackground, leftKey, aboutMe;
-					animate = noLoading = simpleBackground = leftKey = aboutMe = "";
+					let compact, animate, noLoading, simpleBackground, leftKey, aboutMe, noKey;
+					animate = noLoading = simpleBackground = leftKey = aboutMe = noKey = "";
 
 					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
 					compact = `.${compactClass} .apateHiddenMessage {
@@ -859,6 +863,8 @@ module.exports = (() => {
 					}
 					if (this.settings.keyPosition === 1) {
 						leftKey = apateLeftKeyCSS;
+					} else if(this.settings.keyPosition === 2) {
+						noKey = `.apateKeyButtonContainer {display: none;`
 					}
 					if (!this.settings.hiddenAboutMe) {
 						aboutMe = `.apateAboutMeSettings { display: none;}`;
@@ -867,13 +873,13 @@ module.exports = (() => {
 						aboutMe = `.apateEncrpytionSettings { display: none;}`;
 					}
 					BdApi.clearCSS("apateCSS")
-					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe);
+					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe + noKey);
 
 					//Thanks Strencher <3
 					BdApi.findModuleByProps("ComponentDispatch").ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
 					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
-					
-					
+
+
 				}
 
 				/**
@@ -1248,7 +1254,6 @@ module.exports = (() => {
 					this.patchHeaderBar();
 
 
-
 					// workers
 					const workerCode = worker.toString();
 
@@ -1492,7 +1497,7 @@ module.exports = (() => {
 						let infoStyle = "";
 
 						let copyButton = ""
-					
+
 
 						if (this.usesE2E() && this.getStrong() === message.apateUsedPassword) {
 							passwordIndex = "-End To End encryption-"
@@ -1539,7 +1544,7 @@ module.exports = (() => {
 							onConfirm: () => {
 								let publicKey = this.settings.pubKey;
 								this.hideMessage(`\u200b \u200b*[pubKey]${publicKey}*`, "").then(stegCloakedMsg => {
-									BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
+									BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary?.DiscordAPI?.currentChannel?.discordObject?.id, { content: stegCloakedMsg })
 								}).catch((e) => {
 									if (e !== undefined) Logger.error(e);
 								}).finally(() => {
@@ -1547,6 +1552,9 @@ module.exports = (() => {
 										el.classList.remove("calculating");
 									});
 								});
+								console.log("Adding " + id + " to the pending list.")
+								this.settings.pendingList.push(id);
+								this.saveSettings(this.settings)
 								BdApi.showToast(`Sent an E2E request to ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "success" });
 							},
 						});
@@ -1556,18 +1564,19 @@ module.exports = (() => {
 							return;
 						}
 						BdApi.showConfirmationModal("Turn off Apate End to End encryption?",
-							`Do you whish to delete your End to End encryption? WARNING: All your old messages will become unreadable exept for the other user.`, {
+							`Do you wish to delete your End to End encryption? WARNING: All your old messages will become unreadable except for the other user.`, {
 							confirmText: "Turn off E2E",
 							cancelText: "Cancel",
 							danger: true,
 							onConfirm: () => {
-								BdApi.loadData("Apate", "settings").strongChannelIndex = BdApi.loadData("Apate", "settings").strongChannelIndex.filter(function (value, index, arr) {
+								this.settings.strongChannelIndex = this.settings.strongChannelIndex.filter(function (value) {
 									return value.id !== id;
 								});
+								this.saveSettings(this.settings);
 								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
-										BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
+										BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel?.discordObject?.id, { content: stegCloakedMsg })
 									}).catch((e) => {
 										if (e !== undefined) Logger.error(e);
 									}).finally(() => {
@@ -1583,7 +1592,7 @@ module.exports = (() => {
 
 				}
 				usesE2E() {
-					let userId = ZLibrary.DiscordAPI.currentChannel.discordObject.recipients[0];
+					let userId = ZLibrary.DiscordAPI.currentChannel?.discordObject?.recipients[0];
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
 						if (this.settings.strongChannelIndex[k].id == userId) {
 							return true;
@@ -1592,8 +1601,8 @@ module.exports = (() => {
 					return false;
 				}
 				getStrong() {
-					let userId = ZLibrary.DiscordAPI.currentChannel.discordObject.recipients[0];
-					if(!this.usesE2E(userId)) {
+					let userId = ZLibrary.DiscordAPI.currentChannel?.discordObject?.recipients[0];
+					if (!this.usesE2E(userId)) {
 						return undefined;
 					}
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
@@ -1612,12 +1621,12 @@ module.exports = (() => {
 						if (!this.settings.displayLock) {
 							return;
 						}
-						let channel = ZLibrary.DiscordAPI.currentChannel.discordObject;
+						let channel = ZLibrary.DiscordAPI.currentChannel?.discordObject;
 						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 						const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
 						const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
 
-						if (channel.type !== DiscordConstants.ChannelTypes.DM) {
+						if (channel?.type !== DiscordConstants.ChannelTypes.DM || !channel) {
 							return;
 						}
 
@@ -1651,7 +1660,7 @@ module.exports = (() => {
 							if (Array.isArray(methodArguments[0].children)) {
 								//iterate through the Header children
 								for (var i = 0; i < methodArguments[0].children.length; i++) {
-									if(methodArguments[0].children[i].props?.className?.includes("apateE2EButton")) {
+									if (methodArguments[0].children[i].props?.className?.includes("apateE2EButton")) {
 										//is the E2E button --> refresh it
 										methodArguments[0].children.splice(i, 1);
 										methodArguments[0].children.splice(i, 0, E2EButton);
@@ -1738,9 +1747,6 @@ module.exports = (() => {
 					);
 
 					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
-						if (this.settings.keyPosition === 2) {
-							return
-						}
 						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
 						}
@@ -1772,14 +1778,14 @@ module.exports = (() => {
 						}
 
 						switch (this.settings.keyPosition) {
-							case 0: // RIGHT
+							case 1: // LEFT
+								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
+								break;
+							default:
 								buttons.props.children = [
 									...buttons.props.children,
 									keyButton
 								]
-								break;
-							case 1: // LEFT
-								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
 								break;
 						}
 
