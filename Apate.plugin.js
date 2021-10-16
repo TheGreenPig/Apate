@@ -97,6 +97,8 @@ module.exports = (() => {
 		const plugin = (Plugin, Api) => {
 			const Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
 
+
+
 			/**
 			 * Apate banner which is displayed under some message which contains hidden text
 			 */
@@ -173,7 +175,7 @@ module.exports = (() => {
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
-							BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel.discordObject.id, { content: stegCloakedMsg })
+							BdApi.findModuleByProps('sendMessage').sendMessage(this.props.apate.getCurrentChannel()?.id, { content: stegCloakedMsg })
 						}).catch((e) => {
 							if (e !== undefined) Logger.error(e);
 						}).finally(() => {
@@ -1544,7 +1546,7 @@ module.exports = (() => {
 							onConfirm: () => {
 								let publicKey = this.settings.pubKey;
 								this.hideMessage(`\u200b \u200b*[pubKey]${publicKey}*`, "").then(stegCloakedMsg => {
-									BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary?.DiscordAPI?.currentChannel?.discordObject?.id, { content: stegCloakedMsg })
+									BdApi.findModuleByProps('sendMessage').sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
 								}).catch((e) => {
 									if (e !== undefined) Logger.error(e);
 								}).finally(() => {
@@ -1576,7 +1578,7 @@ module.exports = (() => {
 								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
-										BdApi.findModuleByProps('sendMessage').sendMessage(ZLibrary.DiscordAPI.currentChannel?.discordObject?.id, { content: stegCloakedMsg })
+										BdApi.findModuleByProps('sendMessage').sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
 									}).catch((e) => {
 										if (e !== undefined) Logger.error(e);
 									}).finally(() => {
@@ -1592,7 +1594,7 @@ module.exports = (() => {
 
 				}
 				usesE2E() {
-					let userId = ZLibrary.DiscordAPI.currentChannel?.discordObject?.recipients[0];
+					let userId = this.getCurrentChannel()?.recipients[0];
 					for (var k = 0; k < this.settings.strongChannelIndex.length; k++) {
 						if (this.settings.strongChannelIndex[k].id == userId) {
 							return true;
@@ -1601,7 +1603,7 @@ module.exports = (() => {
 					return false;
 				}
 				getStrong() {
-					let userId = ZLibrary.DiscordAPI.currentChannel?.discordObject?.recipients[0];
+					let userId = this.getCurrentChannel()?.recipients[0];
 					if (!this.usesE2E(userId)) {
 						return undefined;
 					}
@@ -1612,6 +1614,9 @@ module.exports = (() => {
 					}
 					return undefined;
 				}
+				getCurrentChannel() {
+					return BdApi.findModuleByProps("getChannel").getChannel(ZLibrary.DiscordModules.SelectedChannelStore?.getChannelId());
+				}
 
 				patchHeaderBar() {
 					//The header bar above the "chat"; this is the same for the `Split View`.
@@ -1621,7 +1626,7 @@ module.exports = (() => {
 						if (!this.settings.displayLock) {
 							return;
 						}
-						let channel = ZLibrary.DiscordAPI.currentChannel?.discordObject;
+						let channel = this.getCurrentChannel();
 						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
 						const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
 						const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
@@ -1885,7 +1890,7 @@ module.exports = (() => {
 									password = this.passwordForNextMessage;
 									this.passwordForNextMessage = undefined;
 								}
-								let recipientId = BdApi.findModuleByProps("getChannel").getChannel(args[0]).recipients[0];
+								let recipientId = this.getCurrentChannel()?.recipients[0];
 								let usesE2E = this.usesE2E()
 
 								if (usesE2E) {
