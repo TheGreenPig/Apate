@@ -57,8 +57,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Some typos.",
-					"Can't turn off end to end encryption.",
+					"Updated to the correct update url.",
 				]
 			},
 		],
