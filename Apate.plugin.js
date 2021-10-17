@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.4.1
+ * @version 1.4.3
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -47,7 +47,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.1",
+			version: "1.4.3",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -57,7 +57,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Updated to the correct update url.",
+					"On the correct branch now. Upates should work from now on!",
 				]
 			},
 		],
