@@ -94,9 +94,39 @@ module.exports = (() => {
 		};
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
-			const Dispatcher = BdApi.findModuleByProps("dirtyDispatch");
-
-
+			//All modules needed. All are found at the start because finding modules can be resource intensive.
+			const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+			const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
+			const ButtonClassesModule = BdApi.findModuleByProps('button', 'contents');
+			const ButtonContainerClassesModule = BdApi.findModuleByProps('buttonContainer', 'buttons');
+			const ButtonLooksModule = BdApi.findModuleByProps("ButtonLooks");
+			const ButtonWrapperClassesModule = BdApi.findModuleByProps('buttonWrapper', 'buttonContent');
+			const ChannelTextAreaContainerModule = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
+			const CompactCozyModule = BdApi.findModuleByProps("compact", "cozy");
+			const ComponentDispatchModule = BdApi.findModuleByProps("ComponentDispatch");
+			const ComputePermissionsModule = BdApi.findModuleByProps("computePermissions");
+			const DirtyDispatcherModule = BdApi.findModuleByProps("dirtyDispatch");
+			const DiscordConstants = BdApi.findModuleByProps("API_HOST");
+			const EditMessageModule = BdApi.findModuleByProps("editMessage");
+			const EmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName);
+			const EndEditMessageModule = BdApi.findModuleByProps("endEditMessage");
+			const GetChannelModule = BdApi.findModuleByProps("getChannel");
+			const GetCurrentUserModule = BdApi.findModuleByProps('getCurrentUser');
+			const GetMessageModule = BdApi.findModuleByProps("getMessage");
+			const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
+			const InstantBatchUploadModule = BdApi.findModuleByProps("instantBatchUpload");
+			const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
+			const MiniPopover = BdApi.findModule((m) => m?.default?.displayName === "MiniPopover");
+			const RenderMessageMarkupToASTModule = BdApi.findModuleByProps("renderMessageMarkupToAST");
+			const SendMessageModule = BdApi.findModuleByProps('sendMessage');
+			const SlateTextAreaClassModule = BdApi.findModuleByProps('slateTextArea').slateTextArea;
+			const StartEditMessageModule = BdApi.findModuleByProps("startEditMessage");
+			const TooltipContainer = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
+			const TooltipWrapper = BdApi.findModuleByPrototypes("renderTooltip");
+			const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+			const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
+			const UserStoreModule = BdApi.findModuleByProps("getUsers");
+			const ChannelTextAreaUploadModule = BdApi.findModuleByProps("channelTextAreaUpload");
 
 			/**
 			 * Apate banner which is displayed under some message which contains hidden text
@@ -118,9 +148,9 @@ module.exports = (() => {
 						this.setState({ processing: false, message: state.message, usedPassword: state.password });
 					};
 
-					Dispatcher.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
+					DirtyDispatcherModule.subscribe("APATE_MESSAGE_REVEALED", handleUpdate);
 
-					Dispatcher.subscribe("APATE_MESSAGE_FORCE_UPDATE", state => {
+					DirtyDispatcherModule.subscribe("APATE_MESSAGE_FORCE_UPDATE", state => {
 						if (state.id === this.props.message.id) {
 							this.setState({ processing: true, message: undefined, usedPassword: undefined, images: [] });
 							this.processMessage();
@@ -157,7 +187,7 @@ module.exports = (() => {
 				}
 
 				acceptE2E(userId, pubKey) {
-					if (userId === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+					if (userId === GetCurrentUserModule.getCurrentUser()?.id) {
 						BdApi.alert("You can't accept yourself!", "Please wait until the other user has accepted your request.");
 						return;
 					}
@@ -174,7 +204,7 @@ module.exports = (() => {
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
-							BdApi.findModuleByProps('sendMessage').sendMessage(this.props.apate.getCurrentChannel()?.id, { content: stegCloakedMsg })
+							SendMessageModule.sendMessage(this.props.apate.getCurrentChannel()?.id, { content: stegCloakedMsg })
 						}).catch((e) => {
 							if (e !== undefined) Logger.error(e);
 						}).finally(() => {
@@ -183,11 +213,11 @@ module.exports = (() => {
 							});
 						});
 
-						BdApi.showToast(`Set up End to End encryption with ${BdApi.findModuleByProps("getCurrentUser").getUser(userId).username}!`, { type: "success" });
+						BdApi.showToast(`Set up End to End encryption with ${GetCurrentUserModule.getUser(userId).username}!`, { type: "success" });
 					}
 				}
 				processStrongPass(userId, encryptedStrong) {
-					if (!this.props.apate.usesE2E(userId) && userId !== BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id && this.props.apate.settings.pendingList.includes(userId)) {
+					if (!this.props.apate.usesE2E(userId) && userId !== GetCurrentUserModule.getCurrentUser()?.id && this.props.apate.settings.pendingList.includes(userId)) {
 						let privateKey = cryptico.generateRSAKey(this.props.apate.settings.privKey, 1024);
 						let strongPassword = cryptico.decrypt(encryptedStrong.replace("[strongPass]", ""), privateKey).plaintext;
 
@@ -206,20 +236,19 @@ module.exports = (() => {
 					if (this.state.message == null) {
 						return "";
 					}
-					const DiscordConstants = BdApi.findModuleByProps("API_HOST");
+
 					let emojiRegex = /\[(?<name>[a-zA-Z_~\d+-ñ]+):(?:(?<id>\d+)\.(?<ext>png|gif)|default)\]/g; // +-ñ are for 3 discord default emojis (ñ for "piñata", + for "+1" and - for "-1")
-					let emojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName).default;
+					let emojiModule = EmojiModule.default;
 
 					let m = Object.assign({}, this.props.message);
 
-					let channel = BdApi.findModuleByProps("getChannel").getChannel(this.props.message.channel_id);
+					let channel = GetChannelModule.getChannel(this.props.message.channel_id);
 
 
 
 					m.content = this.state.message.replace(/\\n/g, "\n");
 
 					let author = this.props.message.author;
-					const buttonModule = BdApi.findModuleByProps("ButtonLooks")
 
 					// Convert emojis in Apate's old format for backward compatibility
 					if (channel.type === DiscordConstants.ChannelTypes.DM) {
@@ -228,8 +257,8 @@ module.exports = (() => {
 							let requestMessage = BdApi.React.createElement("div", {
 								class: "apateE2ERequestMessage",
 							}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
-								BdApi.React.createElement(buttonModule.default, {
-									color: buttonModule.ButtonColors.BRAND,
+								BdApi.React.createElement(ButtonLooksModule.default, {
+									color: ButtonLooksModule.ButtonColors.BRAND,
 									onClick: () => this.acceptE2E(author.id, this.state.message),
 								}, "Accept"),
 							)
@@ -248,8 +277,8 @@ module.exports = (() => {
 							let deleteMessage = BdApi.React.createElement("div", {
 								class: "apateE2ERequestMessage",
 							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`,
-								BdApi.React.createElement(buttonModule.default, {
-									color: buttonModule.ButtonColors.RED,
+								BdApi.React.createElement(ButtonLooksModule.default, {
+									color: ButtonLooksModule.ButtonColors.RED,
 									onClick: () => this.props.apate.displayE2EPopUp(author.id, true, false),
 								}, "Turn off as well"))
 							return deleteMessage;
@@ -263,7 +292,7 @@ module.exports = (() => {
 						}
 					});
 
-					let { content } = BdApi.findModuleByProps("renderMessageMarkupToAST").default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
+					let { content } = RenderMessageMarkupToASTModule.default(m, { renderMediaEmbeds: true, formatInline: false, isInteracting: true });
 
 
 					if (this.props.apate.settings.displayImage) {
@@ -453,7 +482,7 @@ module.exports = (() => {
 				`	width: 3em;`,
 				`	align-items: flex-start;`,
 				`}`,
-				`.${BdApi.findModuleByProps("channelTextAreaUpload").channelTextAreaUpload} .apateKeyButtonContainer, .apateKeyButtonContainer.edit {`,
+				`.${ChannelTextAreaUploadModule.channelTextAreaUpload} .apateKeyButtonContainer, .apateKeyButtonContainer.edit {`,
 				`	margin-left: 0.3rem;`,
 				`	margin-right: -0.8rem;`,
 				`}`,
@@ -849,7 +878,7 @@ module.exports = (() => {
 					let compact, animate, noLoading, simpleBackground, leftKey, aboutMe, noKey;
 					animate = noLoading = simpleBackground = leftKey = aboutMe = noKey = "";
 
-					let compactClass = BdApi.findModuleByProps("compact", "cozy")?.compact;
+					let compactClass = CompactCozyModule.compact;
 					compact = `.${compactClass} .apateHiddenMessage {
 						  text-indent: 0;
 					}`;
@@ -864,7 +893,7 @@ module.exports = (() => {
 					}
 					if (this.settings.keyPosition === 1) {
 						leftKey = apateLeftKeyCSS;
-					} else if(this.settings.keyPosition === 2) {
+					} else if (this.settings.keyPosition === 2) {
 						noKey = `.apateKeyButtonContainer {display: none;`
 					}
 					if (!this.settings.hiddenAboutMe) {
@@ -877,7 +906,7 @@ module.exports = (() => {
 					BdApi.injectCSS("apateCSS", apateCSS + compact + animate + simpleBackground + apatePasswordCSS + noLoading + leftKey + aboutMe + noKey);
 
 					//Thanks Strencher <3
-					BdApi.findModuleByProps("ComponentDispatch").ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
+					ComponentDispatchModule.ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
 					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
 
 
@@ -1084,10 +1113,9 @@ module.exports = (() => {
 						this.settings.hiddenAboutMeText = aboutMeInput.value;
 						this.saveSettings(this.settings);
 
-						let accountUpdateModule = BdApi.findModuleByProps('setPendingBio');
-						let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
+						let bio = GetCurrentUserModule.getCurrentUser().bio;
 
-						accountUpdateModule.saveAccountChanges({ bio });
+						AccountUpdateModule.saveAccountChanges({ bio });
 					})
 
 					aboutMeDiv.appendChild(aboutMeSubTitle);
@@ -1196,7 +1224,7 @@ module.exports = (() => {
 					/*	try to automatically set the about me message, in case the user installed 
 						the plugin on a new PC or changed the about me message on a different PC	*/
 					try {
-						let bio = BdApi.findModuleByProps('getCurrentUser').getCurrentUser().bio;
+						let bio = GetCurrentUserModule.getCurrentUser().bio;
 						let stegCloak = new StegCloak();
 						let hiddenAboutMe = stegCloak.reveal(bio, "");
 						this.settings.hiddenAboutMeText = hiddenAboutMe;
@@ -1208,7 +1236,7 @@ module.exports = (() => {
 
 
 					for (const author of config.info.authors) {
-						if (author.discord_id === BdApi.findModuleByProps('getCurrentUser').getCurrentUser()?.id) {
+						if (author.discord_id === GetCurrentUserModule.getCurrentUser()?.id) {
 							this.settings.devMode = true;
 						}
 					}
@@ -1269,7 +1297,7 @@ module.exports = (() => {
 
 						worker.addEventListener("message", ({ data }) => {
 							if (data.reveal) {
-								Dispatcher.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMessage === undefined ? null : data.hiddenMessage, password: data.password, id: data.id });
+								DirtyDispatcherModule.dispatch({ type: "APATE_MESSAGE_REVEALED", message: data.hiddenMessage === undefined ? null : data.hiddenMessage, password: data.password, id: data.id });
 							}
 						});
 
@@ -1545,7 +1573,7 @@ module.exports = (() => {
 							onConfirm: () => {
 								let publicKey = this.settings.pubKey;
 								this.hideMessage(`\u200b \u200b*[pubKey]${publicKey}*`, "").then(stegCloakedMsg => {
-									BdApi.findModuleByProps('sendMessage').sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
+									SendMessageModule.sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
 								}).catch((e) => {
 									if (e !== undefined) Logger.error(e);
 								}).finally(() => {
@@ -1556,7 +1584,7 @@ module.exports = (() => {
 								console.log("Adding " + id + " to the pending list.")
 								this.settings.pendingList.push(id);
 								this.saveSettings(this.settings)
-								BdApi.showToast(`Sent an E2E request to ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "success" });
+								BdApi.showToast(`Sent an E2E request to ${GetCurrentUserModule.getUser(id).username}!`, { type: "success" });
 							},
 						});
 					} else {
@@ -1577,7 +1605,7 @@ module.exports = (() => {
 								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
-										BdApi.findModuleByProps('sendMessage').sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
+										SendMessageModule.sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
 									}).catch((e) => {
 										if (e !== undefined) Logger.error(e);
 									}).finally(() => {
@@ -1586,7 +1614,7 @@ module.exports = (() => {
 										});
 									});
 								}
-								BdApi.showToast(`Turned off the E2E encryption with ${BdApi.findModuleByProps("getCurrentUser").getUser(id).username}!`, { type: "error" });
+								BdApi.showToast(`Turned off the E2E encryption with ${GetCurrentUserModule.getUser(id).username}!`, { type: "error" });
 							},
 						});
 					}
@@ -1614,21 +1642,16 @@ module.exports = (() => {
 					return undefined;
 				}
 				getCurrentChannel() {
-					return BdApi.findModuleByProps("getChannel").getChannel(ZLibrary.DiscordModules.SelectedChannelStore?.getChannelId());
+					return GetChannelModule.getChannel(ZLibrary.DiscordModules.SelectedChannelStore?.getChannelId());
 				}
 
 				patchHeaderBar() {
 					//The header bar above the "chat"; this is the same for the `Split View`.
-					const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
-
 					BdApi.Patcher.before("Apate", HeaderBar, "default", (thisObject, methodArguments, returnValue) => {
 						if (!this.settings.displayLock) {
 							return;
 						}
 						let channel = this.getCurrentChannel();
-						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
-						const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
-						const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
 
 						if (channel?.type !== DiscordConstants.ChannelTypes.DM || !channel) {
 							return;
@@ -1645,9 +1668,9 @@ module.exports = (() => {
 							svgPath = "M8,10V6a4,4,0,0,1,8-.62h2A6,6,0,0,0,6,6v4H3V24H21V10Zm5.86,10L12,18.14,10.16,20,9,18.87,10.86,17,9,15.17,10.13,14,12,15.87,13.83,14,15,15.14,13.13,17,15,18.83S13.86,20,13.86,20Z"
 						}
 
-						const E2EButton = BdApi.React.createElement(Tooltip, {
+						const E2EButton = BdApi.React.createElement(TooltipContainer, {
 							text: e2eButtonText,
-							className: `${ButtonContainerClasses.buttonContainer} apateE2EButton`
+							className: `${ButtonContainerClassesModule.buttonContainer} apateE2EButton`
 						}, BdApi.React.createElement("div", {
 							onClick: () => this.displayE2EPopUp(channel.recipients[0], e2eEncrypted, true),
 						}, BdApi.React.createElement("svg", {
@@ -1678,26 +1701,18 @@ module.exports = (() => {
 					});
 				}
 				patchTextArea() {
-					const ChannelTextAreaContainer = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
-
-					const Tooltip = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
-					const ButtonContainerClasses = BdApi.findModuleByProps('buttonContainer', 'buttons');
-					const ButtonWrapperClasses = BdApi.findModuleByProps('buttonWrapper', 'buttonContent');
-					const ButtonClasses = BdApi.findModuleByProps('button', 'contents');
-					const SlateTextAreaClass = BdApi.findModuleByProps('slateTextArea').slateTextArea;
-
 					const press = new KeyboardEvent("keydown", { key: "Enter", code: "Enter", which: 13, keyCode: 13, bubbles: true });
 					Object.defineProperties(press, { keyCode: { value: 13 }, which: { value: 13 } });
 
-					const ApateKeyButton = BdApi.React.createElement(Tooltip, {
+					const ApateKeyButton = BdApi.React.createElement(TooltipContainer, {
 						text: "Right click to send with different Encryption!",
-						className: `apateKeyButtonContainer ${ButtonContainerClasses.buttonContainer} keyButton`
+						className: `apateKeyButtonContainer ${ButtonContainerClassesModule.buttonContainer} keyButton`
 					},
 						BdApi.React.createElement("button", {
 							"aria-label": "Send Message",
 							tabindex: 0,
 							type: "button",
-							className: `apateEncryptionKeyButton ${ButtonWrapperClasses.buttonWrapper} ${ButtonClasses.button} ${ButtonClasses.lookBlank} ${ButtonClasses.colorBrand} ${ButtonClasses.grow}`,
+							className: `apateEncryptionKeyButton ${ButtonWrapperClassesModule.buttonWrapper} ${ButtonClassesModule.button} ${ButtonClassesModule.lookBlank} ${ButtonClassesModule.colorBrand} ${ButtonClassesModule.grow}`,
 							onClick: (e) => {
 								let textAreaInner = e.target.parentElement;
 
@@ -1714,7 +1729,7 @@ module.exports = (() => {
 								textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
 
 								this.hideNextMessage = true;
-								textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
+								textAreaInner.querySelector(`.${SlateTextAreaClassModule}`).dispatchEvent(press);
 							},
 							onContextMenu: (e) => {
 								e.preventDefault();
@@ -1734,14 +1749,14 @@ module.exports = (() => {
 									textAreaInner.querySelector(".apateEncryptionKey").classList.add("calculating");
 									this.hideNextMessage = true;
 									this.passwordForNextMessage = password;
-									textAreaInner.querySelector(`.${SlateTextAreaClass}`).dispatchEvent(press);
+									textAreaInner.querySelector(`.${SlateTextAreaClassModule}`).dispatchEvent(press);
 								}).catch(() => { });
 
 								return false;
 							}
 						},
-							BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClasses.contents} ${ButtonWrapperClasses.button} ${ButtonContainerClasses.button}` },
-								BdApi.React.createElement("svg", { viewBox: "0 0 24 24", fill: "currentColor", className: `apateEncryptionKey ${ButtonWrapperClasses.icon}` }, [
+							BdApi.React.createElement("div", { className: `apateEncryptionKeyContainer ${ButtonClassesModule.contents} ${ButtonWrapperClassesModule.button} ${ButtonContainerClassesModule.button}` },
+								BdApi.React.createElement("svg", { viewBox: "0 0 24 24", fill: "currentColor", className: `apateEncryptionKey ${ButtonWrapperClassesModule.icon}` }, [
 									BdApi.React.createElement("path", { d: "M0 0h24v24H0z", fill: "none" }),
 									BdApi.React.createElement("path", { d: "M11.9,11.2a.6.6,0,0,1-.6-.5,4.5,4.5,0,1,0-4.4,5.6A4.6,4.6,0,0,0,11,13.8a.7.7,0,0,1,.6-.4h2.2l.5.2,1,1.1.8-1c.2-.2.3-.3.5-.3l.5.2,1.2,1.1,1.2-1.1.5-.2h1l.9-1.1L21,11.2Zm-5,2.4a1.8,1.8,0,1,1,1.8-1.8A1.8,1.8,0,0,1,6.9,13.6Z" })
 								]
@@ -1750,15 +1765,12 @@ module.exports = (() => {
 						)
 					);
 
-					BdApi.Patcher.after("Apate", ChannelTextAreaContainer.type, "render", (_, [props], ret) => {
+					BdApi.Patcher.after("Apate", ChannelTextAreaContainerModule.type, "render", (_, [props], ret) => {
 						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
 						}
-
-						const DiscordConstants = BdApi.findModuleByProps("API_HOST");
-						const UserStore = BdApi.findModuleByProps("getUsers");
-
-						let canSend = BdApi.findModuleByProps("computePermissions").can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStore.getCurrentUser());
+						
+						let canSend = ComputePermissionsModule.can(DiscordConstants.Permissions.SEND_MESSAGES, props.channel, UserStoreModule.getCurrentUser());
 
 						if (props.channel.type === DiscordConstants.ChannelTypes.GROUP_DM || props.channel.type === DiscordConstants.ChannelTypes.DM) {
 							//can always send in DMs
@@ -1801,7 +1813,7 @@ module.exports = (() => {
 							parent.addEventListener("keyup", (evt) => {
 								if (evt.key === "Enter" && evt.ctrlKey) {
 									evt.preventDefault();
-									let slateTextArea = textArea.ref.current.querySelector(`.${SlateTextAreaClass}`);
+									let slateTextArea = textArea.ref.current.querySelector(`.${SlateTextAreaClassModule}`);
 
 									let focusRing = textAreaInner.props.children.find(c => c?.props?.ringClassName);
 									let text = focusRing.props.children.ref.current.props.textValue;
@@ -1831,9 +1843,9 @@ module.exports = (() => {
 						}
 					});
 
-					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("startEditMessage"), "startEditMessage", (_, [channelId, messageId, content], originalFunction) => {
+					BdApi.Patcher.instead("Apate", StartEditMessageModule, "startEditMessage", (_, [channelId, messageId, content], originalFunction) => {
 						if (content.startsWith("\u200B")) {
-							let message = BdApi.findModuleByProps("getMessage").getMessage(channelId, messageId);
+							let message = GetMessageModule.getMessage(channelId, messageId);
 							if (!message.apateHiddenMessage) return;
 
 							content = content.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
@@ -1843,7 +1855,7 @@ module.exports = (() => {
 						originalFunction(channelId, messageId, content);
 					});
 
-					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("editMessage"), "editMessage", (_, [channelId, messageId, edit], originalFunction) => {
+					BdApi.Patcher.instead("Apate", EditMessageModule, "editMessage", (_, [channelId, messageId, edit], originalFunction) => {
 						if (this.hideNextMessage) {
 							this.hideNextMessage = false;
 
@@ -1869,13 +1881,13 @@ module.exports = (() => {
 						}
 					});
 
-					BdApi.Patcher.after("Apate", BdApi.findModuleByProps("endEditMessage"), "endEditMessage", (_, [channelId, response]) => {
+					BdApi.Patcher.after("Apate", EndEditMessageModule, "endEditMessage", (_, [channelId, response]) => {
 						if (response?.body.content.startsWith("\u200B")) {
-							let message = BdApi.findModuleByProps("getMessage").getMessage(channelId, response.body.id);
+							let message = GetMessageModule.getMessage(channelId, response.body.id);
 							delete message.apateHiddenMessage;
 							delete message.apateUsedPassword;
 
-							Dispatcher.dispatch({ type: "APATE_MESSAGE_FORCE_UPDATE", id: response.body.id });
+							DirtyDispatcherModule.dispatch({ type: "APATE_MESSAGE_FORCE_UPDATE", id: response.body.id });
 						}
 					});
 
@@ -1911,13 +1923,12 @@ module.exports = (() => {
 						}
 					}
 
-					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("sendMessage"), "sendMessage", patchedSendMessage(1).bind(this));
-					BdApi.Patcher.instead("Apate", BdApi.findModuleByProps("instantBatchUpload"), "upload", patchedSendMessage(3).bind(this));
+					BdApi.Patcher.instead("Apate", SendMessageModule, "sendMessage", patchedSendMessage(1).bind(this));
+					BdApi.Patcher.instead("Apate", InstantBatchUploadModule, "upload", patchedSendMessage(3).bind(this));
 				}
 
 				patchMessages() {
-					const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
-
+				
 					BdApi.Patcher.after("Apate", MessageContent, "type", (_, [props], ret) => {
 						if (props.className && (props.className.includes("repliedTextContent-") || props.className.includes("threadMessageAccessoryContent-"))) {
 							return
@@ -1932,9 +1943,6 @@ module.exports = (() => {
 					});
 				}
 				patchMiniPopover() {
-					const MiniPopover = BdApi.findModule((m) => m?.default?.displayName === "MiniPopover");
-					const TooltipWrapper = BdApi.findModuleByPrototypes("renderTooltip");
-
 					BdApi.Patcher.after("Apate", MiniPopover, "default", (_, [props], ret) => {
 						const args = props.children[1].props;
 
@@ -1975,10 +1983,6 @@ module.exports = (() => {
 				}
 
 				patchAboutMe() {
-					const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
-					const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
-					const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
-					const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
 					const aboutMeCache = {};
 
 					function hashCode(s) {
@@ -2017,16 +2021,21 @@ module.exports = (() => {
 
 					BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
 						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
-						let aboutMe = infoSection.props.children.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
-
-						let hiddenMessage = getBioHiddenMessage(props.user.bio);
-
-						if (hiddenMessage != null) {
-							aboutMe.props.children = [
-								...aboutMe.props.children,
-								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage" }, hiddenMessage),
-							];
+						try {
+							let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+							let hiddenMessage = getBioHiddenMessage(props.user.bio);
+	
+							if (hiddenMessage != null) {
+								aboutMe.props.children = [
+									...aboutMe.props.children,
+									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, hiddenMessage),
+								];
+							}
 						}
+						catch{
+							return;
+						}
+
 					});
 
 					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
