@@ -15,7 +15,7 @@ Apate is a tool based on [StegCloak](https://github.com/KuroLabs/stegcloak) that
 
 
 ## Installing
-Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. If you see a `There is an update for Apate avalible!` Banner message, click it to fully update Apate. 
+Make sure you have [BetterDiscord](https://betterdiscord.app/) installed. Then just download the Plugin [here](https://betterdiscord.app/Download?id=446) and pull it into your plugins Folder. If you are asked to download the ZeresPluginLibrary, download it. If you see a `There is an update for Apate available!` Banner message, click it to fully update Apate. 
 
 ## Usage
 <img src="https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/Tutorials/sendMessage.gif" alt="Demo" width="500">
