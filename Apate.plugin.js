@@ -1210,15 +1210,11 @@ module.exports = (() => {
 					this.settings = this.loadSettings(this.default);
 
 					if (typeof StegCloak === "undefined") {
-						let stegCloakScript = document.createElement("script");
-						stegCloakScript.src = "https://rawcdn.githack.com/KuroLabs/stegcloak/4fd99560708b1cd4567587e84f5d390e08690a01/dist/stegcloak.min.js";
-						document.head.append(stegCloakScript);
+						BdApi.linkJS("Apate", "https://rawcdn.githack.com/KuroLabs/stegcloak/4fd99560708b1cd4567587e84f5d390e08690a01/dist/stegcloak.min.js");
 					}
 
 					if (typeof cryptico === "undefined") {
-						let crypticoScript = document.createElement("script");
-						crypticoScript.src = "https://rawcdn.githack.com/wwwtyro/cryptico/9291ece634d37415e66396d749d38e612d66f935/cryptico.min.js";
-						document.head.append(crypticoScript);
+						BdApi.linkJS("Apate", "https://rawcdn.githack.com/wwwtyro/cryptico/9291ece634d37415e66396d749d38e612d66f935/cryptico.min.js");
 					}
 
 					/*	try to automatically set the about me message, in case the user installed 
@@ -2068,6 +2064,7 @@ module.exports = (() => {
 					}
 					BdApi.clearCSS("apateCSS");
 					BdApi.Patcher.unpatchAll("Apate");
+					BdApi.unlikJS("Apate");
 				};
 			};
 		};
