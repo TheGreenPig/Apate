@@ -1,6 +1,6 @@
 /**
  * @name Apate
- * @version 1.4.3
+ * @version 1.4.4
  * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
@@ -59,7 +59,7 @@ var dbits,canary=0xdeadbeefcafe,j_lm=15715070==(16777215&canary);function BigInt
  
  
 			 ],
-			 version: "1.4.3",
+			 version: "1.4.4",
 			 description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			 github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			 github: "https://github.com/TheGreenPig/Apate"
@@ -69,7 +69,7 @@ var dbits,canary=0xdeadbeefcafe,j_lm=15715070==(16777215&canary);function BigInt
 				 title: "Fixed",
 				 type: "fixed",
 				 items: [
-					 "On the correct branch now. Upates should work from now on!",
+					 "Use local libs instead. (Should fix `cryptico undefined` error)",
 				 ]
 			 },
 		 ],
