@@ -1577,7 +1577,7 @@ var dbits,canary=0xdeadbeefcafe,j_lm=15715070==(16777215&canary);function BigInt
 						 BdApi.showConfirmationModal("Apate End to End encryption",
 							 `Here you can request to set up a secure End to End encrypted channel. After requesting, the other person will have to accept your request.
 							 If you have set up E2E correctly, a strong password will be generated and then sent over a secure message. WARNING! 
-							 If you reqest to set up a secure channel and the other person does not have Apate, they will see the request as an empty message.`, {
+							 If you request to set up a secure channel and the other person does not have Apate, they will see the request as an empty message.`, {
 							 confirmText: "Request E2E",
 							 cancelText: "Cancel",
 							 onConfirm: () => {
