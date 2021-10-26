@@ -98,7 +98,7 @@ module.exports = (() => {
 			const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
 			const ButtonClassesModule = BdApi.findModuleByProps('button', 'contents');
 			const ButtonContainerClassesModule = BdApi.findModuleByProps('buttonContainer', 'buttons');
-			const ButtonLooksModule = BdApi.findModuleByProps("ButtonLooks");
+			const ButtonLooksModule = ZLibrary.DiscordModules.ButtonData;
 			const ButtonWrapperClassesModule = BdApi.findModuleByProps('buttonWrapper', 'buttonContent');
 			const ChannelTextAreaContainerModule = BdApi.findModule(m => m.type?.render?.displayName === "ChannelTextAreaContainer");
 			const CompactCozyModule = BdApi.findModuleByProps("compact", "cozy");
@@ -110,7 +110,6 @@ module.exports = (() => {
 			const EmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName);
 			const EndEditMessageModule = BdApi.findModuleByProps("endEditMessage");
 			const GetChannelModule = ZLibrary.DiscordModules.ChannelStore;
-			const GetCurrentUserModule = BdApi.findModuleByProps('getCurrentUser');
 			const GetMessageModule = BdApi.findModuleByProps("getMessage");
 			const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 			const InstantBatchUploadModule = BdApi.findModuleByProps("instantBatchUpload");
@@ -143,7 +142,6 @@ module.exports = (() => {
 
 						this.props.message.apateHiddenMessage = state.message === undefined ? null : state.message;
 						this.props.message.apateUsedPassword = state.password;
-
 						this.setState({ processing: false, message: state.message, usedPassword: state.password });
 					};
 
@@ -186,7 +184,7 @@ module.exports = (() => {
 				}
 
 				acceptE2E(userId, pubKey) {
-					if (userId === GetCurrentUserModule.getCurrentUser()?.id) {
+					if (userId === UserStoreModule.getCurrentUser()?.id) {
 						BdApi.alert("You can't accept yourself!", "Please wait until the other user has accepted your request.");
 						return;
 					}
@@ -212,11 +210,11 @@ module.exports = (() => {
 							});
 						});
 
-						BdApi.showToast(`Set up End to End encryption with ${GetCurrentUserModule.getUser(userId).username}!`, { type: "success" });
+						BdApi.showToast(`Set up End to End encryption with ${UserStoreModule.getUser(userId).username}!`, { type: "success" });
 					}
 				}
 				processStrongPass(userId, encryptedStrong) {
-					if (!this.props.apate.usesE2E(userId) && userId !== GetCurrentUserModule.getCurrentUser()?.id && this.props.apate.settings.pendingList.includes(userId)) {
+					if (!this.props.apate.usesE2E(userId) && userId !== UserStoreModule.getCurrentUser()?.id && this.props.apate.settings.pendingList.includes(userId)) {
 						let privateKey = cryptico.generateRSAKey(this.props.apate.settings.privKey, 1024);
 						let strongPassword = cryptico.decrypt(encryptedStrong.replace("[strongPass]", ""), privateKey).plaintext;
 
@@ -247,39 +245,7 @@ module.exports = (() => {
 
 					let author = this.props.message.author;
 					// Convert emojis in Apate's old format for backward compatibility
-					if (channel.type === DiscordConstants.ChannelTypes.DM) {
-						if (/\[pubKey\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
-							//Is e2e request, need better formatting here (button etc.)
-							let requestMessage = BdApi.React.createElement("div", {
-								class: "apateE2ERequestMessage",
-							}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
-								BdApi.React.createElement(ButtonLooksModule.default, {
-									color: ButtonLooksModule.ButtonColors.BRAND,
-									onClick: () => this.acceptE2E(author.id, this.state.message),
-								}, "Accept"),
-							)
-							return requestMessage;
-						}
-						else if (/\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
-							//Is e2e confirm, need better formatting here (button etc.)
-							let acceptMessage = BdApi.React.createElement("div", {
-								class: "apateE2ERequestMessage",
-							}, BdApi.React.createElement("b", {}, author.username), ` accepted the End to End encryption!`);
-							this.processStrongPass(author.id, this.state.message);
-							return acceptMessage;
-						}
-						else if (this.state.message === "[deleteE2E]") {
-							//delete confirm
-							let deleteMessage = BdApi.React.createElement("div", {
-								class: "apateE2ERequestMessage",
-							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`,
-								BdApi.React.createElement(ButtonLooksModule.default, {
-									color: ButtonLooksModule.ButtonColors.RED,
-									onClick: () => this.props.apate.displayE2EPopUp(author.id, true, false),
-								}, "Turn off as well"))
-							return deleteMessage;
-						}
-					}
+					
 					m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
 						if (ext) {
 							return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
@@ -358,19 +324,52 @@ module.exports = (() => {
 
 						content = analyseChildren(content);
 					}
+					if (channel.type === DiscordConstants.ChannelTypes.DM) {
+						if (/\[pubKey\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
+							//Is e2e request, need better formatting here (button etc.)
+							let requestMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` wants to set up End to End encryption for this channel!`,
+								BdApi.React.createElement(ButtonLooksModule.default, {
+									color: ButtonLooksModule.ButtonColors.BRAND,
+
+									onClick: () => this.acceptE2E(author.id, this.state.message),
+								}, "Accept"),
+							)
+							
+							return requestMessage;
+						}
+						else if (/\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
+							//Is e2e confirm, need better formatting here (button etc.)
+							let acceptMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` accepted the End to End encryption!`);
+							this.processStrongPass(author.id, this.state.message);
+							return acceptMessage;
+						}
+						else if (this.state.message === "[deleteE2E]") {
+							//delete confirm
+							let deleteMessage = BdApi.React.createElement("div", {
+								class: "apateE2ERequestMessage",
+							}, BdApi.React.createElement("b", {}, author.username), ` has turned off E2E for this chat!`,
+								BdApi.React.createElement(ButtonLooksModule.default, {
+									color: ButtonLooksModule.ButtonColors.RED,
+									onClick: () => this.props.apate.displayE2EPopUp(author.id, true, false),
+								}, "Turn off as well"))
+							return deleteMessage;
+						}
+					}
+
 					return content;
-
-
 				}
 
 				render() {
 					let useBorder = this.formatHiddenMessage()?.props?.class !== "apateE2ERequestMessage";
-					return this.state.message === null ?
-						null :
-						BdApi.React.createElement("div",
-							{ className: `${useBorder ? "apateHiddenMessage border" : "apateE2ERequestMessageWrapper"} ${this.state.processing ? "loading" : ""}` },
-							this.formatHiddenMessage()
-						);
+					let message = BdApi.React.createElement("div",
+						{ className: `${useBorder ? "apateHiddenMessage border" : "apateE2ERequestMessageWrapper"} ${this.state.processing ? "loading" : ""}` },
+						this.formatHiddenMessage()
+					);
+					return this.state.message === null ? null : message
 				}
 			}
 
@@ -1109,7 +1108,7 @@ module.exports = (() => {
 						this.settings.hiddenAboutMeText = aboutMeInput.value;
 						this.saveSettings(this.settings);
 
-						let bio = GetCurrentUserModule.getCurrentUser().bio;
+						let bio = UserStoreModule.getCurrentUser().bio;
 
 						AccountUpdateModule.saveAccountChanges({ bio });
 					})
@@ -1218,7 +1217,7 @@ module.exports = (() => {
 					/*	try to automatically set the about me message, in case the user installed 
 						the plugin on a new PC or changed the about me message on a different PC	*/
 					try {
-						let bio = GetCurrentUserModule.getCurrentUser().bio;
+						let bio = UserStoreModule.getCurrentUser().bio;
 						let stegCloak = new StegCloak();
 						let hiddenAboutMe = stegCloak.reveal(bio, "");
 						this.settings.hiddenAboutMeText = hiddenAboutMe;
@@ -1230,7 +1229,7 @@ module.exports = (() => {
 
 
 					for (const author of config.info.authors) {
-						if (author.discord_id === GetCurrentUserModule.getCurrentUser()?.id) {
+						if (author.discord_id === UserStoreModule.getCurrentUser()?.id) {
 							this.settings.devMode = true;
 						}
 					}
@@ -1578,7 +1577,7 @@ module.exports = (() => {
 								console.log("Adding " + id + " to the pending list.")
 								this.settings.pendingList.push(id);
 								this.saveSettings(this.settings)
-								BdApi.showToast(`Sent an E2E request to ${GetCurrentUserModule.getUser(id).username}!`, { type: "success" });
+								BdApi.showToast(`Sent an E2E request to ${UserStoreModule.getUser(id).username}!`, { type: "success" });
 							},
 						});
 					} else {
@@ -1608,7 +1607,7 @@ module.exports = (() => {
 										});
 									});
 								}
-								BdApi.showToast(`Turned off the E2E encryption with ${GetCurrentUserModule.getUser(id).username}!`, { type: "error" });
+								BdApi.showToast(`Turned off the E2E encryption with ${UserStoreModule.getUser(id).username}!`, { type: "error" });
 							},
 						});
 					}
