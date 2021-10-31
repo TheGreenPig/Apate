@@ -1320,7 +1320,7 @@ module.exports = (() => {
 					}
 					let coverMessage, hiddenMessage, invalidEndString;
 					
-					if(!this.usesE2E) {
+					if(!this.usesE2E || apateRegexResult.length > 0) {
 						let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
 						
 						coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
