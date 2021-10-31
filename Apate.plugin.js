@@ -1,7 +1,5 @@
 /**
  * @name Apate
- * @version 1.4.6
- * @description Hide your secret Discord messages in other messages!
  * @author TheGreenPig, fabJunior, Aster
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
@@ -46,17 +44,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.6",
+			version: "1.4.7",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Fixed",
-				type: "fixed",
+				title: "Added",
+				type: "added",
 				items: [
-					"Fixed the Error where Discord would crash when trying to set up End to End encryption.",
+					"Added feature to send messsages with no cover message in DMs with E2E. When you write a message, press Enter to send the message unencrypted and Ctrl+Enter to send it E2E encrypted.",
 				]
 			},
 		],
@@ -1306,7 +1304,7 @@ module.exports = (() => {
 				}
 
 				/**
-				 * Takes an input and eturns null if the input doesn't match the apate regex and thus the message isn't correctly formed
+				 * Takes an input and returns null if the input doesn't match the apate regex and thus the message isn't correctly formed
 				 * otherwise returns an object with the cover message and hidden message
 				 * @param  {string}		input
 				 * @return {?Object}			null if the input is invalid, otherwise {coverMessage: String, hiddenMessage: String}
@@ -1316,18 +1314,25 @@ module.exports = (() => {
 
 					apateRegexResult = [...apateRegexResult];
 
-					if (!apateRegexResult.length) {
+					if (!apateRegexResult.length && !this.usesE2E()) {
 						BdApi.alert("Invalid input!", "Something went wrong... Mark your hidden message with stars `*` like this: `cover message *hidden message*`!");
 						return null;
 					}
-
-					let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
-
-					let coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
-					let hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
-					let invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
-
-					if (!coverMessage && !this.settings.devMode) {
+					let coverMessage, hiddenMessage, invalidEndString;
+					
+					if(!this.usesE2E) {
+						let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
+						
+						coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
+						hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
+						invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
+					}else {
+						coverMessage ="";
+						hiddenMessage = input;
+						invalidEndString ="";
+					}
+					
+					if (!coverMessage && !this.settings.devMode && !this.usesE2E()) {
 						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `cover message *hidden message*`");
 						return null;
 					}
@@ -1928,7 +1933,6 @@ module.exports = (() => {
 				}
 
 				patchMessages() {
-
 					BdApi.Patcher.after("Apate", MessageContent, "type", (_, [props], ret) => {
 						if (props.className && (props.className.includes("repliedTextContent-") || props.className.includes("threadMessageAccessoryContent-"))) {
 							return
