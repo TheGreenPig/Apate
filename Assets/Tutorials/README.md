@@ -31,6 +31,10 @@ Hold shift and hover over a message with a hidden Apate message. Press the Apate
 
 To turn on End to End ecryption, click the Lock icon in the top left corner. This only works in DMs. Then you will have to wait until the other user accepts your reuest. As soon as they do, all the hidden messages you send will be encrypted with a strong Password only you two have.
 
+**Why is this useful?**
+
+End to end encryption let's you set up a strong password and sending it securely. If you set up End to End encryption and your account gets hacked or accessed from a different PC for example, all of the hidden messages will be unreadable and secure. Only if someone has access to the Apate config file they can decrypt the messages so **do not share the config file with anyone!**
+ 
 Note:
 >- To turn off End to End encryption, click the Lock again. **ALL YOUR ENCRYPTED MESSAGES WILL BE LOST** so be careful with this.
 >- If you accepted the E2E request and can't see the messages the other person already sent, you might have to restart Discord (<kbd>Ctrl</kbd> + <kbd>R</kbd>)
