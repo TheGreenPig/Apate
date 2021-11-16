@@ -44,17 +44,19 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.7",
+			version: "1.4.8",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Added",
-				type: "added",
+				title: "Fixed",
+				type: "fixed",
 				items: [
-					"Added feature to send messsages with no cover message in DMs with E2E. When you write a message, press Enter to send the message unencrypted and Ctrl+Enter to send it E2E encrypted.",
+					"Fixed some syle issues to (hopefully) support more themes.",
+					"Fixed problems when turning on encryption, but not choosing a password.",
+					"Small typo.",
 				]
 			},
 		],
@@ -823,7 +825,10 @@ module.exports = (() => {
 					}
 
 					let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
-					li.setAttribute('style', `color:${color}`);
+					//Dont force the own password to be white
+					if(color!=="white") {
+						li.setAttribute('style', `color:${color}`);
+					}
 					ul.appendChild(li);
 				}
 				removePassword(password) {
