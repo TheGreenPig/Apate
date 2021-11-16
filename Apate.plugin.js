@@ -109,7 +109,7 @@ module.exports = (() => {
 			const EmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName);
 			const EndEditMessageModule = BdApi.findModuleByProps("endEditMessage");
 			const GetChannelModule = ZLibrary.DiscordModules.ChannelStore;
-			const GetMessageModule = BdApi.findModuleByProps("getMessage");
+			const GetMessageModule = ZLibrary.DiscordModules.MessageStore;
 			const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 			const InstantBatchUploadModule = BdApi.findModuleByProps("instantBatchUpload");
 			const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
@@ -496,27 +496,20 @@ module.exports = (() => {
 					margin-bottom: 10px;
 				}
 				.btn-add{
-					background-color: rgb(12, 187, 50);
-					font-size: 1em;
-					color: white;
-					padding: 0.2em;
-					border-radius: .15rem;
-				}
-				.downloadListButton{
-					background-color: Teal;
-					color: white;
+					background-color: var(--brand-experiment);
+					color: var(--text-normal);
 					padding: 0.3em;
 					font-size: 1em;
 					margin-bottom: 10px;
 					border-radius: .25rem;
 				}
-				.uploadListButton{
-					background-color: Teal;
-					color: white;
+				.downloadUploadListStyle{
+					background-color: var(--background-accent);
+					color: var(--text-normal);
 					padding: 0.3em;
 					font-size: 1em;
 					margin-bottom: 10px;
-					border-radius: .15rem;
+					border-radius: .25rem;
 				}
 				.btn-passwords{
 					font-size: 1.3em;
@@ -537,20 +530,17 @@ module.exports = (() => {
 					padding: 0.4em 0.5em;
 					line-height: normal;
 					margin-bottom: 10px;
-					background-color: #000;
-					border: 1px solid
-					rgba(0,0,0,.125);
-					border-top-left-radius: .25rem;
-					border-top-right-radius: .25rem;
-					border-bottom-left-radius: .25rem;
-					border-bottom-right-radius: .25rem;
+					background-color: var(--background-secondary);
+					border: 1px solid rgba(0,0,0,.125);
+					border-radius: .25rem;
 				}
 				.ownPassword{
-					color: white;
+					color: var(--text-normal);
 					background-color: transparent;
+					border: none;
 				}
 				.selectedPassword{
-					background-color: white;
+					background-color: var(--background-accent);
 				}
 			`;
 
@@ -846,7 +836,7 @@ module.exports = (() => {
 					this.updatePasswords();
 				}
 				updatePasswords() {
-					if (this.settings.passwords[0] !== this.settings.password) {
+					if (this.settings.passwords[0] !== this.settings.password && this.settings.password !== "") {
 						if (this.settings.passwords.indexOf(this.settings.password) !== -1) {
 							this.removePassword(this.settings.password);
 						}
@@ -1016,9 +1006,9 @@ module.exports = (() => {
 					  <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
 					  <div class="input-group-append">
 						<button class="btn-add" type="button">Add Password</button>
-						<button class= "downloadListButton" onclick="document.getElementById('file-output').click();">Download Password List</button>
+						<button class= "downloadListButton downloadUploadListStyle" onclick="document.getElementById('file-output').click();">Download Password List</button>
 						<a id="file-output" href="data:application/xml;charset=utf-8,${encodeURIComponent(this.settings.passwords.join("\r\n"))}" download="ApatePasswordList.txt"></a>
-						<button class="uploadListButton" onclick="document.getElementById('file-input').click();">Import Password List</button>
+						<button class="uploadListButton downloadUploadListStyle" onclick="document.getElementById('file-input').click();">Import Password List</button>
 						<input id="file-input" type="file" name="name" style="display: none;" accept=".txt"/>
   
 					  </div>
@@ -1333,7 +1323,7 @@ module.exports = (() => {
 					}
 					
 					if (!coverMessage && !this.settings.devMode && !this.usesE2E()) {
-						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Synatax: `cover message *hidden message*`");
+						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Syntax: `cover message *hidden message*`");
 						return null;
 					}
 
@@ -1420,9 +1410,9 @@ module.exports = (() => {
 						noEncrypt.setAttribute('id', "");
 						noEncrypt.classList.add("passwordLi");
 						noEncrypt.textContent = "-No Encryption-";
-						noEncrypt.setAttribute('style', `color:SlateGray;`);
+						noEncrypt.setAttribute('style', `color:var(--text-normal)`);
 
-						if (this.settings.encryption === 1) {
+						if (this.settings.encryption === 1 || this.settings.password ==="") {
 							noEncrypt.classList.add("selectedPassword");
 						}
 						noEncrypt.addEventListener("click", (e) => {
@@ -1441,7 +1431,7 @@ module.exports = (() => {
 
 							let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
 							if (i === 0) {
-								li.setAttribute('style', `color:SlateGray;`);
+								li.setAttribute('style', `color:var(--text-normal)`);
 								if (this.settings.encryption === 0) {
 									li.classList.add("selectedPassword");
 								}
