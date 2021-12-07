@@ -1892,7 +1892,6 @@ module.exports = (() => {
 					let patchedSendMessage = (argsMessageIdx) => {
 
 						return async (_, args, originalFunction) => {
-							console.log(args)
 							if (this.hideNextMessage) {
 								this.hideNextMessage = false;
 
