@@ -44,7 +44,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.8",
+			version: "1.4.9",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -54,9 +54,8 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Fixed some syle issues to (hopefully) support more themes.",
-					"Fixed problems when turning on encryption, but not choosing a password.",
-					"Small typo.",
+					"Copy button in settings",
+					"Fixed problems with the new file Upload",
 				]
 			},
 		],
@@ -117,7 +116,7 @@ module.exports = (() => {
 			const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
 			const MiniPopover = BdApi.findModule((m) => m?.default?.displayName === "MiniPopover");
 			const RenderMessageMarkupToASTModule = BdApi.findModuleByProps("renderMessageMarkupToAST");
-			const SendMessageModule = BdApi.findModuleByProps('sendMessage');
+			const SendMessageModule = BdApi.findModuleByProps('sendMessage', 'sendBotMessage');
 			const SlateTextAreaClassModule = BdApi.findModuleByProps('slateTextArea').slateTextArea;
 			const StartEditMessageModule = BdApi.findModuleByProps("startEditMessage");
 			const TooltipContainer = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
@@ -245,7 +244,7 @@ module.exports = (() => {
 
 					let author = this.props.message.author;
 					// Convert emojis in Apate's old format for backward compatibility
-					
+
 					m.content = m.content.replace(emojiRegex, (match, name, id, ext) => {
 						if (ext) {
 							return `<${ext === "gif" ? "a" : ""}:${name}:${id}>`;
@@ -336,7 +335,7 @@ module.exports = (() => {
 									onClick: () => this.acceptE2E(author.id, this.state.message),
 								}, "Accept"),
 							)
-							
+
 							return requestMessage;
 						}
 						else if (/\[strongPass\][a-zA-Z\d+=?/]+/g.test(this.state.message)) {
@@ -373,7 +372,7 @@ module.exports = (() => {
 				}
 			}
 
-			let apateCSS = 
+			let apateCSS =
 				`.apateKeyButtonContainer {
 					display: flex;
 					justify-content: center;
@@ -777,7 +776,7 @@ module.exports = (() => {
 					copyButton.classList.add("btn-passwords");
 					copyButton.setAttribute("title", "Copy Password")
 					copyButton.addEventListener("click", () => {
-						navigator.clipboard.writeText(item);
+						DiscordNative.clipboard.copy(item);
 						BdApi.showToast("Copied password!", { type: "success" });
 					});
 
@@ -826,7 +825,7 @@ module.exports = (() => {
 
 					let color = this.settings.passwordColorTable[this.settings.passwords.indexOf(item)]
 					//Dont force the own password to be white
-					if(color!=="white") {
+					if (color !== "white") {
 						li.setAttribute('style', `color:${color}`);
 					}
 					ul.appendChild(li);
@@ -1196,7 +1195,6 @@ module.exports = (() => {
 				async onStart() {
 
 					this.settings = this.loadSettings(this.default);
-
 					//external link
 					//  if (typeof StegCloak === "undefined") {
 					// 	 BdApi.linkJS("Apate", "https://cdn.jsdelivr.net/gh/KuroLabs/stegcloak/dist/stegcloak.min.js");
@@ -1314,19 +1312,19 @@ module.exports = (() => {
 						return null;
 					}
 					let coverMessage, hiddenMessage, invalidEndString;
-					
-					if(!this.usesE2E || apateRegexResult.length > 0) {
+
+					if (!this.usesE2E || apateRegexResult.length > 0) {
 						let lastRegexMatch = apateRegexResult[apateRegexResult.length - 1];
-						
+
 						coverMessage = lastRegexMatch.input.slice(0, lastRegexMatch.index).trim();
 						hiddenMessage = lastRegexMatch[0].slice(1, -1).trim();
 						invalidEndString = lastRegexMatch.input.slice(lastRegexMatch.index + lastRegexMatch[0].length).trim();
-					}else {
-						coverMessage ="";
+					} else {
+						coverMessage = "";
 						hiddenMessage = input;
-						invalidEndString ="";
+						invalidEndString = "";
 					}
-					
+
 					if (!coverMessage && !this.settings.devMode && !this.usesE2E()) {
 						BdApi.alert("Invalid input!", "The Cover message must have at least one non-whitespace character (This is to prevent spam). Syntax: `cover message *hidden message*`");
 						return null;
@@ -1417,7 +1415,7 @@ module.exports = (() => {
 						noEncrypt.textContent = "-No Encryption-";
 						noEncrypt.setAttribute('style', `color:var(--text-normal)`);
 
-						if (this.settings.encryption === 1 || this.settings.password ==="") {
+						if (this.settings.encryption === 1 || this.settings.password === "") {
 							noEncrypt.classList.add("selectedPassword");
 						}
 						noEncrypt.addEventListener("click", (e) => {
@@ -1892,7 +1890,9 @@ module.exports = (() => {
 					});
 
 					let patchedSendMessage = (argsMessageIdx) => {
+
 						return async (_, args, originalFunction) => {
+							console.log(args)
 							if (this.hideNextMessage) {
 								this.hideNextMessage = false;
 
@@ -1907,6 +1907,7 @@ module.exports = (() => {
 								if (usesE2E) {
 									password = this.getStrong();
 								}
+
 								this.hideMessage(args[argsMessageIdx].content, password).then(stegCloakedMsg => {
 									args[argsMessageIdx].content = stegCloakedMsg;
 									originalFunction(...args);
@@ -1924,7 +1925,7 @@ module.exports = (() => {
 					}
 
 					BdApi.Patcher.instead("Apate", SendMessageModule, "sendMessage", patchedSendMessage(1).bind(this));
-					BdApi.Patcher.instead("Apate", InstantBatchUploadModule, "upload", patchedSendMessage(3).bind(this));
+					BdApi.Patcher.instead("Apate", InstantBatchUploadModule, "uploadFiles", patchedSendMessage(3).bind(this));
 				}
 
 				patchMessages() {
@@ -1945,7 +1946,7 @@ module.exports = (() => {
 					BdApi.Patcher.after("Apate", MiniPopover, "default", (_, [props], ret) => {
 						const args = props.children[1]?.props;
 
-						if (!args || !this.settings.showInfo || !args.message.apateHiddenMessage || typeof (args.message.apateHiddenMessage) === 'undefined') {
+						if (!args || !this.settings.showInfo || !args.message?.apateHiddenMessage || typeof (args.message.apateHiddenMessage) === 'undefined') {
 							return;
 						}
 						if (!args.expanded) return;
