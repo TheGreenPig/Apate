@@ -44,7 +44,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.9",
+			version: "1.4.10",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -54,8 +54,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Copy button in settings",
-					"Fixed problems with the new file Upload",
+					"Fixed custom About Me page.",
 				]
 			},
 		],
@@ -75,29 +74,25 @@ module.exports = (() => {
 
 
 	return !global.ZeresPluginLibrary ? class {
-		constructor() { this._config = config; }
-		getName() { return config.info.name; }
-		getAuthor() { return config.info.authors.map(a => a.name).join(", "); }
-		getDescription() { return config.info.description; }
-		getVersion() { return config.info.version; }
 		load() {
-			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for **${config.info.name}** is missing. Please click Download Now to install it.`, {
-				confirmText: "Download Now",
+			BdApi.showConfirmationModal("Library plugin is needed",
+				`The library plugin needed for AQWERT'sPluginBuilder is missing. Please click Download Now to install it.`, {
+				confirmText: "Download",
 				cancelText: "Cancel",
 				onConfirm: () => {
-					require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js", async (error, response, body) => {
-						if (error) return require("electron").shell.openExternal("https://betterdiscord.app/Download?id=9");
-						await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
+					request.get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js", (error, response, body) => {
+						if (error)
+							return electron.shell.openExternal("https://betterdiscord.net/ghdl?url=https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+
+						fs.writeFileSync(path.join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body);
 					});
 				}
 			});
-		}
-		start() { }
-		stop() { }
+		};
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
 			//All modules needed. All are found at the start because finding modules can be resource intensive.
-			const AccountUpdateModule = BdApi.findModuleByProps('setPendingBio');
+			const AccountUpdateModule = BdApi.findModuleByProps('saveAccountRequest');
 			const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
 			const ButtonClassesModule = BdApi.findModuleByProps('button', 'contents');
 			const ButtonContainerClassesModule = BdApi.findModuleByProps('buttonContainer', 'buttons');
@@ -2039,7 +2034,7 @@ module.exports = (() => {
 							return;
 						}
 
-					});
+					});	
 
 					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
 						if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
@@ -2050,9 +2045,8 @@ module.exports = (() => {
 
 						let oldBio = patch.bio.replace(/[\u200C\u200D\u2061\u2062\u2063\u2064\u200B]*/g, "");
 
-						if (!oldBio.trim().includes(" ")) {
-							BdApi.alert("Cover message only one word.", "Please use at least two words in your About Me cover message for Apate to work.");
-							return
+						if (!/\S +\S/g.test(oldBio)) {
+							oldBio += " \u200b";
 						}
 
 						let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
