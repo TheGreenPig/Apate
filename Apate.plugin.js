@@ -54,7 +54,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Fixed custom About Me page.",
+					"First fixes of the big Discord update. I don't think nearly everything is fixed yet, so I haven't updated the version yet.",
 				]
 			},
 		],
@@ -113,7 +113,7 @@ module.exports = (() => {
 			const EmojiModule = BdApi.findModule(m => m.Emoji && m.default.getByName);
 			const EndEditMessageModule = BdApi.findModuleByProps("endEditMessage");
 			const GetChannelModule = ZLibrary.DiscordModules.ChannelStore;
-			const GetMessageModule = ZLibrary.DiscordModules.MessageStore;
+			const GetMessageModule =  BdApi.findModuleByProps("hasCurrentUserSentMessage", "getMessage");
 			const HeaderBar = BdApi.findModule(m => m?.default?.displayName === "HeaderBar");
 			const InstantBatchUploadModule = BdApi.findModuleByProps("instantBatchUpload");
 			const MessageContent = BdApi.findModule(m => m.type?.displayName === "MessageContent");
@@ -199,7 +199,7 @@ module.exports = (() => {
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
-						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
+						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
@@ -228,7 +228,7 @@ module.exports = (() => {
 							this.props.apate.settings.pendingList.splice(index, 1);
 						}
 						this.props.apate.saveSettings(this.props.apate.settings);
-						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
+						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
 					}
 				}
 				formatHiddenMessage() {
@@ -897,7 +897,7 @@ module.exports = (() => {
 
 					//Thanks Strencher <3
 					ComponentDispatchModule.ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
-					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-"))?.forceUpdate();
+					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
 
 
 				}
@@ -1575,7 +1575,7 @@ module.exports = (() => {
 										el.classList.remove("calculating");
 									});
 								});
-								console.log("Adding " + id + " to the pending list.")
+								// console.log("Adding " + id + " to the pending list.")
 								this.settings.pendingList.push(id);
 								this.saveSettings(this.settings)
 								BdApi.showToast(`Sent an E2E request to ${UserStoreModule.getUser(id).username}!`, { type: "success" });
@@ -1596,7 +1596,7 @@ module.exports = (() => {
 									return value.id !== id;
 								});
 								this.saveSettings(this.settings);
-								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-3qD0b-")).forceUpdate();
+								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
 										SendMessageModule.sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
@@ -2022,6 +2022,7 @@ module.exports = (() => {
 					});
 
 					BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
+
 						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
 						try {
 							let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
