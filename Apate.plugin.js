@@ -44,7 +44,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.10",
+			version: "1.4.11",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -54,7 +54,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"First fixes of the big Discord update. I don't think nearly everything is fixed yet, so I haven't updated the version yet.",
+					"I did some basic testing and it looks like it works for the most part. If you encounter an issue, please contact me."
 				]
 			},
 		],
@@ -2022,7 +2022,6 @@ module.exports = (() => {
 					});
 
 					BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
-
 						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
 						try {
 							let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
