@@ -1010,7 +1010,7 @@ module.exports = (() => {
 					let passwordListDiv = document.createElement("div");
 
 					passwordListDiv.innerHTML = ` <div class="input-group">
-					  <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidate" required placeholder="password1234" maxlength="50">
+					  <input type="text" class="inputDefault-3FGxgL input-2g-os5 form-control" id="candidate" required placeholder="password1234" maxlength="50">
 					  <div class="input-group-append">
 						<button class="btn-add" type="button">Add Password</button>
 						<button class= "downloadListButton downloadUploadListStyle" onclick="document.getElementById('file-output').click();">Download Password List</button>
@@ -1034,7 +1034,7 @@ module.exports = (() => {
 
 
 					let text = document.createElement("div");
-					text.className = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ modeDefault-3a2Ph1";
+					text.className = "colorStandard-21JIj7 size14-3fJ-ot description-30xx7u formText-2ngGjI modeDefault-2fEh7a";
 					text.textContent = `Here you can manage your passwords. Apate will go through every password and try to use it on a hidden message. 
 										  The more passwords are in your list, the longer it will take to display every message. The higher up a password is, the more priority it has.`;
 
@@ -1046,12 +1046,12 @@ module.exports = (() => {
 					let encryptionDiv = document.createElement("div");
 					encryptionDiv.classList.add("apateEncrpytionSettings")
 					let passwordTitle = document.createElement("label");
-					passwordTitle.classList = "title-31JmR4";
+					passwordTitle.classList = "title-2dsDLn";
 					passwordTitle.textContent = "Enter password:"
 
 					encryptionDiv.appendChild(passwordTitle);
 					encryptionDiv.innerHTML += ` <div class="input-group">
-					  <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
+					  <input type="text" class="inputDefault-3FGxgL input-2g-os5 form-control" id="candidateOwnPass" required placeholder="password1234" maxlength="50" title="Password">
 					  <button class="btn-generate btn-add" type="button">Generate Password</button>
   
   
@@ -1070,7 +1070,7 @@ module.exports = (() => {
 					})
 
 					let passwordSubTitle = document.createElement("div");
-					passwordSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
+					passwordSubTitle.classList = "colorStandard-21JIj7 size14-3fJ-ot description-30xx7u formText-2ngGjI marginBottom8-emkd0_ modeDefault-2fEh7a";
 					passwordSubTitle.textContent = "If encryption is turned off this field will be ignored. Only characters a-Z, 0-9, space and special characters(:._, etc.). Tip: Right click the Key, to encrpyt a message with a certian password only once."
 
 					encryptionDiv.appendChild(passwordSubTitle);
@@ -1082,17 +1082,17 @@ module.exports = (() => {
 					let aboutMeDiv = document.createElement("div");
 					aboutMeDiv.classList.add("apateAboutMeSettings");
 					let aboutMeTitle = document.createElement("label");
-					aboutMeTitle.classList = "title-31JmR4";
+					aboutMeTitle.classList = "title-2dsDLn";
 					aboutMeTitle.textContent = "Hidden About Me Message:"
 
 					let aboutMeSubTitle = document.createElement("div");
-					aboutMeSubTitle.classList = "colorStandard-2KCXvj size14-e6ZScH description-3_Ncsb formText-3fs7AJ marginBottom8-AtZOdT modeDefault-3a2Ph1";
+					aboutMeSubTitle.classList = "colorStandard-21JIj7 size14-3fJ-ot description-30xx7u formText-2ngGjI marginBottom8-emkd0_ modeDefault-2fEh7a";
 					aboutMeSubTitle.textContent = "Choose a message that gets hidden in your About Me page and only Apate users can read."
 
 					aboutMeDiv.appendChild(aboutMeTitle)
 
 					aboutMeDiv.innerHTML += ` <div class="input-group">
-					  <input type="text" class="inputDefault-_djjkz input-cIJ7To form-control" required placeholder="Hidden Message!" maxlength="50" title="Hidden About Me message">
+					  <input type="text" class="inputDefault-3FGxgL input-2g-os5 form-control" required placeholder="Hidden Message!" maxlength="50" title="Hidden About Me message">
 					</div>`
 
 					let aboutMeInput = aboutMeDiv.querySelector("input");
