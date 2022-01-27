@@ -44,7 +44,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.4.11",
+			version: "1.5.0",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -54,7 +54,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"I did some basic testing and it looks like it works for the most part. If you encounter an issue, please contact me."
+					"Fixed key not getting displayed."
 				]
 			},
 		],
@@ -80,12 +80,12 @@ module.exports = (() => {
 		getDescription() { return config.info.description; }
 		getVersion() { return config.info.version; }
 		load() {
-			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for ${config.info.name} is missing. Please click Download Now to install it.`, {
+			BdApi.showConfirmationModal("Library Missing", `The library plugin needed for **${config.info.name}** is missing. Please click Download Now to install it.`, {
 				confirmText: "Download Now",
 				cancelText: "Cancel",
 				onConfirm: () => {
 					require("request").get("https://rauenzi.github.io/BDPluginLibrary/release/0PluginLibrary.plugin.js", async (error, response, body) => {
-						if (error) return require("electron").shell.openExternal("https://betterdiscord.net/ghdl?url=https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js");
+						if (error) return require("electron").shell.openExternal("https://betterdiscord.app/Download?id=9");
 						await new Promise(r => require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"), body, r));
 					});
 				}
@@ -399,7 +399,7 @@ module.exports = (() => {
 				}
 				.apateEncryptionKey {
 					transition: all 300ms ease;
-					font-size: 1rem;
+					font-size: 0.8rem;
 					width: 3em;
 					height: 100%;
 				}
@@ -1785,8 +1785,7 @@ module.exports = (() => {
 						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
 						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
 						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
-						const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
-
+						// const buttons = textAreaInner.props.children.find(c => c?.props?.className?.includes("buttons-"));
 						let keyButton = ApateKeyButton;
 
 						if (props.type === "edit") {
@@ -1799,10 +1798,7 @@ module.exports = (() => {
 								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
 								break;
 							default:
-								buttons.props.children = [
-									...buttons.props.children,
-									keyButton
-								]
+								textAreaInner.props.children.splice(textAreaInner.props.children.length, 0, keyButton);
 								break;
 						}
 
