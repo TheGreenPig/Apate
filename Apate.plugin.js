@@ -45,7 +45,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.1",
+			version: "1.5.2",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -55,7 +55,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Place key left of the send button."
+					"Resolve crashing issue"
 				]
 			},
 		],
