@@ -9,7 +9,6 @@
 const request = require("request");
 const fs = require("fs");
 const path = require("path");
-const DeveloperBadgesPlugin = require("./DeveloperBadges.plugin");
 /* 
  * BetterDiscord BdApi documentation:
  *   https://github.com/BetterDiscord/BetterDiscord/wiki/Creating-Plugins
