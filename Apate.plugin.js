@@ -1783,7 +1783,7 @@ module.exports = (() => {
 							//can always send in DMs
 							canSend = true;
 						}
-						buttons.props.renderApateButton = canSend;
+						buttons.props.renderApateButton = canSend && this.settings.keyPosition!==1;
 						if (!canSend) {
 							return;
 						}
@@ -1798,10 +1798,11 @@ module.exports = (() => {
 						switch (this.settings.keyPosition) {
 							case 1: // LEFT
 								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
+								BdApi.Patcher.unpatchAll("ApateKeyButton");
 								break;
 							default:
 								//now doesn't get appended 
-								BdApi.Patcher.after("Apate", ChannelTextAreaButtons, "type", (_, [propsValue], returnValue) => {
+								BdApi.Patcher.after("ApateKeyButton", ChannelTextAreaButtons, "type", (_, [propsValue], returnValue) => {
 									let children = returnValue.props.children;
 									if (!children.some(child => child?.key === "ApateKeyButton") && propsValue.renderApateButton) children.splice(children.length - (children.some(child => child?.type === ChannelSendMessageButton)&&1), 0, keyButton);
 								})
