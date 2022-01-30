@@ -8,6 +8,7 @@
 const request = require("request");
 const fs = require("fs");
 const path = require("path");
+const DeveloperBadgesPlugin = require("./DeveloperBadges.plugin");
 /* 
  * BetterDiscord BdApi documentation:
  *   https://github.com/BetterDiscord/BetterDiscord/wiki/Creating-Plugins
@@ -1760,6 +1761,11 @@ module.exports = (() => {
 							)
 						)
 					);
+					BdApi.Patcher.after("Apate", ChannelTextAreaButtons, "type", (_, [props], ret) => {
+						let children = ret.props.children;
+						if (!children.some(child => child?.key === "ApateKeyButton") && props.renderApateButton) children.splice(children.length - (children.some(child => child?.type === ChannelSendMessageButton)&&1), 0, ApateKeyButton);
+					})
+
 
 					BdApi.Patcher.after("Apate", ChannelTextAreaContainerModule.type, "render", (_, [props], ret) => {
 						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
@@ -1795,18 +1801,8 @@ module.exports = (() => {
 							keyButton = BdApi.React.cloneElement(ApateKeyButton);
 							keyButton.props.className += " edit";
 						}
-						switch (this.settings.keyPosition) {
-							case 1: // LEFT
-								textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
-								BdApi.Patcher.unpatchAll("ApateKeyButton");
-								break;
-							default:
-								//now doesn't get appended 
-								BdApi.Patcher.after("ApateKeyButton", ChannelTextAreaButtons, "type", (_, [propsValue], returnValue) => {
-									let children = returnValue.props.children;
-									if (!children.some(child => child?.key === "ApateKeyButton") && propsValue.renderApateButton) children.splice(children.length - (children.some(child => child?.type === ChannelSendMessageButton)&&1), 0, keyButton);
-								})
-								break;
+						if(this.settings.keyPosition === 1) {
+							textAreaInner.props.children.splice(textAreaInner.props.children.indexOf(textArea) - 1, 0, keyButton);
 						}
 
 						let parent = textArea.ref.current?.parentElement;
