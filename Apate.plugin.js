@@ -4,6 +4,7 @@
  * @source https://github.com/TheGreenPig/Apate/blob/main/Apate.plugin.js
  * @updateUrl https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js
  * @authorLink https://github.com/TheGreenPig
+ * @invite JsqBVSCugb
  */
 const request = require("request");
 const fs = require("fs");
