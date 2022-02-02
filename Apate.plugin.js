@@ -1998,7 +1998,6 @@ module.exports = (() => {
 
 							if (!aboutMeCache[bioHash]) {
 								const stegCloak = new StegCloak();
-								console.log(stegCloak);
 								let hiddenMessage = stegCloak.reveal(bio.substring(1), "").trim();
 								aboutMeCache[hashCode(bio)] = hiddenMessage;
 							}
