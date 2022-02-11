@@ -45,7 +45,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.3",
+			version: "1.5.4",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -55,7 +55,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Fixed hidden about me."
+					"Fixed key not getting displayed."
 				]
 			},
 		],
@@ -1224,7 +1224,6 @@ module.exports = (() => {
 
 					}
 
-
 					for (const author of config.info.authors) {
 						if (author.discord_id === UserStoreModule.getCurrentUser()?.id) {
 							this.settings.devMode = true;
@@ -1772,7 +1771,7 @@ module.exports = (() => {
 						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
 						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
 						const buttons = textAreaInner.props.children.find(c => c?.type === ChannelTextAreaButtons);
-						if (!["normal", "sidebar", "form", "edit"].includes(props.type)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
+						if (!["normal", "sidebar", "form", "edit"].includes(props.type.analyticsName)) { // "edit" when editing a message, "sidebar" when having a thread open, "form" when uploading a file
 							return
 						}
 
@@ -1789,6 +1788,7 @@ module.exports = (() => {
 							//can always send in DMs
 							canSend = true;
 						}
+						
 						buttons.props.renderApateButton = canSend && this.settings.keyPosition!==1;
 						if (!canSend) {
 							return;
@@ -1797,7 +1797,7 @@ module.exports = (() => {
 						
 						let keyButton = ApateKeyButton;
 
-						if (props.type === "edit") {
+						if (props.type.analyticsName === "edit") {
 							keyButton = BdApi.React.cloneElement(ApateKeyButton);
 							keyButton.props.className += " edit";
 						}
