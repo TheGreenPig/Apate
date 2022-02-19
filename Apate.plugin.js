@@ -45,17 +45,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.4",
+			version: "1.5.5",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Fixed",
-				type: "fixed",
+				title: "Added",
+				type: "added",
 				items: [
-					"Fixed key not getting displayed."
+					"Markdown, clickable links and image embed support for hidden about me messages!"
 				]
 			},
 		],
@@ -96,6 +96,13 @@ module.exports = (() => {
 		stop() { }
 	} : (([Plugin, Api]) => {
 		const plugin = (Plugin, Api) => {
+			const {
+				DiscordSelectors,
+				Settings,
+				Tooltip,
+				Logger,
+				WebpackModules
+			} = { ...Api, ...BdApi };
 			//All modules needed. All are found at the start because finding modules can be resource intensive.
 			const AccountUpdateModule = BdApi.findModuleByProps('saveAccountRequest');
 			const BIO_MAX_LENGTH = BdApi.findModuleByProps("BIO_MAX_LENGTH").BIO_MAX_LENGTH;
@@ -127,10 +134,24 @@ module.exports = (() => {
 			const StartEditMessageModule = BdApi.findModuleByProps("startEditMessage");
 			const TooltipContainer = BdApi.findModuleByProps('TooltipContainer').TooltipContainer;
 			const TooltipWrapper = BdApi.findModuleByPrototypes("renderTooltip");
-			const UserInfoBase = BdApi.findModule(m => m.default.displayName === "UserInfoBase");
+			const UserInfoBase = getLazyLoadedModule("UserInfoBase");
 			const UserPopout = BdApi.findModule(m => m.default.displayName === "UserPopoutBody");
 			const UserStoreModule = BdApi.findModuleByProps("getUsers");
 
+
+
+			//credits to Strencher
+			function getLazyLoadedModule(displayName) {
+				return new Promise(resolve => {
+					const cached = WebpackModules.getModule(m => m && m.default && m.default.displayName === displayName);
+					if (cached) return resolve(cached);
+					const unsubscribe = WebpackModules.addListener(module => {
+					if (!module.default || module.default.displayName !== displayName) return;
+					unsubscribe();
+					resolve(module);
+					});
+				});
+			}
 			/**
 			 * Apate banner which is displayed under some message which contains hidden text
 			 */
@@ -614,12 +635,6 @@ module.exports = (() => {
 				"Orchid",
 				"Plum",
 			];
-			const {
-				DiscordSelectors,
-				Settings,
-				Tooltip,
-				Logger
-			} = { ...Api, ...BdApi };
 			const { SettingPanel, SettingGroup, RadioGroup, Switch, Textbox } = Settings;
 
 
@@ -905,12 +920,6 @@ module.exports = (() => {
 
 				}
 
-				/**
-				 * Tests if the given url is a valid image url
-				 * @param  {string} url			The url
-				 * @param  {int}	timeoutT	Number of milliseconds before returning a timeout error (default 5 000)
-				 * @return {string}				Returns "success", "error" or "timeout"
-				 */
 				testImage(url, timeoutT) {
 					return new Promise(function (resolve, reject) {
 						var timeout = timeoutT || 5000;
@@ -921,7 +930,7 @@ module.exports = (() => {
 						};
 						img.onload = function () {
 							clearTimeout(timer);
-							resolve("success");
+							resolve(true);
 						};
 						timer = setTimeout(function () {
 							// reset .src to invalid URL so it stops previous
@@ -1983,7 +1992,7 @@ module.exports = (() => {
 
 				}
 
-				patchAboutMe() {
+				async patchAboutMe() {
 					const aboutMeCache = {};
 
 					function hashCode(s) {
@@ -2007,36 +2016,59 @@ module.exports = (() => {
 
 						return null;
 					}
+					function formatHiddenMessage(hiddenMessage) {
+						let msg = Object.assign({}, {content: " "+hiddenMessage});
+						let {content} = RenderMessageMarkupToASTModule.default(msg, {});
+						let hasImage = false;
+						content.forEach((child, i) => {
+							if(child.type?.displayName === "MaskedLink" && !hasImage) {
+								const validImageExtensions = ["jpg", "jpeg", "png", "gif", "gifv", "apng", "avif", "jfif", "pjpeg", "pjp", "svg", "webp"]
+								if(validImageExtensions.some(e => child.props.href.endsWith(e))) {
+									let url ="";
+									let imageLink = new URL(child.props.href)
+									const trustedHostnames = ["discordapp.net", "discordapp.com", "imgur.com"]
+									if (trustedHostnames.some(e=>imageLink.hostname.endsWith(e))) {
+										url = imageLink.href;
+									} else {
+										url = `https://images.weserv.nl/?url=${encodeURIComponent(imageLink.href)}&n=-1`
+									}
+									content[i] = BdApi.React.createElement("div", { className: "apateHiddenImgWrapper" }, BdApi.React.createElement("img", { className: "apateHiddenImg", src: url }));
+								}
+							}
+						})
+						return content
+					}
 
 					BdApi.Patcher.after("Apate", UserPopout, "default", (_, [props], ret) => {
 						let hiddenMessage = getBioHiddenMessage(props.user.bio);
 
 						if (hiddenMessage != null) {
+							let content = formatHiddenMessage(hiddenMessage)
 							ret.props.children = [
-								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, hiddenMessage),
+								BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, content),
 								...ret.props.children
 							];
 						}
 					});
 
-					// BdApi.Patcher.after("Apate", UserInfoBase, "default", (_, [props], ret) => {
-					// 	let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
-					// 	try {
-					// 		let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
-					// 		let hiddenMessage = getBioHiddenMessage(props.user.bio);
+					BdApi.Patcher.after("Apate", await UserInfoBase, "default", (_, [props], ret) => {
+						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+						try {
+							let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+							let hiddenMessage = getBioHiddenMessage(props.user.bio);
+							if (hiddenMessage != null) {
+								let content = formatHiddenMessage(hiddenMessage)
+								aboutMe.props.children = [
+									...aboutMe.props.children,
+									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, content),
+								];
+							}
+						}
+						catch {
+							return;
+						}
 
-					// 		if (hiddenMessage != null) {
-					// 			aboutMe.props.children = [
-					// 				...aboutMe.props.children,
-					// 				BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, hiddenMessage),
-					// 			];
-					// 		}
-					// 	}
-					// 	catch {
-					// 		return;
-					// 	}
-
-					// });	
+					});	
 
 					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
 						if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
@@ -2054,7 +2086,7 @@ module.exports = (() => {
 						let newBio = "\u200B" + stegCloak.hide(this.settings.hiddenAboutMeText, "", oldBio);
 
 						if (newBio.length > BIO_MAX_LENGTH) {
-							BdApi.alert("About Me too long!", "Either shorten the text in the About Me page, or your hidden message, for Apate to work.");
+							BdApi.alert("About Me too long!", `Either shorten the text in the About Me page, or your hidden message, for Apate to work. (${newBio.length-BIO_MAX_LENGTH} too much characters.)`);
 						} else {
 							Logger.log(`Changed bio, Cover message: ${newBio}, Hidden Message: ${this.settings.hiddenAboutMeText}.`);
 							patch.bio = newBio;
