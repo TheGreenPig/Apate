@@ -6,9 +6,6 @@
  * @authorLink https://github.com/TheGreenPig
  * @invite JsqBVSCugb
  */
-const request = require("request");
-const fs = require("fs");
-const path = require("path");
 /* 
  * BetterDiscord BdApi documentation:
  *   https://github.com/BetterDiscord/BetterDiscord/wiki/Creating-Plugins
@@ -45,17 +42,17 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.5",
+			version: "1.5.6",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
 		},
 		changelog: [
 			{
-				title: "Added",
-				type: "added",
+				title: "Fixed",
+				type: "fixed",
 				items: [
-					"Markdown, clickable links and image embed support for hidden about me messages!"
+					"Setting the hidden about me page works again (Thanks fabJunior)"
 				]
 			},
 		],
@@ -2051,25 +2048,6 @@ module.exports = (() => {
 						}
 					});
 
-					BdApi.Patcher.after("Apate", await UserInfoBase, "default", (_, [props], ret) => {
-						let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
-						try {
-							let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
-							let hiddenMessage = getBioHiddenMessage(props.user.bio);
-							if (hiddenMessage != null) {
-								let content = formatHiddenMessage(hiddenMessage)
-								aboutMe.props.children = [
-									...aboutMe.props.children,
-									BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, content),
-								];
-							}
-						}
-						catch {
-							return;
-						}
-
-					});	
-
 					BdApi.Patcher.before("Apate", AccountUpdateModule, "saveAccountChanges", (_, [patch], request) => {
 						if (!typeof (patch.bio) === "string" || patch.bio.trim().length === 0 || this.settings.hiddenAboutMeText === "") {
 							return
@@ -2092,6 +2070,27 @@ module.exports = (() => {
 							patch.bio = newBio;
 						}
 					});
+
+					UserInfoBase.then(UserInfoBaseModule => {
+						BdApi.Patcher.after("Apate", UserInfoBaseModule, "default", (_, [props], ret) => {
+							let infoSection = ret.props.children.find(child => child.props?.className.includes("userInfoSection-"));
+							try {
+								let aboutMe = infoSection.props.children?.find(child => child.props?.children?.some(subChild => subChild.props?.className.includes("userBio-")));
+								let hiddenMessage = getBioHiddenMessage(props.user.bio);
+								if (hiddenMessage != null) {
+									let content = formatHiddenMessage(hiddenMessage)
+									aboutMe.props.children = [
+										...aboutMe.props.children,
+										BdApi.React.createElement("div", { class: "apateAboutMeHidden apateHiddenMessage border" }, content),
+									];
+								}
+							}
+							catch {
+								return;
+							}
+	
+						});	
+					})
 				}
 				onStop() {
 					for (const worker of this.revealWorkers) {
