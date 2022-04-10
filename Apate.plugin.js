@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.6",
+			version: "1.5.7",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,7 +52,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Setting the hidden about me page works again (Thanks fabJunior)"
+					"Let the key appear again (discord changed the compute permissions module, thanks Qb for the updated parameters)"
 				]
 			},
 		],
@@ -1783,7 +1783,11 @@ module.exports = (() => {
 
 						let canSend = true;
 						try {
-							if (!ComputePermissionsModule.can(DiscordConstants.Permissions.SEND_MESSAGES, UserStoreModule.getCurrentUser(), props.channel)) {
+							if (!ComputePermissionsModule.can({
+								permission: DiscordConstants.Permissions.SEND_MESSAGES, 
+								context: props.channel, 
+								user: UserStoreModule.getCurrentUser()
+							})) {
 								canSend = false;
 							};
 						}
