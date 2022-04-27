@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.7",
+			version: "1.5.8",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,7 +52,8 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Let the key appear again (discord changed the compute permissions module, thanks Qb for the updated parameters)"
+					"Fix 'copy' and 'delete' emojis",
+					"Fix classes"
 				]
 			},
 		],
@@ -790,7 +791,7 @@ module.exports = (() => {
 					li.setAttribute('id', item);
 
 					var copyButton = document.createElement("button");
-					copyButton.textContent = `ð`
+					copyButton.textContent = `📋`
 					copyButton.classList.add("btn-passwords");
 					copyButton.setAttribute("title", "Copy Password")
 					copyButton.addEventListener("click", () => {
@@ -799,7 +800,7 @@ module.exports = (() => {
 					});
 
 					var revButton = document.createElement("button");
-					revButton.textContent = `â`
+					revButton.textContent = `❌`
 					revButton.classList.add("btn-passwords");
 					revButton.setAttribute("title", "Remove Password")
 					revButton.addEventListener("click", () => this.removePassword(item));
@@ -1549,11 +1550,11 @@ module.exports = (() => {
 									DiscordNative.clipboard.copy(message.apateUsedPassword);
 									BdApi.showToast("Copied password!", { type: "success" });
 								}
-							}, `ð`)
+							}, `📋`)
 						}
 
 						let infoMessage = BdApi.React.createElement("div", {
-							class: "markup-2BOw-j messageContent-2qWWxC",
+							class: "markup-eYLPri messageContent-2t3eCI",
 						}, "Password used: ",
 							BdApi.React.createElement("b", {},
 								BdApi.React.createElement("div", {
