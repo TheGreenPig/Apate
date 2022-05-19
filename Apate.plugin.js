@@ -42,7 +42,7 @@ module.exports = (() => {
 
 
 			],
-			version: "1.5.8",
+			version: "1.5.9",
 			description: "Apate lets you hide messages in other messages! - Usage: `cover message \*hidden message\*`",
 			github_raw: "https://raw.githubusercontent.com/TheGreenPig/Apate/main/Apate.plugin.js",
 			github: "https://github.com/TheGreenPig/Apate"
@@ -52,8 +52,7 @@ module.exports = (() => {
 				title: "Fixed",
 				type: "fixed",
 				items: [
-					"Fix 'copy' and 'delete' emojis",
-					"Fix classes"
+					"Fix key disappearing",
 				]
 			},
 		],
@@ -99,7 +98,9 @@ module.exports = (() => {
 				Settings,
 				Tooltip,
 				Logger,
-				WebpackModules
+				WebpackModules,
+				Utilities,
+				ReactTools
 			} = { ...Api, ...BdApi };
 			//All modules needed. All are found at the start because finding modules can be resource intensive.
 			const AccountUpdateModule = BdApi.findModuleByProps('saveAccountRequest');
@@ -221,7 +222,7 @@ module.exports = (() => {
 
 						this.props.apate.settings.strongChannelIndex.push(strongChannelEntry);
 						this.props.apate.saveSettings(this.props.apate.settings);
-						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
+						ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
 
 						let strongPasswordEncrypted = cryptico.encrypt(strongPassword, pubKey.replace("[pubKey]", "")).cipher;
 						this.props.apate.hideMessage(`\u200b \u200b*[strongPass]${strongPasswordEncrypted}*`, "").then(stegCloakedMsg => {
@@ -250,7 +251,7 @@ module.exports = (() => {
 							this.props.apate.settings.pendingList.splice(index, 1);
 						}
 						this.props.apate.saveSettings(this.props.apate.settings);
-						ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
+						ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
 					}
 				}
 				formatHiddenMessage() {
@@ -913,7 +914,7 @@ module.exports = (() => {
 
 					//Thanks Strencher <3
 					ComponentDispatchModule.ComponentDispatch.dispatchToLastSubscribed("TEXTAREA_FOCUS")
-					ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
+					ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t"))?.forceUpdate();
 
 
 				}
@@ -1604,7 +1605,7 @@ module.exports = (() => {
 									return value.id !== id;
 								});
 								this.saveSettings(this.settings);
-								ZLibrary.ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
+								ReactTools.getOwnerInstance(document.querySelector(".title-31SJ6t")).forceUpdate();
 								if (sendConfirm) {
 									this.hideMessage(`\u200b \u200b*[deleteE2E]*`, "").then(stegCloakedMsg => {
 										SendMessageModule.sendMessage(this.getCurrentChannel()?.id, { content: stegCloakedMsg })
@@ -1774,7 +1775,8 @@ module.exports = (() => {
 
 
 					BdApi.Patcher.after("Apate", ChannelTextAreaContainerModule.type, "render", (_, [props], ret) => {
-						const textArea = ret.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+						// const textArea = ret.props.children.props.children.find(c => c?.props?.className?.includes("channelTextArea-"));
+						const textArea = Utilities.findInReactTree(ret, c => c?.props?.className?.includes("channelTextArea-"));
 						const textAreaContainer = textArea.props.children.find(c => c?.props?.className?.includes("scrollableContainer-"));
 						const textAreaInner = textAreaContainer.props.children.find(c => c?.props?.className?.includes("inner-"));
 						const buttons = textAreaInner.props.children.find(c => c?.type === ChannelTextAreaButtons);
@@ -1828,7 +1830,7 @@ module.exports = (() => {
 
 									let focusRing = textAreaInner.props.children.find(c => c?.props?.ringClassName);
 									let text = focusRing.props.children.ref.current.props.textValue;
-
+									
 									if (this.getCoverAndHiddenParts(text) == null) return;
 
 									this.hideNextMessage = true;
