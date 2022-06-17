@@ -29,7 +29,7 @@ Hold shift and hover over a message with a hidden Apate message. Press the Apate
 
 ![endToEndEncryption.gif](https://raw.githubusercontent.com/TheGreenPig/Apate/main/Assets/Tutorials/endToEndEncryption.gif)
 
-To turn on End to End ecryption, click the Lock icon in the top left corner. This only works in DMs. Then you will have to wait until the other user accepts your reuest. As soon as they do, all the hidden messages you send will be encrypted with a strong Password only you two have.
+To turn on End to End ecryption, click the Lock icon in the top left corner. This only works in DMs. Then you will have to wait until the other user accepts your request. As soon as they do, all the hidden messages you send will be encrypted with a strong Password only you two have.
 
 **Why is this useful?**
 
