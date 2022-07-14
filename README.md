@@ -1,7 +1,7 @@
 # Apate is deprecated
 While it was a fun project that really introduced me into the world of BetterDiscord plugins, I will no longer maintain Apate and take it down from the BD website. This is mostly due to the fact that this plugin is used primarily for malicious purposes and/or being disrespectful. Just because you have a plugin that uses some steganography and cryptography, doesn't make it ok for you to be toxic to other people that can't see your messages and open up servers that are against Discord ToS. If you really need a plugin that encrypts your messages, I'm sure you'll be able to find one with a quick google search. I do not want to be associated and/or responsible for the problematic use cases Apate _can_ induce. It was never my intention for this plugin to turn out the way it is seemingly used now. It's also a lot of work to maintain such a big plugin. 
 
-Thank you for my understanding. 
+Thank you for understanding. 
 
 
 <h1 align="center">
